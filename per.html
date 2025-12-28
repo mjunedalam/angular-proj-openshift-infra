@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGWA Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                },
+                extend: {
+                    colors: {
+                        blue: {
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                        },
+                    },
+                    boxShadow: {
+                        'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
+                        'inner-strong': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.2)',
+                    },
+                    backgroundImage: {
+                        'gradient-cyan-blue': 'linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%)',
+                        'gradient-blue-dark': 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
+                        'gradient-header': 'linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        body { background-color: #f0f2f5; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        /* Sidebar Animations */
+        .sidebar-transition { transition: width 0.3s ease-in-out; }
+        .sidebar-text { transition: opacity 0.2s ease-in-out; white-space: nowrap; overflow: hidden; }
+        .collapsed .sidebar-text { opacity: 0; width: 0; display: none; }
+        .collapsed .nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
+        .collapsed .logo-area { justify-content: center; }
+        .collapsed .logo-text { display: none; }
+
+        /* Accordion Animations */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, opacity 0.3s ease-in;
+            opacity: 0;
+        }
+        .accordion-content.open {
+            max-height: 600px;
+            opacity: 1;
+        }
+        .rotate-icon { transition: transform 0.3s ease; }
+        .rotate-icon.open { transform: rotate(180deg); }
+
+        /* Custom Gradient for bars */
+        .bar-gradient { background: linear-gradient(90deg, #1e40af 0%, #3b82f6 50%, #22d3ee 100%); }
+
+        /* Table Styles based on image_2.png */
+        .table-header-gradient { background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%); }
+        .table-row-even { background-color: rgba(241, 245, 249, 0.8); }
+    </style>
+</head>
+<body class="font-sans h-screen flex overflow-hidden text-slate-700">
+
+    <aside id="sidebar" class="sidebar-transition w-64 bg-gradient-to-b from-blue-900 to-blue-800 flex flex-col py-4 text-white shadow-xl z-20 relative border-r border-blue-800/50">
+        <div class="px-4 mb-8 flex items-center justify-between logo-area">
+            <div class="flex items-center gap-3 logo-text overflow-hidden whitespace-nowrap">
+                <div class="bg-white/10 p-1.5 rounded-md shadow-sm">
+                    <i class="fa-solid fa-layer-group text-blue-200"></i>
+                </div>
+                <span class="font-bold tracking-wider text-lg">MENU</span>
+            </div>
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-white/10 rounded-lg transition-colors focus:outline-none text-blue-200 hover:text-white">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </div>
+        <div class="space-y-1 flex flex-col w-full px-3">
+            <a href="#" class="nav-item flex items-center gap-4 p-3 bg-blue-600/50 text-white rounded-lg cursor-pointer transition-all shadow-sm font-medium border-l-4 border-cyan-400">
+                <i class="fa-solid fa-house w-5 text-center"></i>
+                <span class="sidebar-text">Dashboard</span>
+            </a>
+            <a href="#" class="nav-item flex items-center gap-4 p-3 hover:bg-white/5 text-blue-100 hover:text-white rounded-lg cursor-pointer transition-all font-medium border-l-4 border-transparent">
+                <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                <span class="sidebar-text">Performance</span>
+            </a>
+            <a href="#" class="nav-item flex items-center gap-4 p-3 hover:bg-white/5 text-blue-100 hover:text-white rounded-lg cursor-pointer transition-all font-medium border-l-4 border-transparent">
+                <i class="fa-solid fa-filter w-5 text-center"></i>
+                <span class="sidebar-text">Operations</span>
+            </a>
+            <a href="#" class="nav-item flex items-center gap-4 p-3 hover:bg-white/5 text-blue-100 hover:text-white rounded-lg cursor-pointer transition-all font-medium border-l-4 border-transparent">
+                <i class="fa-solid fa-layer-group w-5 text-center"></i>
+                <span class="sidebar-text">Formations</span>
+            </a>
+            <a href="#" class="nav-item flex items-center gap-4 p-3 hover:bg-white/5 text-blue-100 hover:text-white rounded-lg cursor-pointer transition-all font-medium border-l-4 border-transparent">
+                <i class="fa-solid fa-map-location-dot w-5 text-center"></i>
+                <span class="sidebar-text">Map View</span>
+            </a>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0 transition-all duration-300">
+        <header class="bg-white h-14 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 font-extrabold text-xl text-blue-900">
+                    <div class="bg-gradient-to-tr from-blue-600 to-cyan-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm">
+                        <i class="fa-solid fa-droplet text-sm"></i>
+                    </div>
+                    <span>AGWA</span>
+                </div>
+                <div class="h-6 w-px bg-slate-300 hidden sm:block"></div>
+                <h1 class="text-xs font-semibold text-slate-500 hidden sm:block tracking-wide uppercase">Aramco Ground Water Application</h1>
+            </div>
+            <div class="hidden md:flex items-center text-xs font-medium bg-slate-100 p-1 rounded-md shadow-inner">
+                <button class="px-3 py-1 text-slate-600 hover:text-blue-700 hover:bg-white rounded transition-all">THR-845</button>
+                <button class="px-3 py-1 bg-white text-blue-700 shadow-sm rounded transition-all font-bold">ABQQ-987</button>
+                <button class="px-3 py-1 text-slate-600 hover:text-blue-700 hover:bg-white rounded transition-all">JWYT-891</button>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+                <div class="hidden lg:flex items-center gap-2 text-slate-500 font-medium">
+                    <i class="fa-regular fa-calendar text-blue-600"></i>
+                    <span>Mon, 20 Oct 2025</span>
+                </div>
+                <div class="flex items-center gap-2 pl-4 lg:border-l border-slate-200">
+                    <div class="text-right hidden sm:block">
+                        <div class="font-bold text-slate-800 leading-tight">Abdulrahman</div>
+                        <div class="text-[10px] text-slate-500 font-medium">Drilling Engineer</div>
+                    </div>
+                    <div class="w-8 h-8 bg-gradient-to-tr from-blue-700 to-blue-500 rounded-full flex items-center justify-center text-white shadow-sm ring-2 ring-white">
+                        <i class="fa-solid fa-user text-xs"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 p-4 overflow-y-auto relative bg-slate-50/50">
+            <div class="grid grid-cols-12 gap-4 h-full relative z-10">
+                
+                <div class="col-span-12 lg:col-span-3 flex flex-col gap-4">
+                    
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm relative overflow-hidden">
+                            <div class="text-[10px] opacity-80 mb-1">Well Name</div>
+                            <div class="font-bold text-sm leading-tight">THURAYYA - Lg3 / THRY-845</div>
+                            <div class="text-[10px] opacity-80">SP-276 Drilling Water Supply</div>
+                        </div>
+                        <div class="col-span-1 bg-white p-3 rounded-2xl shadow-sm flex flex-col justify-center relative overflow-hidden border border-slate-100">
+                            <div class="text-[10px] text-slate-500 mb-1">Targeted Aquifer</div>
+                            <div class="font-bold text-blue-800 flex items-center gap-1">
+                                <i class="fa-solid fa-droplet text-blue-500"></i> Jafurah
+                            </div>
+                        </div>
+
+                        <div class="col-span-2 bg-white p-3 rounded-2xl shadow-sm flex items-center justify-between border border-slate-100">
+                            <div>
+                                <div class="text-[10px] text-slate-500 mb-1">Current Status</div>
+                                <div class="font-bold text-blue-800">On Target</div>
+                            </div>
+                            <div class="bg-gradient-cyan-blue p-2 rounded-full text-white shadow-sm">
+                                <i class="fa-solid fa-gear animate-spin-slow"></i>
+                            </div>
+                        </div>
+                        <div class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center">
+                             <div class="flex items-center gap-2 mb-1">
+                                <i class="fa-regular fa-calendar text-cyan-300"></i>
+                                <div class="text-[10px] opacity-80">Days</div>
+                            </div>
+                            <div class="font-bold text-sm">29.34/49</div>
+                        </div>
+
+                        <div class="col-span-2 grid grid-cols-2 gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+                             <div class="text-center">
+                                <div class="text-[10px] text-slate-500 mb-1">Days since Sup</div>
+                                <div class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-cyan-500 border-r-blue-500 mx-auto flex items-center justify-center shadow-sm bg-white">
+                                    <span class="text-base font-extrabold text-blue-900">42</span>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-[10px] text-slate-500 mb-1">Target Days</div>
+                                <div class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-300 mx-auto flex items-center justify-center shadow-sm bg-white">
+                                    <span class="text-base font-extrabold text-blue-900">60</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center">
+                            <div class="font-bold text-lg leading-none mb-1">BI34</div>
+                            <div class="text-[10px] opacity-80">Supporting</div>
+                            <div class="font-bold text-xs">Well THRY-5</div>
+                        </div>
+
+                         <div class="col-span-2 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex items-center justify-between relative overflow-hidden">
+                            <div>
+                                <div class="font-extrabold text-2xl">9,890</div>
+                                <div class="text-[10px] opacity-80">Feet</div>
+                            </div>
+                             <div class="text-cyan-300 opacity-50 absolute right-2 bottom-0 text-4xl">
+                                 <i class="fa-solid fa-water"></i>
+                            </div>
+                             <div class="text-white absolute top-2 right-1/3">
+                                 <i class="fa-solid fa-arrow-down"></i>
+                            </div>
+                        </div>
+                         <div class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center">
+                            <div class="text-[10px] opacity-80 mb-1">Previous Well</div>
+                            <div class="font-bold text-sm">THRY-845</div>
+                        </div>
+
+                        <div class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex items-center justify-between">
+                            <div class="text-[10px] opacity-80 font-medium">Current Depth (FT.DF)</div>
+                            <div class="font-extrabold text-2xl">3591</div>
+                        </div>
+                        <div class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center">
+                            <div class="text-[10px] opacity-80 mb-1">Next Well</div>
+                            <div class="font-bold text-sm">THRY-841</div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl flex-1 flex flex-col overflow-hidden shadow-glass border-0">
+                        <div class="table-header-gradient px-4 py-2 text-white text-sm font-bold flex items-center justify-center shadow-sm">
+                            Picked Formation Tops
+                        </div>
+                        <div class="flex-1 overflow-auto bg-white">
+                            <table class="w-full text-xs text-left">
+                                <thead class="text-[10px] uppercase text-white bg-blue-700 font-semibold">
+                                    <tr>
+                                        <th class="px-4 py-2">Formation</th>
+                                        <th class="px-4 py-2 text-center">Depth</th>
+                                        <th class="px-4 py-2">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 font-medium">
+                                    <tr class="table-row-even">
+                                        <td class="px-4 py-2 font-bold text-blue-900">DMMM</td>
+                                        <td class="px-4 py-2 text-center text-blue-900">642</td>
+                                        <td class="px-4 py-2 text-blue-700 text-[10px]">77 FEET DEEPER</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-4 py-2 font-bold text-blue-900">RUS</td>
+                                        <td class="px-4 py-2 text-center text-blue-900">882</td>
+                                        <td class="px-4 py-2 text-cyan-600 text-[10px]">18 FEET SHALLOWER</td>
+                                    </tr>
+                                    <tr class="table-row-even">
+                                        <td class="px-4 py-2 font-bold text-blue-900">UMER</td>
+                                        <td class="px-4 py-2 text-center text-blue-900">1230</td>
+                                        <td class="px-4 py-2 text-cyan-600 text-[10px]">10 FEET SHALLOWER</td>
+                                    </tr>
+                                     <tr>
+                                        <td class="px-4 py-2 font-bold text-blue-900">ARU</td>
+                                        <td class="px-4 py-2 text-center text-blue-900">233</td>
+                                        <td class="px-4 py-2 text-blue-700 text-[10px]">80 FEET DEEPER</td>
+                                    </tr>
+                                     <tr class="table-row-even">
+                                        <td class="px-4 py-2 font-bold text-blue-900">LAMS</td>
+                                        <td class="px-4 py-2 text-center text-blue-900">3410</td>
+                                        <td class="px-4 py-2 text-blue-700 text-[10px]">40 FEET DEEPER</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-12 lg:col-span-6 flex flex-col h-full min-h-[500px]">
+                    <div class="glass-panel rounded-2xl flex-1 p-5 flex flex-col items-center relative overflow-hidden shadow-glass border-slate-200/60">
+                        <h2 class="text-blue-900 text-base font-bold mb-4 self-center">Daily Drilling Operations Summary</h2>
+                        <div class="flex-1 w-full flex relative px-4 justify-center">
+                            <div class="h-full w-12 flex flex-col justify-between text-[9px] text-slate-400 font-semibold border-r border-slate-200 pr-2 py-4 text-right">
+                                <span>0</span><span>500</span><span>1,000</span><span>1,500</span><span>2,000</span><span>2,500</span><span>3,000</span><span>3,500</span><span>4,000</span><span>4,500</span><span>5,000</span>
+                            </div>
+                            <div class="flex-1 relative flex justify-center pt-2 max-w-md">
+                                <div class="absolute inset-0 z-0 flex flex-col justify-between opacity-30 pointer-events-none py-4">
+                                    <div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div><div class="border-b border-slate-200 w-full h-0"></div>
+                                </div>
+                                <div class="relative z-10 mt-4 flex flex-col items-center scale-90 origin-top">
+                                    <div class="h-6 w-64 bg-emerald-500 border border-emerald-700/50 rounded-sm relative shadow-sm flex items-center justify-center">
+                                         <div class="absolute -left-24 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-500 w-24 text-right pr-3 leading-tight">30" Cond. @ 180</div>
+                                    </div>
+                                    <div class="h-16 w-52 bg-emerald-400 border-x border-b border-emerald-700/50 relative shadow-sm">
+                                        <div class="absolute -left-28 top-6 text-[9px] text-slate-500 w-28 text-right pr-3 leading-tight font-medium">18 5/8" Casing @ 700</div>
+                                    </div>
+                                    <div class="h-24 w-36 bg-emerald-300 border-x border-b border-emerald-700/50 relative shadow-sm">
+                                        <div class="absolute -left-28 top-10 text-[9px] text-slate-500 w-28 text-right pr-3 leading-tight font-medium">13 3/8" Casing @ 1420</div>
+                                    </div>
+                                    <div class="h-32 w-24 bg-slate-100 border-x border-b border-slate-300 relative shadow-inner">
+                                        <div class="absolute inset-x-0 top-0 bottom-0 flex justify-center"><div class="w-px h-full border-l border-dashed border-blue-300"></div></div>
+                                        <div class="absolute -left-28 top-14 text-[9px] text-slate-500 w-28 text-right pr-3 leading-tight font-medium">9 5/8" Casing @ 2150</div>
+                                        <div class="absolute top-1 inset-x-0 text-[8px] text-blue-500 text-center font-bold">16"</div>
+                                    </div>
+                                    <div class="h-24 w-16 bg-slate-100 border-x border-b border-slate-300 relative shadow-inner">
+                                         <div class="absolute inset-x-0 top-0 bottom-0 flex justify-center"><div class="w-px h-full border-l border-dashed border-blue-300"></div></div>
+                                        <div class="absolute -left-28 top-10 text-[9px] text-slate-500 w-28 text-right pr-3 leading-tight font-medium">7" Liner @ 3150</div>
+                                        <div class="absolute top-1 inset-x-0 text-[8px] text-blue-500 text-center font-bold">12"</div>
+                                    </div>
+                                    <div class="h-8 w-8 bg-gradient-to-b from-slate-400 to-slate-500 border-x border-slate-600 relative flex justify-center shadow-sm" style="clip-path: polygon(0 0, 100% 0, 50% 100%);">
+                                        <div class="absolute -bottom-4 text-[8px] text-slate-500 font-bold whitespace-nowrap">8 3/8" Open Hole</div>
+                                    </div>
+                                    <div class="mt-2 w-72 h-20 bg-red-50/50 border-2 border-dashed border-red-300/50 rounded flex items-center justify-center">
+                                        <div class="text-red-400/70 text-xs font-bold uppercase tracking-wider">Not drilled</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-full mt-4 flex gap-3 px-4 lg:px-12">
+                            <button class="flex-1 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-lg shadow hover:shadow-md transition-all font-bold text-xs tracking-wide">RCC</button>
+                            <button class="flex-1 py-2 bg-white text-slate-500 border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-all font-bold text-xs">Mud Log</button>
+                            <button class="flex-1 py-2 bg-white text-slate-500 border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-all font-bold text-xs">Logging</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-12 lg:col-span-3 flex flex-col gap-4">
+                    <div class="glass-panel rounded-2xl p-4 flex flex-col items-center shadow-glass min-h-[180px] border-slate-200/60">
+                        <div class="w-full flex justify-between items-center mb-2">
+                            <h3 class="text-blue-900 font-bold text-sm">Map of Active Water Well</h3>
+                            <div class="bg-cyan-100 p-1.5 rounded-full"><i class="fa-solid fa-earth-asia text-cyan-600 text-sm"></i></div>
+                        </div>
+                        <div class="w-full flex-1 bg-blue-50/50 rounded-xl border border-blue-100 relative overflow-hidden group shadow-inner-strong">
+                            <div class="absolute inset-0 flex items-center justify-center text-blue-200 opacity-30">
+                                <i class="fa-solid fa-map text-7xl"></i>
+                            </div>
+                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                                <div class="flex flex-col items-center">
+                                    <span class="bg-red-500 text-white text-[8px] px-1 rounded shadow mb-0.5">Focus</span>
+                                    <i class="fa-solid fa-location-dot text-red-500 text-xl drop-shadow-sm animate-bounce"></i>
+                                </div>
+                            </div>
+                             <i class="fa-solid fa-location-dot text-blue-400 absolute top-1/4 left-1/3 text-sm"></i>
+                             <i class="fa-solid fa-location-dot text-blue-400 absolute bottom-1/3 right-1/4 text-sm"></i>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl shadow-glass flex flex-col overflow-hidden border-slate-200/60">
+                        <div class="px-4 py-3 border-b border-slate-100 bg-white/50 flex justify-between items-center">
+                            <h3 class="text-blue-900 font-bold text-sm">Offset Wells</h3>
+                            <i class="fa-solid fa-gear text-slate-300"></i>
+                        </div>
+
+                        <div class="border-b border-slate-100 last:border-0">
+                            <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-blue-50/50 transition-colors group" onclick="toggleAccordion('well1', this)">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600 flex items-center justify-center border border-blue-200 shadow-sm group-hover:from-blue-500 group-hover:to-blue-600 group-hover:text-white transition-all">
+                                        <i class="fa-solid fa-droplet text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-blue-900 text-sm group-hover:text-blue-700">THR-841</div>
+                                    </div>
+                                </div>
+                                <div class="text-right flex items-center gap-3">
+                                    <div>
+                                        <div class="text-[9px] text-slate-400 uppercase font-semibold">Aquifer</div>
+                                        <div class="text-xs font-bold text-slate-600">WASI</div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down text-slate-300 text-xs rotate-icon"></i>
+                                </div>
+                            </div>
+                            
+                            <div id="well1" class="accordion-content bg-slate-50/30">
+                                <div class="p-3 space-y-3 border-t border-slate-100">
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div class="bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
+                                            <div class="text-[9px] text-slate-500 font-semibold">TDS (PPM)</div>
+                                            <div class="text-blue-900 font-extrabold text-base">8443</div>
+                                        </div>
+                                        <div class="bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
+                                            <div class="text-[9px] text-slate-500 font-semibold">RPM</div>
+                                            <div class="text-blue-900 font-extrabold text-base">0</div>
+                                        </div>
+                                        <div class="bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
+                                            <div class="text-[9px] text-slate-500 font-semibold">H2S</div>
+                                            <div class="text-blue-900 font-extrabold text-base">0</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="h-10 w-full rounded-md overflow-hidden relative flex items-center px-3 shadow-sm border border-slate-100 bg-white">
+                                        <div class="absolute left-0 top-0 bottom-0 bar-gradient opacity-90" style="width: 45%;"></div>
+                                        <div class="relative z-10 w-full flex justify-between items-center text-white mix-blend-hard-light">
+                                            <div>
+                                                <div class="font-extrabold text-base leading-none">42</div>
+                                                <div class="text-[9px] font-semibold opacity-90">Distance</div>
+                                            </div>
+                                            <i class="fa-solid fa-arrows-left-right opacity-80"></i>
+                                        </div>
+                                        <div class="absolute right-3 z-0 text-slate-200"><i class="fa-solid fa-arrows-left-right"></i></div>
+                                    </div>
+
+                                    <div class="h-10 w-full rounded-md overflow-hidden relative flex items-center px-3 shadow-sm border border-slate-100 bg-white">
+                                        <div class="absolute left-0 top-0 bottom-0 bar-gradient opacity-90" style="width: 30%;"></div>
+                                        <div class="relative z-10 w-full flex justify-between items-center text-white mix-blend-hard-light">
+                                            <div>
+                                                <div class="font-extrabold text-base leading-none">2.1</div>
+                                                <div class="text-[9px] font-semibold opacity-90">Productivity (GPM/FT)</div>
+                                            </div>
+                                        </div>
+                                        <div class="absolute right-3 z-0 text-slate-200"><i class="fa-solid fa-chart-simple"></i></div>
+                                    </div>
+
+                                    <div class="h-10 w-full rounded-md overflow-hidden relative flex items-center px-3 shadow-sm border border-slate-100 bg-white">
+                                        <div class="absolute left-0 top-0 bottom-0 bar-gradient opacity-90" style="width: 80%;"></div>
+                                        <div class="relative z-10 w-full flex justify-between items-center text-white mix-blend-hard-light">
+                                            <div>
+                                                <div class="font-extrabold text-base leading-none">930</div>
+                                                <div class="text-[9px] font-semibold opacity-90">Rate (GPM)</div>
+                                            </div>
+                                        </div>
+                                         <div class="absolute right-3 z-0 text-white/30"><i class="fa-solid fa-gauge-high"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-b border-slate-100 last:border-0">
+                            <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-blue-50/50 transition-colors group" onclick="toggleAccordion('well2', this)">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600 flex items-center justify-center border border-blue-200 shadow-sm group-hover:from-blue-500 group-hover:to-blue-600 group-hover:text-white transition-all">
+                                        <i class="fa-solid fa-droplet text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-blue-900 text-sm group-hover:text-blue-700">THR-831</div>
+                                    </div>
+                                </div>
+                                <div class="text-right flex items-center gap-3">
+                                    <div>
+                                        <div class="text-[9px] text-slate-400 uppercase font-semibold">Aquifer</div>
+                                        <div class="text-xs font-bold text-slate-600">WASI</div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down text-slate-300 text-xs rotate-icon"></i>
+                                </div>
+                            </div>
+                            <div id="well2" class="accordion-content bg-slate-50/30">
+                                <div class="p-3 border-t border-slate-100 text-center text-xs text-slate-400 font-medium">Data not loaded</div>
+                            </div>
+                        </div>
+
+                        <div class="border-b border-slate-100 last:border-0">
+                            <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-blue-50/50 transition-colors group" onclick="toggleAccordion('well3', this)">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600 flex items-center justify-center border border-blue-200 shadow-sm group-hover:from-blue-500 group-hover:to-blue-600 group-hover:text-white transition-all">
+                                        <i class="fa-solid fa-droplet text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-blue-900 text-sm group-hover:text-blue-700">THR-845</div>
+                                    </div>
+                                </div>
+                                <div class="text-right flex items-center gap-3">
+                                    <div>
+                                        <div class="text-[9px] text-slate-400 uppercase font-semibold">Aquifer</div>
+                                        <div class="text-xs font-bold text-slate-600">WASI</div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down text-slate-300 text-xs rotate-icon"></i>
+                                </div>
+                            </div>
+                            <div id="well3" class="accordion-content bg-slate-50/30">
+                                <div class="p-3 border-t border-slate-100 text-center text-xs text-slate-400 font-medium">Data not loaded</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('w-64');
+            sidebar.classList.toggle('w-20');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        function toggleAccordion(id, header) {
+            const content = document.getElementById(id);
+            const icon = header.querySelector('.rotate-icon');
+            
+            document.querySelectorAll('.accordion-content').forEach(c => {
+                if(c !== content) c.classList.remove('open');
+            });
+            document.querySelectorAll('.rotate-icon').forEach(i => {
+                if(i !== icon) i.classList.remove('open');
+            });
+
+            content.classList.toggle('open');
+            icon.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>
