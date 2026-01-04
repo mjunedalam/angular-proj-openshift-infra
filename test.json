@@ -1,0 +1,515 @@
+[
+    {
+        "RIG_ACTIVITY": [
+            {
+                "biNum": "60",
+                "biNumDesc": "DEVELOPMENT DRILLING AND WORKOVERS",
+                "wellName": "ANDR-978",
+                "spuddate": "12/19/2025@1700",
+                "wRigCd": "JAC202",
+                "wDrlgLocDesc": "ANDR-978",
+                "welltype": "WATER WELL SUPPLY",
+                "waterWell": "ANDR-834, SDGM-983",
+                "wDrlgEndDt": "01/14/2026"
+            }
+        ],
+        "WELL_MASTER": [
+            {
+                "well": "ANDR-978",
+                "utmNorth": 2833303,
+                "utmEast": 326093,
+                "lon": 49.2682454,
+                "lat": 25.6066899
+            }
+        ],
+        "RIG_IDENTIFICATION": [
+            {
+                "rigname": "JACK-202"
+            }
+        ],
+        "CONTACT": [
+            {
+                "rigContNum": "+8821677713737",
+                "description": "THURAYA",
+                "rigContNumPdf": "+882167771\n3737",
+                "rigDescriptionPdf": "THURAYA"
+            },
+            {
+                "rigContNum": "0133786378",
+                "description": "RIG FORMAN VSAT",
+                "rigContNumPdf": "0133786378\n",
+                "rigDescriptionPdf": "RIG FORMAN\n VSAT"
+            },
+            {
+                "rigContNum": "0133786376",
+                "description": "OTHER VSAT",
+                "rigContNumPdf": "0133786376\n",
+                "rigDescriptionPdf": "OTHER VSAT\n"
+            }
+        ],
+        "DRLG_OP_STATUS": [
+            {
+                "epANum": 98730,
+                "wPrsntDpth": 845,
+                "wCsgBotDpth": 845,
+                "wCsgOdSz": "18 5/8",
+                "wDpthChgDis": 0,
+                "wMudCircPc": "0",
+                "wPrevDpth": 845,
+                "wSpudOprDay": 10.5,
+                "wOpRmk": "WIPER TRIP, CHC, POOH, RUN & CMT 18 5/8\" CSG, WOC.",
+                "nxt24HrPlanRmk": "PERFORM 2ND TOP JOB, WOC, N/D 30\" BOP, WH WORK, N/U 21 1/4\" BOP, RIH W/ 17\" DRLG BHA. COC.",
+                "spuddays": 10.5,
+                "footage": 0,
+                "targetDepth": 3828
+            }
+        ],
+        "DRLG_FM_TOPS": [
+            {
+                "epANum": 98730,
+                "stLongCd": "RUS",
+                "wStDmrkDpth": 825,
+                "wStDmrkRmk": "3FT SHALLOWER"
+            }
+        ],
+        "DRLG_FD_TDAY": [
+            {
+                "footage": 0
+            }
+        ],
+        "actualRm": 3,
+        "kpiRm": 4.89,
+        "rigMoveDays": -1.89,
+        "ROP_DATA": [
+            {
+                "rop": 0
+            }
+        ],
+        "NEXT_2_WELL_ACTIVITY": [
+            {
+                "nextWellActivity": "UTMN-3565"
+            }
+        ],
+        "NEW_TARGET_DAYS": [
+            {
+                "targetDays": 32
+            }
+        ],
+        "DRLG_OP_SMRY": [
+            {
+                "epANum": 98730,
+                "wEvntTime": "0500",
+                "wHolSz": "22",
+                "wOpRmk": "HPJSM, FLOW CHECK- STATIC, POOH W/ 22\" REAMING BHA WIPER TRIP TO 24\" SHOE, RIH FREE TO BTM.\n* PUMPING 75 PCF MUD CAP INSIDE ANNULUS.\n* HOLE IN GOOD CONDITION.",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 845,
+                "wHoleEndDpth": 845,
+                "toTm": "0830"
+            },
+            {
+                "epANum": 98730,
+                "wEvntTime": "0830",
+                "wHolSz": "22",
+                "wOpRmk": "SWEEP HOLE W/ 2X50 BBLS HVP, CHC W/ NO RETURN, SPOT 150 BBLS WEIGHTED CSG GO PILL ON BTM.\n* PUMPING 75 PCF MUD CAP INSIDE ANNULUS.",
+                
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 845,
+                "wHoleEndDpth": 845,
+                "toTm": "0930"
+            },
+            {
+                "epANum": 98730,
+                "wEvntTime": "0930",
+                "wHolSz": "22",
+                "wOpRmk": "HPJSM, FLOW CHECK- STATIC, POOH W/ 22\" REAMING BHA TO SURFACE.\n* HOLE IN GOOD CONDITION.\n* PUMPING 75 PCF MUD CAP INSIDE ANNULUS",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 845,
+                "wHoleEndDpth": 845,
+                "toTm": "1400"
+            },
+            {
+                "epANum": 98730,
+                "wEvntTime": "0300",
+                "wHolSz": "22",
+                "wOpRmk": "WAIT ON CMT HARDNESS.",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "CSG",
+                "wHoleStaDpth": 845,
+                "wHoleEndDpth": 845,
+                "toTm": "0500"
+            }
+        ],
+        "BITINFO": [
+            {
+                "bitSz": 22
+            }
+        ],
+        "EXAD_GWD_IR_HEADER":[{
+            "dtRemarks": "Provide AramcoLink on-site to pick casing points and formation tops remotely.",
+            "mudRemarks": "Customize Mud Logging Services is required in this well from surface to TD.",
+            "loggingRemarks": "Run ZDL/CN/GR logs from total depth to 100 ft above the 9-5/8\" casing shoe. Continue CN/GR to surface."
+        }],
+        "EXAD_GWD_IR_TOPS":[
+            {
+                "stLongCd": "AHMD",
+                "planTvdDepth": 2760,
+                "planSsDepth": -1815
+            },
+            {
+                "stLongCd": "ARUM",
+                "planTvdDepth": 1960,
+                "planSsDepth": -1015
+            },
+            {
+                "stLongCd": "LAMS",
+                "planTvdDepth": 2450,
+                "planSsDepth": -1505
+            },
+            {
+                "stLongCd": "RUS",
+                "planTvdDepth": 800,
+                "planSsDepth": 145
+            },
+            {
+                "stLongCd": "SFNY",
+                "planTvdDepth": 3055,
+                "planSsDepth": -2110
+            },
+            {
+                "stLongCd": "SHUB",
+                "planTvdDepth": 3825,
+                "planSsDepth": -2880
+            },
+            {
+                "stLongCd": "UMER",
+                "planTvdDepth": 880,
+                "planSsDepth": 65
+            }
+        ],
+        "EXAD_GWD_IR_CASING":[
+            {
+            "csgSize": "13 3/8",
+            "csgType": "Casing",
+            "csgDepth": 1980,
+            "csgRemarks": "+/- 20 ft into ARUM"
+        },
+    {
+            "csgSize": "18 5/8",
+            "csgType": "Casing",
+            "csgDepth": 820,
+            "csgRemarks": "+/- 20 into RUS"
+        },{
+            "csgSize": "24",
+            "csgType": "Conductor",
+            "csgDepth": 100,
+            "csgRemarks": ""
+        },{
+            "csgSize": "9 5/8",
+            "csgType": "Liner",
+            "csgDepth": 3075,
+            "csgRemarks": "+/- 20 ft into SFNY"
+        }],
+        "EXAD_GWD_IR_HYDROGEOLOGY":[{
+            "flowType": "N",
+            "estTargetAquifier": "WASI",
+            "estStaticWaterLevel": 110,
+            "estWaterQuality": 2800,
+            "estProductivity": 500,
+            "estH2s": 0
+        }],
+        "EXAD_GWD_IR_WATER":[{
+            "offsetWaterWell": "ANDR_963",
+            "distance": 6.4,
+            "direction": "SW",
+            "aquifer": "WASI",
+            "td": 3600,
+            "flowRate": 770,
+            "rpm": 1500,
+            "staticWaterLevel": 108.4,
+            "specificCapacity": 5.64,
+            "drawDown": 136.58,
+            "fieldTds": 2030,
+            "h2s": 0,
+            "testDuration": 180
+        }],
+        "EXAD_RCD_PREWAP": [{
+            "surfaceElevation": 945,
+            "estTargetDepth": 3800,
+            "targetFormation": "WSIA",
+            "supportedBusiness": "ANDR-814 REPLACEMENT"
+        }],
+        "WATER_WELL_TEST_OUTCOME": [{
+            "wellName": "ANDR-978",
+            "testType": "flow",
+            "aquifer": "UMER",
+            "rpm": 1700,
+            "flowRate":1000,
+            "temperature": 61,
+            "tds": 2900,
+            "producitivty": 4.37,
+            "h2s": 0
+        }]
+    },
+    {
+        "RIG_ACTIVITY": [
+            {
+                "biNum": "58",
+                "biNumDesc": "UTILITY AND SUPPORT WELLS",
+                "drlgPlanWellDesc": "WATER SUPPLU",
+                "wellName": "ANDR-983",
+                "spuddate": "12/18/2025@1700",
+                "wRigCd": "JAC203",
+                "welltype": "WATER SUPPLU",
+                "waterWell": "ANDR-981",
+                "wDrlgEndDt": "01/15/2026"
+            }
+        ],
+        "WELL_MASTER": [
+            {
+                "well": "ANDR-983",
+                "utmNorth": 2834474,
+                "utmEast": 285987,
+                "lon": 48.8688838,
+                "lat": 25.6119823
+            }
+        ],
+        "RIG_IDENTIFICATION": [
+            {
+                "rigname": "JACK-203"
+            }
+        ],
+        "CONTACT": [
+            {
+                "rigContNum": "+8821677713735",
+                "description": "THURAYA",
+                "rigContNumPdf": "+882167771\n3735",
+                "rigDescriptionPdf": "THURAYA"
+            },
+            {
+                "rigContNum": "0135788566",
+                "description": "RIG FORMAN VSAT",
+                "rigContNumPdf": "0135788566\n",
+                "rigDescriptionPdf": "RIG FORMAN\n VSAT"
+            },
+            {
+                "rigContNum": "0135788567",
+                "description": "OTHER VSAT",
+                "rigContNumPdf": "0135788567\n",
+                "rigDescriptionPdf": "OTHER VSAT\n"
+            }
+        ],
+        "DRLG_OP_STATUS": [
+            {
+                "epANum": 99479,
+                "wPrsntDpth": 960,
+                "wCsgBotDpth": 650,
+                "wCsgOdSz": "18 5/8",
+                "wDpthChgDis": 260,
+                "wPrevDpth": 700,
+                "wSpudOprDay": 11.5,
+                "wMudCircPc": "100",
+                "wOpRmk": "DRLG 17\" HOLE SECTION ",
+                "nxt24HrPlanRmk": "DRLG 17\" HOLE SECTION TO CP @ 2195 FT",
+                "spuddays": 11.5,
+                "footage": 260,
+                "targetDepth": 5228
+            }
+        ],
+        "DRLG_FM_TOPS": [
+            {
+                "epANum": 99479,
+                "stLongCd": "PNGU",
+                "wStDmrkDpth": 271,
+                "wStDmrkRmk": "66 FT DEEPER"
+            },
+            {
+                "epANum": 99479,
+                "stLongCd": "KHBR",
+                "wStDmrkDpth": 360,
+                "wStDmrkRmk": null
+            },
+            {
+                "epANum": 99479,
+                "stLongCd": "RUS",
+                "wStDmrkDpth": 620,
+                "wStDmrkRmk": "75 FT DEEPER"
+            },
+            {
+                "epANum": 99479,
+                "stLongCd": "UMER",
+                "wStDmrkDpth": 920,
+                "wStDmrkRmk": "95 FT DEEPER"
+            }
+        ],
+        "DRLG_FD_TDAY": [
+            {
+                "footage": 260
+            }
+        ],
+        "actualRm": 9.083,
+        "kpiRm": 1.75,
+        "rigMoveDays": 7.333,
+        "ROP_DATA": [
+            {
+                "rop": 10.83
+            }
+        ],
+        "NEXT_2_WELL_ACTIVITY": [
+            {
+                "nextWellActivity": "BARH-803"
+            }
+        ],
+        "NEW_TARGET_DAYS": [
+            {
+                "targetDays": 38
+            }
+        ],
+        "DRLG_OP_SMRY": [
+            {
+                "epANum": 99479,
+                "wEvntTime": "0500",
+                "wHolSz": "17",
+                "wOpRmk": "DRILL 17\" HOLE W/ 65 PCF INHIBITED PHPA MUD W/ 100% RETURN.\n- WASH & REAM EVERY JOINT DRILLED TWO TIMES.\n- SWEEP HOLE W/ 2 X 25 BBLS HVP EVERY CONNECTION.",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 700,
+                "wHoleEndDpth": 960,
+                "toTm": "0500"
+            }
+        ],
+        "BITINFO": [
+            {
+                "bitSz": null
+            }
+        ],
+        "EXAD_GWD_IR_HEADER":[{
+            "dtRemarks": "Provide AramcoLink on-site to pick casing points and formation tops remotely.",
+            "mudRemarks": "Customize Mudlogging Services are required in this well from surface to TD.",
+            "loggingRemarks": "Not required."
+        }],
+        "EXAD_GWD_IR_TOPS":[
+            {
+                "stLongCd": "AHMD",
+                "planTvdDepth": 4510,
+                "planSsDepth": -3765
+            },
+            {
+                "stLongCd": "ARUM",
+                "planTvdDepth": 2505,
+                "planSsDepth": -1760
+            },
+            {
+                "stLongCd": "DMMM",
+                "planTvdDepth": 455,
+                "planSsDepth": 290
+            },
+            {
+                "stLongCd": "RUS",
+                "planTvdDepth": 785,
+                "planSsDepth": -40
+            },
+            {
+                "stLongCd": "SFNY",
+                "planTvdDepth": 4845,
+                "planSsDepth": -4100
+            },
+            {
+                "stLongCd": "SHUB",
+                "planTvdDepth": 5720,
+                "planSsDepth": -4975
+            },
+            {
+                "stLongCd": "UMER",
+                "planTvdDepth": 1005,
+                "planSsDepth": -260
+            },
+            {
+                "stLongCd": "WASI",
+                "planTvdDepth": 4010,
+                "planSsDepth": -3265
+            }
+        ],
+        "EXAD_GWD_IR_CASING":[
+            {
+            "csgSize": "24",
+            "csgType": "Conductor",
+            "csgDepth": 100,
+            "csgRemarks": null
+        },
+    {
+            "csgSize": "18 5/8",
+            "csgType": "Casing",
+            "csgDepth": 815,
+            "csgRemarks": "+/- 30 into RUS"
+        },{
+            "csgSize": "13 3/8",
+            "csgType": "Casing",
+            "csgDepth": 2535,
+            "csgRemarks": "+/-30 ft into ARUM"
+        },{
+            "csgSize": "9 5/8",
+            "csgType": "Liner",
+            "csgDepth": 4865,
+            "csgRemarks": "+/- 20 ft into SFNY"
+        }],
+        "EXAD_GWD_IR_HYDROGEOLOGY":[{
+            "flowType": "Y",
+            "estTargetAquifier": "WASI",
+            "estStaticWaterLevel": 26,
+            "estWaterQuality": 2300,
+            "estProductivity": 500,
+            "estH2s": 0
+        }],
+        "EXAD_GWD_IR_WATER":[
+        {
+            "offsetWaterWell": "ANDR-963",
+            "distance": 35,
+            "direction": "E",
+            "aquifer": "WASI",
+            "td": 0,
+            "flowRate": 770,
+            "rpm": 0,
+            "staticWaterLevel": 108,
+            "specificCapacity": 5.6,
+            "drawDown": 137,
+            "fieldTds": 2030,
+            "h2s": 0,
+            "testDuration": 0
+        },
+        {
+            "offsetWaterWell": "FRUQ-805",
+            "distance": 59,
+            "direction": "N",
+            "aquifer": "WASI",
+            "td": 0,
+            "flowRate": 0,
+            "rpm": 0,
+            "staticWaterLevel": null,
+            "specificCapacity": null,
+            "drawDown": null,
+            "fieldTds": 2700,
+            "h2s": 0,
+            "testDuration": 0
+        }
+    ],
+        "EXAD_RCD_PREWAP": [{
+            "surfaceElevation": 745,
+            "estTargetDepth": 5620,
+            "targetFormation": "WASI",
+            "supportedBusiness": "Booster Gas Compression Station (BGCS-1)."
+        }],
+        "WATER_WELL_TEST_OUTCOME": [{
+            "wellName": "ANDR-983",
+            "testType": null,
+            "aquifer": null,
+            "rpm": null,
+            "flowRate":null,
+            "temperature": null,
+            "tds": null,
+            "producitivty": null,
+            "h2s": null
+        }]
+    }
+]
