@@ -1,0 +1,366 @@
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.aramco.easd</groupId>
+    <artifactId>dailyoperations</artifactId>
+    <version>1.0.0‑SNAPSHOT</version>
+
+    <properties>
+        <compiler-plugin.version>3.14.0</compiler-plugin.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>com.redhat.quarkus.platform</quarkus.platform.group-id>
+        <quarkus.platform.version>3.20.3.redhat-00006</quarkus.platform.version>
+
+        <quarkus.mybatis.version>2.4.1</quarkus.mybatis.version>
+
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.4</surefire-plugin.version>
+        <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
+        <commons-lang3.version>3.14.0</commons-lang3.version>
+
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Quarkus extensions – version taken from the BOM property -->
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-rest-client-reactive-jackson</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-rest-client-reactive</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-smallrye-jwt</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-hibernate-validator</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-smallrye-openapi</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-csrf-reactive</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <!-- MyBatis (the version property already exists) -->
+            <dependency>
+                <groupId>io.quarkiverse.mybatis</groupId>
+                <artifactId>quarkus-mybatis</artifactId>
+                <version>${quarkus.mybatis.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-resteasy-reactive</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-jdbc-oracle</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-arc</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-smallrye-health</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-opentelemetry</artifactId>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <!-- test dependencies (versions also come from the BOM) -->
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-junit5</artifactId>
+                <scope>test</scope>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-junit5-mockito</artifactId>
+                <scope>test</scope>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.rest-assured</groupId>
+                <artifactId>rest-assured</artifactId>
+                <scope>test</scope>
+                <version>5.5.0</version>   <!-- any recent version -->
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-test-security</artifactId>
+                <scope>test</scope>
+                <version>${quarkus.platform.version}</version>
+            </dependency>
+
+            <!-- Apache Commons Lang -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Quarkus extensions – version comes from the BOM -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-reactive-jackson</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-reactive</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-csrf-reactive</artifactId>
+        </dependency>
+
+        <!-- CVE‑2024‑7254 fix -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.25.5.redhat-00003</version>
+        </dependency>
+
+        <!-- MyBatis – version is defined in the property above -->
+        <dependency>
+            <groupId>io.quarkiverse.mybatis</groupId>
+            <artifactId>quarkus-mybatis</artifactId>
+            <version>${quarkus.mybatis.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-resteasy-reactive</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-oracle</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-security</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Apache Commons – version now defined -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons-lang3.version}</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>redhat</id>
+            <url>https://maven.repository.redhat.com/ga</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>redhat</id>
+            <url>https://maven.repository.redhat.com/ga</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <build>
+        <plugins>
+            <!-- Quarkus Maven plugin -->
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Compiler -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- Surefire / Failsafe -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                                <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                                <maven.home>${maven.home}</maven.home>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Checkstyle -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${checkstyle-plugin.version}</version>
+                <configuration>
+                    <configLocation>google_checks.xml</configLocation>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <skipITs>false</skipITs>
+                <quarkus.package.type>native</quarkus.package.type>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>
