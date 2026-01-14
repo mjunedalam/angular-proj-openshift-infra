@@ -1,0 +1,56 @@
+C:\Users\alammx1o.ARAMCO\Java\jdk-21.0.3\bin\java.exe -Dmaven.multiModuleProjectDirectory=C:\Dev\JavaDev\Agwa-Services\dailyoperations -Djansi.passthrough=true "-Dmaven.home=C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven3" "-Dclassworlds.conf=C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven3\bin\m2.conf" "-Dmaven.ext.class.path=C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven-event-listener.jar" "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\lib\idea_rt.jar=60186:C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\bin" -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -classpath "C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven3\boot\plexus-classworlds-2.7.0.jar;C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven3\boot\plexus-classworlds.license" org.codehaus.classworlds.Launcher -Didea.version=2023.3.4 -DskipTests=true install
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.aramco.easd:dailyoperations >-------------------
+[INFO] Building dailyoperations 1.0.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ dailyoperations ---
+[INFO] Copying 5 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- quarkus:3.20.3.redhat-00006:generate-code (default) @ dailyoperations ---
+[INFO] 
+[INFO] --- compiler:3.14.0:compile (default-compile) @ dailyoperations ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- quarkus:3.20.3.redhat-00006:generate-code-tests (default) @ dailyoperations ---
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ dailyoperations ---
+[INFO] Copying 0 resource from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.14.0:testCompile (default-testCompile) @ dailyoperations ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ dailyoperations ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.3.0:jar (default-jar) @ dailyoperations ---
+[INFO] Building jar: C:\Dev\JavaDev\Agwa-Services\dailyoperations\target\dailyoperations-1.0.0-SNAPSHOT.jar
+[INFO] 
+[INFO] --- quarkus:3.20.3.redhat-00006:build (default) @ dailyoperations ---
+[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.allow-json" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
+[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.enabled" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
+[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.cookie-http-only" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
+[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.cookie-name" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
+[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.token-header-name" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
+[WARNING] [io.quarkus.runtime.logging.LoggingSetupRecorder] Log level TRACE for category 'org.jboss.resteasy.reactive.client.logging' set below minimum logging level DEBUG, promoting it to DEBUG. Set the build time configuration property 'quarkus.log.category."org.jboss.resteasy.reactive.client.logging".min-level' to 'TRACE' to avoid this warning
+[INFO] [io.quarkus.deployment.QuarkusAugmentor] Quarkus augmentation completed in 4123ms
+[INFO] 
+[INFO] --- failsafe:3.5.4:integration-test (default) @ dailyoperations ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- failsafe:3.5.4:verify (default) @ dailyoperations ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- install:3.1.1:install (default-install) @ dailyoperations ---
+[INFO] Installing C:\Dev\JavaDev\Agwa-Services\dailyoperations\pom.xml to C:\Users\alammx1o.ARAMCO\.m2\repository\com\aramco\easd\dailyoperations\1.0.0-SNAPSHOT\dailyoperations-1.0.0-SNAPSHOT.pom
+[INFO] Installing C:\Dev\JavaDev\Agwa-Services\dailyoperations\target\dailyoperations-1.0.0-SNAPSHOT.jar to C:\Users\alammx1o.ARAMCO\.m2\repository\com\aramco\easd\dailyoperations\1.0.0-SNAPSHOT\dailyoperations-1.0.0-SNAPSHOT.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  18.280 s
+[INFO] Finished at: 2026-01-14T14:26:15+03:00
+[INFO] ------------------------------------------------------------------------
+
+Process finished with exit code 0
