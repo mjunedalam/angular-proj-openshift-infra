@@ -1,56 +1,94 @@
-C:\Users\alammx1o.ARAMCO\Java\jdk-21.0.3\bin\java.exe -Dmaven.multiModuleProjectDirectory=C:\Dev\JavaDev\Agwa-Services\dailyoperations -Djansi.passthrough=true "-Dmaven.home=C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven3" "-Dclassworlds.conf=C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven3\bin\m2.conf" "-Dmaven.ext.class.path=C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven-event-listener.jar" "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\lib\idea_rt.jar=60186:C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\bin" -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -classpath "C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven3\boot\plexus-classworlds-2.7.0.jar;C:\Program Files\JetBrains\IntelliJ IDEA 2023.3.4\plugins\maven\lib\maven3\boot\plexus-classworlds.license" org.codehaus.classworlds.Launcher -Didea.version=2023.3.4 -DskipTests=true install
-[INFO] Scanning for projects...
-[INFO] 
-[INFO] ------------------< com.aramco.easd:dailyoperations >-------------------
-[INFO] Building dailyoperations 1.0.0-SNAPSHOT
-[INFO]   from pom.xml
-[INFO] --------------------------------[ jar ]---------------------------------
-[INFO] 
-[INFO] --- resources:3.3.1:resources (default-resources) @ dailyoperations ---
-[INFO] Copying 5 resources from src\main\resources to target\classes
-[INFO] 
-[INFO] --- quarkus:3.20.3.redhat-00006:generate-code (default) @ dailyoperations ---
-[INFO] 
-[INFO] --- compiler:3.14.0:compile (default-compile) @ dailyoperations ---
-[INFO] Nothing to compile - all classes are up to date.
-[INFO] 
-[INFO] --- quarkus:3.20.3.redhat-00006:generate-code-tests (default) @ dailyoperations ---
-[INFO] 
-[INFO] --- resources:3.3.1:testResources (default-testResources) @ dailyoperations ---
-[INFO] Copying 0 resource from src\test\resources to target\test-classes
-[INFO] 
-[INFO] --- compiler:3.14.0:testCompile (default-testCompile) @ dailyoperations ---
-[INFO] Nothing to compile - all classes are up to date.
-[INFO] 
-[INFO] --- surefire:3.5.4:test (default-test) @ dailyoperations ---
-[INFO] Tests are skipped.
-[INFO] 
-[INFO] --- jar:3.3.0:jar (default-jar) @ dailyoperations ---
-[INFO] Building jar: C:\Dev\JavaDev\Agwa-Services\dailyoperations\target\dailyoperations-1.0.0-SNAPSHOT.jar
-[INFO] 
-[INFO] --- quarkus:3.20.3.redhat-00006:build (default) @ dailyoperations ---
-[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.allow-json" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
-[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.enabled" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
-[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.cookie-http-only" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
-[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.cookie-name" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
-[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.csrf-reactive.token-header-name" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
-[WARNING] [io.quarkus.runtime.logging.LoggingSetupRecorder] Log level TRACE for category 'org.jboss.resteasy.reactive.client.logging' set below minimum logging level DEBUG, promoting it to DEBUG. Set the build time configuration property 'quarkus.log.category."org.jboss.resteasy.reactive.client.logging".min-level' to 'TRACE' to avoid this warning
-[INFO] [io.quarkus.deployment.QuarkusAugmentor] Quarkus augmentation completed in 4123ms
-[INFO] 
-[INFO] --- failsafe:3.5.4:integration-test (default) @ dailyoperations ---
-[INFO] Tests are skipped.
-[INFO] 
-[INFO] --- failsafe:3.5.4:verify (default) @ dailyoperations ---
-[INFO] Tests are skipped.
-[INFO] 
-[INFO] --- install:3.1.1:install (default-install) @ dailyoperations ---
-[INFO] Installing C:\Dev\JavaDev\Agwa-Services\dailyoperations\pom.xml to C:\Users\alammx1o.ARAMCO\.m2\repository\com\aramco\easd\dailyoperations\1.0.0-SNAPSHOT\dailyoperations-1.0.0-SNAPSHOT.pom
-[INFO] Installing C:\Dev\JavaDev\Agwa-Services\dailyoperations\target\dailyoperations-1.0.0-SNAPSHOT.jar to C:\Users\alammx1o.ARAMCO\.m2\repository\com\aramco\easd\dailyoperations\1.0.0-SNAPSHOT\dailyoperations-1.0.0-SNAPSHOT.jar
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time:  18.280 s
-[INFO] Finished at: 2026-01-14T14:26:15+03:00
-[INFO] ------------------------------------------------------------------------
+2026-01-18T10:13:43.010615464Z > agwa@0.0.1 install
+2026-01-18T10:13:43.010615464Z > npm install
+2026-01-18T10:13:43.010615464Z
+2026-01-18T10:13:43.100087804Z npm warn using --force Recommended protections disabled.
+2026-01-18T10:13:53.262280781Z
+2026-01-18T10:13:53.262280781Z > agwa@0.0.1 install
+2026-01-18T10:13:53.262280781Z > npm install
+2026-01-18T10:13:53.262280781Z
+2026-01-18T10:13:53.353052076Z npm warn using --force Recommended protections disabled.
+2026-01-18T10:14:03.133860306Z
+2026-01-18T10:14:03.133860306Z > agwa@0.0.1 install
+2026-01-18T10:14:03.133860306Z > npm install
+2026-01-18T10:14:03.133860306Z
+2026-01-18T10:14:03.223258619Z npm warn using --force Recommended protections disabled.
+2026-01-18T10:14:13.982597981Z
+2026-01-18T10:14:13.982597981Z > agwa@0.0.1 install
+2026-01-18T10:14:13.982597981Z > npm install
+2026-01-18T10:14:13.982597981Z
+2026-01-18T10:14:14.081399428Z npm warn using --force Recommended protections disabled.
+2026-01-18T10:14:22.936274788Z
+2026-01-18T10:14:22.936274788Z > agwa@0.0.1 install
+2026-01-18T10:14:22.936274788Z > npm install
+2026-01-18T10:14:22.936274788Z
+2026-01-18T10:14:23.033357464Z npm warn using --force Recommended protections disabled.
 
-Process finished with exit code 0
+getting above npm install going in loop , below are the required files
+{
+  "name": "agwa",
+  "version": "0.0.1",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --watch",
+    "lint": "ng lint",
+    "install": "npm install --legacy-peer-deps"
+  },
+  "private": true,
+  "dependencies": {
+    "@ag-grid-community/all-modules": "^27.3.0",
+    "@angular/animations": "^19.0.0",
+    "@angular/cdk": "^19.2.19",
+    "@angular/common": "^19.0.0",
+    "@angular/compiler": "^19.0.0",
+    "@angular/core": "^19.0.0",
+    "@angular/forms": "^19.0.0",
+    "@angular/material": "^19.2.19",
+    "@angular/platform-browser": "^19.0.0",
+    "@angular/platform-browser-dynamic": "^19.0.0",
+    "@angular/router": "^19.0.0",
+    "@arcgis/core": "^4.33.12",
+    "@auth0/angular-jwt": "^5.2.0",
+    "@ngrx/signals": "^19.2.1",
+    "@tailwindcss/postcss": "^4.1.11",
+    "ag-grid-angular": "~31.3.2",
+    "ag-grid-community": "~31.3.2",
+    "ag-grid-enterprise": "~31.3.2",
+    "chart.js": "^4.5.0",
+    "d3": "^7.9.0",
+    "juice": "^11.0.1",
+    "material-icons": "^1.13.14",
+    "ng2-charts": "^8.0.0",
+    "postcss": "^8.5.6",
+    "rxjs": "~7.8.0",
+    "tailwindcss": "^4.1.11",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^19.2.15",
+    "@angular/cli": "^19.2.5",
+    "@angular/compiler-cli": "^19.2.0",
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "@types/d3": "^7.4.3",
+    "@types/express": "^4.17.4",
+    "@types/jasmine": "~5.1.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^18.8.0",
+    "angular-eslint": "21.0.1",
+    "babel-jest": "30.0.0",
+    "eslint": "^9.39.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "jest-preset-angular": "^14.0.1",
+    "ts-jest": "^29.2.4",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "8.46.4"
+  }
+}
