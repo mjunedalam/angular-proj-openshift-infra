@@ -1,16 +1,72 @@
-2026-01-20 11:42:52,326 INFO [org.apa.cam.qua.cor.CamelBootstrapRecorder] (main) Apache Camel Quarkus 3.15.0.redhat-00007 is starting
-2026-01-20 11:42:52,327 INFO [org.apa.cam.mai.MainSupport] (main) Apache Camel (Main) 4.8.0.redhat-00015 is starting
-2026-01-20 11:42:52,330 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Apache Camel 4.8.0.redhat-00015 (camel-1) is starting
-2026-01-20 11:42:52,330 INFO [org.apa.cam.ope.OpenTelemetryTracer] (main) OpenTelemetryTracer enabled using instrumentation-name: camel
-2026-01-20 11:42:52,330 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Using ThreadPoolFactory: org.apache.camel.opentelemetry.OpenTelemetryInstrumentedThreadPoolFactory@2729bb71
-2026-01-20 11:42:52,427 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Routes startup (total:1)
-2026-01-20 11:42:52,427 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Started SendEmailRoute (rest://post:/send-email)
-2026-01-20 11:42:52,427 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Apache Camel 4.8.0.redhat-00015 (camel-1) started in 96ms (build:0ms init:0ms start:96ms)
-2026-01-20 11:42:52,430 INFO [io.quarkus] (main) agwa-integrations 1.0.0 native (powered by Quarkus 3.15.3.redhat-00004) started in 0.401s. Listening on: http://0.0.0.0:9090
-2026-01-20 11:42:52,430 INFO [io.quarkus] (main) Profile prod activated.
-2026-01-20 11:42:52,430 INFO [io.quarkus] (main) Installed features: [camel-attachments, camel-core, camel-http, camel-ical, camel-jackson, camel-jsonpath, camel-mail, camel-microprofile-health, camel-opentelemetry, camel-platform-http, camel-rest, cdi, opentelemetry, qute, rest-client, rest-client-jackson, smallrye-context-propagation, smallrye-health, vertx]
-2026-01-20 11:43:12,667 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (Shutdown thread) Apache Camel 4.8.0.redhat-00015 (camel-1) is shutting down (timeout:45s)
-2026-01-20 11:43:12,667 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (Shutdown thread) Routes stopped (total:1)
-2026-01-20 11:43:12,667 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (Shutdown thread) Stopped SendEmailRoute (rest://post:/send-email)
-2026-01-20 11:43:12,667 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (Shutdown thread) Apache Camel 4.8.0.redhat-00015 (camel-1) shutdown in 0ms (uptime:20s)
-2026-01-20 11:43:12,725 INFO [io.quarkus] (Shutdown thread) agwa-integrations stopped in 0.059s
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agwa-integrations
+spec:
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: agwa-integrations
+          image: agwa-integrations
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          envFrom:
+            - secretRef:
+                name: agwa-integrations-datasource-credentials-secret
+            - configMapRef:
+                name: datasource-configmap
+          env:
+            - name: oracle.jdbc.javaNetNio
+              value: "false"
+          resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 50m
+              memory: 110Mi
+apiVersion: v1
+kind: Service
+metadata:
+  name: agwa-integrations
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
