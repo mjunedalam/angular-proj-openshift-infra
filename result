@@ -1,0 +1,54 @@
+package com.aramco.easd.agwa.integrations.routes;
+
+import com.aramco.easd.agwa.integrations.dto.EmailApiPayload;
+import com.aramco.easd.agwa.integrations.dto.EmailRequest;
+import com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.apache.camel.Exchange;
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.jackson.JacksonDataFormat;
+
+@ApplicationScoped
+public class EmailRoute extends RouteBuilder {
+
+    @Inject
+    EmailPayloadBuilder payloadBuilder;
+
+    @Override
+    public void configure() {
+        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        JacksonDataFormat format = new JacksonDataFormat();
+        format.setObjectMapper(mapper);
+        format.setUnmarshalType(EmailRequest.class);
+
+        from("rest:post:/send-email")
+                .unmarshal(format)
+                .log("Deserialized EmailRequest: ${body}")
+                .routeId("SendEmailRoute")
+                .process(exchange -> {
+                    // Set the property as you were doing before
+                    EmailRequest request = exchange.getIn().getBody(EmailRequest.class);
+                    exchange.setProperty("EmailRequest", request);
+                })
+                
+                // --- FIX STARTS HERE ---
+                .process(exchange -> {
+                    // We call the method directly. 
+                    // This bypasses the "MethodNotFound" reflection error.
+                    EmailApiPayload payload = payloadBuilder.buildPayload(exchange);
+                    exchange.getMessage().setBody(payload);
+                })
+                // --- FIX ENDS HERE ---
+
+                .marshal().json()
+                .log("JSON to send: ${body}")
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                .to("https://email-service-test.apps.ocpa.enp.aramco.com.sa?bridgeEndpoint=true")
+                .log("Email request forwarded to Email Api")
+                .setBody(constant("OK"));
+    }
+}
