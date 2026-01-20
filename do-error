@@ -1,45 +1,16 @@
-[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
- Port 4200 is already in use.
-Would you like to use a different port? Yes
-Component HMR has been enabled, see https://angular.dev/hmr for more info.
-An unhandled exception occurred: Cannot find module @rollup/rollup-win32-x64-msvc. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
-See "C:\Users\ALAMMX~1.ARA\AppData\Local\Temp\ng-mOd5YH\angular-errors.log" for further details.
-node:internal/process/promises:391
-    triggerUncaughtException(err, true /* fromPromise */);
-    ^
-
-Error: Cannot find module @rollup/rollup-win32-x64-msvc. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
-    at requireWithFriendlyError (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:71:9)
-    at Object.<anonymous> (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:80:76)
-    ... 3 lines matching cause stack trace ...
-    at Module._load (node:internal/modules/cjs/loader:1091:12)
-    at cjsLoader (node:internal/modules/esm/translators:298:15)
-    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:240:7)
-    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
-    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24) {
-  [cause]: Error: Cannot find module '@rollup/rollup-win32-x64-msvc'
-  Require stack:
-  - C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js
-      at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
-      at requireWithFriendlyError (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:53:10)
-      at Object.<anonymous> (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:80:76)
-      at Module._compile (node:internal/modules/cjs/loader:1521:14)
-      at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
-      at Module.load (node:internal/modules/cjs/loader:1266:32)
-      at requireWithFriendlyError (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:53:10)
-      at Object.<anonymous> (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:80:76)
-      at requireWithFriendlyError (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:53:10)
-      at requireWithFriendlyError (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:53:10)
-      at Object.<anonymous> (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:80:76)
-      at Module._compile (node:internal/modules/cjs/loader:1521:14)
-      at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
-      at Module.load (node:internal/modules/cjs/loader:1266:32)
-      at Module._load (node:internal/modules/cjs/loader:1091:12) {
-    code: 'MODULE_NOT_FOUND',
-    requireStack: [
-      'C:\\Dev\\JavaDev\\Agwa-Services\\agwa-master\\agwa-frontend\\node_modules\\vite\\node_modules\\rollup\\dist\\native.js'
-    ]
-  }
-}
-
-Node.js v20.19.6
+2026-01-20 11:42:52,326 INFO [org.apa.cam.qua.cor.CamelBootstrapRecorder] (main) Apache Camel Quarkus 3.15.0.redhat-00007 is starting
+2026-01-20 11:42:52,327 INFO [org.apa.cam.mai.MainSupport] (main) Apache Camel (Main) 4.8.0.redhat-00015 is starting
+2026-01-20 11:42:52,330 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Apache Camel 4.8.0.redhat-00015 (camel-1) is starting
+2026-01-20 11:42:52,330 INFO [org.apa.cam.ope.OpenTelemetryTracer] (main) OpenTelemetryTracer enabled using instrumentation-name: camel
+2026-01-20 11:42:52,330 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Using ThreadPoolFactory: org.apache.camel.opentelemetry.OpenTelemetryInstrumentedThreadPoolFactory@2729bb71
+2026-01-20 11:42:52,427 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Routes startup (total:1)
+2026-01-20 11:42:52,427 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Started SendEmailRoute (rest://post:/send-email)
+2026-01-20 11:42:52,427 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Apache Camel 4.8.0.redhat-00015 (camel-1) started in 96ms (build:0ms init:0ms start:96ms)
+2026-01-20 11:42:52,430 INFO [io.quarkus] (main) agwa-integrations 1.0.0 native (powered by Quarkus 3.15.3.redhat-00004) started in 0.401s. Listening on: http://0.0.0.0:9090
+2026-01-20 11:42:52,430 INFO [io.quarkus] (main) Profile prod activated.
+2026-01-20 11:42:52,430 INFO [io.quarkus] (main) Installed features: [camel-attachments, camel-core, camel-http, camel-ical, camel-jackson, camel-jsonpath, camel-mail, camel-microprofile-health, camel-opentelemetry, camel-platform-http, camel-rest, cdi, opentelemetry, qute, rest-client, rest-client-jackson, smallrye-context-propagation, smallrye-health, vertx]
+2026-01-20 11:43:12,667 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (Shutdown thread) Apache Camel 4.8.0.redhat-00015 (camel-1) is shutting down (timeout:45s)
+2026-01-20 11:43:12,667 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (Shutdown thread) Routes stopped (total:1)
+2026-01-20 11:43:12,667 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (Shutdown thread) Stopped SendEmailRoute (rest://post:/send-email)
+2026-01-20 11:43:12,667 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (Shutdown thread) Apache Camel 4.8.0.redhat-00015 (camel-1) shutdown in 0ms (uptime:20s)
+2026-01-20 11:43:12,725 INFO [io.quarkus] (Shutdown thread) agwa-integrations stopped in 0.059s
