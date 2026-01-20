@@ -1,142 +1,40 @@
-Caused by: java.lang.RuntimeException: java.lang.RuntimeException: org.apache.camel.FailedToCreateRouteException: Failed to create route SendEmailRoute at: >>> Bean[com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder_ClientProxy] <<< in route: Route(SendEmailRoute)[From[rest:post:/send-email] -> [Unmars... because of Method with name: buildPayload not found on bean: com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder@46ee1b62 of type: com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder_ClientProxy
-	at org.apache.camel.quarkus.core.CamelBootstrapRecorder.start(CamelBootstrapRecorder.java:47)
-	at io.quarkus.deployment.steps.CamelBootstrapProcessor$boot173480958.deploy_0(Unknown Source)
-	at io.quarkus.deployment.steps.CamelBootstrapProcessor$boot173480958.deploy(Unknown Source)
-	... 7 more
-Caused by: java.lang.RuntimeException: org.apache.camel.FailedToCreateRouteException: Failed to create route SendEmailRoute at: >>> Bean[com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder_ClientProxy] <<< in route: Route(SendEmailRoute)[From[rest:post:/send-email] -> [Unmars... because of Method with name: buildPayload not found on bean: com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder@46ee1b62 of type: com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder_ClientProxy
-	at org.apache.camel.quarkus.main.CamelMainRuntime.start(CamelMainRuntime.java:65)
-	at org.apache.camel.quarkus.core.CamelBootstrapRecorder.start(CamelBootstrapRecorder.java:45)
-	... 9 more
-Caused by: org.apache.camel.FailedToCreateRouteException: Failed to create route SendEmailRoute at: >>> Bean[com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder_ClientProxy] <<< in route: Route(SendEmailRoute)[From[rest:post:/send-email] -> [Unmars... because of Method with name: buildPayload not found on bean: com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder@46ee1b62 of type: com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder_ClientProxy
-	at org.apache.camel.reifier.RouteReifier.doCreateRoute(RouteReifier.java:235)
-	at org.apache.camel.reifier.RouteReifier.createRoute(RouteReifier.java:86)
-	at org.apache.camel.impl.DefaultModelReifierFactory.createRoute(DefaultModelReifierFactory.java:49)
-	at org.apache.camel.impl.DefaultCamelContext.startRouteDefinitions(DefaultCamelContext.java:726)
-	at org.apache.camel.impl.DefaultCamelContext.startRouteDefinitions(DefaultCamelContext.java:592)
-	at org.apache.camel.impl.engine.AbstractCamelContext.doInit(AbstractCamelContext.java:2429)
-	at org.apache.camel.quarkus.core.FastCamelContext.doInit(FastCamelContext.java:195)
-	at org.apache.camel.support.service.BaseService.init(BaseService.java:85)
-	at org.apache.camel.impl.engine.AbstractCamelContext.init(AbstractCamelContext.java:2064)
-	at org.apache.camel.support.service.BaseService.start(BaseService.java:115)
-	at org.apache.camel.impl.engine.AbstractCamelContext.start(AbstractCamelContext.java:2083)
-	at org.apache.camel.impl.DefaultCamelContext.start(DefaultCamelContext.java:211)
-	at org.apache.camel.quarkus.main.CamelMain.doStart(CamelMain.java:91)
-	at org.apache.camel.support.service.BaseService.start(BaseService.java:123)
-	at org.apache.camel.quarkus.main.CamelMain.startEngine(CamelMain.java:137)
-	at org.apache.camel.quarkus.main.CamelMainRuntime.start(CamelMainRuntime.java:49)
-	... 10 more
-Caused by: org.apache.camel.component.bean.MethodNotFoundException: Method with name: buildPayload not found on bean: com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder@46ee1b62 of type: com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder_ClientProxy
-	at org.apache.camel.component.bean.DefaultBeanProcessorFactory.createBeanProcessor(DefaultBeanProcessorFactory.java:191)
-	at org.apache.camel.reifier.BeanReifier.createProcessor(BeanReifier.java:49)
-	at org.apache.camel.reifier.ProcessorReifier.makeProcessor(ProcessorReifier.java:893)
-	at org.apache.camel.reifier.ProcessorReifier.addRoutes(ProcessorReifier.java:629)
-	at org.apache.camel.reifier.RouteReifier.doCreateRoute(RouteReifier.java:231)
-	... 25 more
+PS C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend> npm start
 
-getting above error 
-below arre the required code
-package com.aramco.easd.agwa.integrations.service;
+> agwa@0.0.1 start
+> ng serve
 
-import com.aramco.easd.agwa.integrations.providers.CurrentDateProvider;
-import com.aramco.easd.agwa.integrations.dto.EmailApiPayload;
-import com.aramco.easd.agwa.integrations.dto.EmailRequest;
-import com.aramco.easd.agwa.integrations.template.MorningReportTemplate;
-import io.quarkus.runtime.annotations.RegisterForReflection;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import org.apache.camel.Exchange;
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ Port 4200 is already in use.
+Would you like to use a different port? Yes
+Component HMR has been enabled, see https://angular.dev/hmr for more info.
+An unhandled exception occurred: Cannot find module @rollup/rollup-win32-x64-msvc. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+See "C:\Users\ALAMMX~1.ARA\AppData\Local\Temp\ng-mOd5YH\angular-errors.log" for further details.
+node:internal/process/promises:391
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
 
-import java.util.Collections;
-import java.util.Map;
-
-@ApplicationScoped
-@RegisterForReflection
-@Named("emailPayloadBuilder")
-public class EmailPayloadBuilder {
-
-    @Inject
-    MorningReportTemplate morningReportTemplate;
-
-    @Inject
-    CurrentDateProvider currentDateProvider;
-
-    public EmailApiPayload buildPayload(Exchange exchange) throws Exception {
-
-        EmailRequest request = exchange.getIn().getBody(EmailRequest.class);
-        Map<String, Object> tmplData = request.getTemplateData();
-        tmplData.put("currentDateProvider", currentDateProvider);
-        String htmlContent = morningReportTemplate.render(tmplData).render();
-        EmailApiPayload payload = new EmailApiPayload();
-        payload.setFromAddress(request.getFrom());
-        payload.setTo(request.getTo());
-        payload.setCc(request.getCc() != null ? request.getCc() : Collections.emptyList());
-        payload.setSubject(request.getSubject());
-        payload.setContent(htmlContent);
-        return payload;
-    }
+Error: Cannot find module @rollup/rollup-win32-x64-msvc. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:71:9)
+    at Object.<anonymous> (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:80:76)
+    ... 3 lines matching cause stack trace ...
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at cjsLoader (node:internal/modules/esm/translators:298:15)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:240:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24) {
+  [cause]: Error: Cannot find module '@rollup/rollup-win32-x64-msvc'
+  Require stack:
+  - C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+      at requireWithFriendlyError (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:53:10)
+      at Object.<anonymous> (C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\vite\node_modules\rollup\dist\native.js:80:76)
+      at Module._compile (node:internal/modules/cjs/loader:1521:14)
+      at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+      at Module.load (node:internal/modules/cjs/loader:1266:32)
+      at Module._load (node:internal/modules/cjs/loader:1091:12) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [
+      'C:\\Dev\\JavaDev\\Agwa-Services\\agwa-master\\agwa-frontend\\node_modules\\vite\\node_modules\\rollup\\dist\\native.js'
+    ]
+  }
 }
-package com.aramco.easd.agwa.integrations.routes;
-
-
-import com.aramco.easd.agwa.integrations.dto.EmailApiPayload;
-import com.aramco.easd.agwa.integrations.dto.EmailRequest;
-import com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder;
-import com.aramco.easd.agwa.integrations.service.EmailService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import org.apache.camel.Exchange;
-import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.jackson.JacksonDataFormat;
-
-@ApplicationScoped
-public class EmailRoute extends RouteBuilder {
-
-    @Inject
-    EmailPayloadBuilder payloadBuilder;
-
-    @Override
-    public void configure() {
-        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        JacksonDataFormat format = new JacksonDataFormat();
-        format.setObjectMapper(mapper);
-        format.setUnmarshalType(EmailRequest.class);
-
-/*      estConfiguration()
-                .component("platform-http")
-                .bindingMode(RestBindingMode.json)
-                .dataFormatProperty("prettyPrint", "true");
-
-        rest("/api/email")
-                .post("/send")
-                .consumes("application/json")
-                .to("direct:sendEmail");*/
-
-        from("rest:post:/send-email")
-                .unmarshal(format)
-                .log("Deserialized EmailRequest: ${body}")
-                .routeId("SendEmailRoute")
-                .log("Final email body (multipart): ${body}")
-                .process(exchange -> {
-                    EmailRequest request = exchange.getIn().getBody(EmailRequest.class);
-                    exchange.setProperty("EmailRequest", request);
-
-                })
-
-
-                //.bean(emailService, "prepareEmail(${exchange})")
-                .bean("emailPayloadBuilder", "buildPayload")
-                .marshal().json()
-                .log("JSON to send: ${body}")
-
-                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
-                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                //.to("smtp://exchange.aramco.com.sa");
-                .to("https://email-service-test.apps.ocpa.enp.aramco.com.sa?bridgeEndpoint=true")
-                .log("Email request forwarded to Email Api")
-                .setBody(constant("OK"));
-    }
-}
-
