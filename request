@@ -1,47 +1,137 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: npm-task
+  name: buildah
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: image-build
 spec:
-  description: |-
-    This task can be used to run npm goals on a project where package.json is present and has some pre-defined npm scripts.
+  description: >-
+    Buildah task builds source into a container image and
+    then pushes it to a container registry.
+
+    Buildah Task builds source into a container image using Project Atomic's
+    Buildah build tool.It uses Buildah's support for building from Dockerfiles,
+    using its buildah bud command.This command executes the directives in the
+    Dockerfile to assemble a container image, then pushes that image to a
+    container registry.
+
   params:
-    - default: .
-      description: The path where package.json of the project is defined.
-      name: PATH_CONTEXT
+    - name: IMAGE
+      description: Reference of the image buildah will produce.
       type: string
-    - default:
-        - version
-      description: The npm goals you want to run.
-      name: ARGS
-      type: array
-    - default: 'registry.access.redhat.com/ubi9/nodejs-20:latest'
-      description: The node image you want to use.
-      name: IMAGE
+    - name: BUILDER_IMAGE
+      description: The location of the buildah builder image.
+      default: 'registry.redhat.io/rhel8/buildah:8.10'
       type: string
-  steps:
-    - args:
-        - $(params.ARGS)
-        - '--cache'
-        - $(workspaces.npm-cache.path)
-        - '--userconfig'
-        - $(workspaces.npmrc.path)/.npmrc
-      command:
-        - npm
-      resources:
-        limits:
-          cpu: '2'
-          memory: 2Gi
-        requests:
-          cpu: '1'
-          memory: 1Gi
-      env:
-        - name: CI
-          value: 'true'
-      image: $(params.IMAGE)
-      name: npm-run
-      workingDir: $(workspaces.source.path)/$(params.PATH_CONTEXT)
+    - name: STORAGE_DRIVER
+      description: Set buildah storage driver
+      default: vfs
+      type: string
+    - name: DOCKERFILE
+      description: Path to the Dockerfile to build.
+      default: ./Dockerfile
+      type: string
+    - name: CONTEXT
+      description: Path to the directory to use as context.
+      default: .
+      type: string
+    - name: TLSVERIFY
+      description: Verify the TLS on the registry endpoint (for push/pull to a non-TLS registry)
+      default: 'true'
+      type: string
+    - name: FORMAT
+      description: The format of the built container, oci or docker
+      default: oci
+      type: string
+    - name: BUILD_EXTRA_ARGS
+      description: Extra parameters passed for the build command when building images.
+      default: ''
+      type: string
+    - name: PUSH_EXTRA_ARGS
+      description: Extra parameters passed for the push command when pushing images.
+      type: string
+      default: ''
+    - default: 'false'
+      description: Skip pushing the built image
+      name: SKIP_PUSH
+      type: string
   workspaces:
     - name: source
-    - name: npm-cache
-    - name: npmrc
+    - description: An optional workspace that allows providing a .docker/config.json file for Buildah to access the container registry. The file should be placed at the root of the Workspace with name config.json or .dockerconfigjson.
+      name: dockerconfig
+      optional: true
+    - description: An optional workspace that allows providing the entitlement keys for Buildah to access subscription. The mounted workspace contains entitlement.pem and entitlement-key.pem.
+      mountPath: /tmp/entitlement
+      name: rhel-entitlement
+      optional: true
+
+  results:
+    - name: IMAGE_DIGEST
+      description: Digest of the image just built.
+      type: string
+    - description: Image repository where the built image would be pushed to
+      name: IMAGE_URL
+      type: string
+  steps:
+    - image: $(params.BUILDER_IMAGE)
+      name: build-and-push
+      script: |
+        ENTITLEMENT_VOLUME=""
+        
+        if [[ "false" == "true" ]]; then
+          ENTITLEMENT_VOLUME="--volume /tmp/entitlement:/etc/pki/entitlement"
+        fi
+        
+        buildah bud --storage-driver=$(params.STORAGE_DRIVER) \
+          $ENTITLEMENT_VOLUME  \
+          --format=$(params.FORMAT) --tls-verify=$(params.TLSVERIFY) \
+          -f $(params.DOCKERFILE) -t $(params.IMAGE) $(params.CONTEXT)
+        
+        [[ $(params.SKIP_PUSH) == "true" ]] && echo "Push skipped" && exit 0
+        
+        if [[ $(params.SKIP_PUSH) == "true" ]]; then
+        
+          # if config.json exists at workspace root, we use that
+          if test -f "/config.json"; then
+            export DOCKER_CONFIG=""
+        
+          # else we look for .dockerconfigjson at the root
+          elif test -f "/.dockerconfigjson"; then
+            cp "/.dockerconfigjson" "$HOME/.docker/config.json"
+            export DOCKER_CONFIG="$HOME/.docker"
+        
+          # need to error out if neither files are present
+          else
+            echo "neither 'config.json' nor '.dockerconfigjson' found at workspace root"
+            exit 1
+          fi
+        fi
+        
+        buildah --storage-driver=$(params.STORAGE_DRIVER) push \
+           --tls-verify=$(params.TLSVERIFY) \
+          --digestfile /tmp/image-digest $(params.IMAGE) \
+          docker://$(params.IMAGE)
+        cat /tmp/image-digest | tee /tekton/results/IMAGE_DIGEST
+        echo -n "$(params.IMAGE)" | tee /tekton/results/IMAGE_URL
+      securityContext:
+        capabilities:
+          add:
+            - SETFCAP
+      volumeMounts:
+        - mountPath: /var/lib/containers
+          name: varlibcontainers
+      resources:
+        limits:
+          cpu: "2"
+          memory: 2Gi
+        requests:
+          cpu: 200m
+          memory: 200m
+      workingDir: /workspace/source
+
+  volumes:
+    - name: varlibcontainers
+      emptyDir: {}
