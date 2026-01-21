@@ -1,106 +1,30 @@
-...and 1060 more lazy chunks files. Use "--verbose" to show all the files.
-
-Application bundle generation failed. [27.345 seconds]
-
-▲ [WARNING] bundle initial exceeded maximum budget. Budget 500.00 kB was not met by 2.42 MB with a total of 2.92 MB.
-
-
-▲ [WARNING] 26 rules skipped due to selector errors:
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & * -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-  & -> Empty sub-selector
-
-
-X [ERROR] bundle initial exceeded maximum budget. Budget 1.00 MB was not met by 1.92 MB with a total of 2.92 MB.
-
-here is package.json analyze and tell me best fix of the above build failure
-{
-  "name": "agwa",
-  "version": "0.0.1",
-  "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --watch",
-    "lint": "ng lint"
-  },
-  "private": true,
-  "dependencies": {
-    "@ag-grid-community/all-modules": "^27.3.0",
-    "@angular/animations": "^19.0.0",
-    "@angular/cdk": "^19.2.19",
-    "@angular/common": "^19.0.0",
-    "@angular/compiler": "^19.0.0",
-    "@angular/core": "^19.0.0",
-    "@angular/forms": "^19.0.0",
-    "@angular/material": "^19.2.19",
-    "@angular/platform-browser": "^19.0.0",
-    "@angular/platform-browser-dynamic": "^19.0.0",
-    "@angular/router": "^19.0.0",
-    "@arcgis/core": "^4.33.12",
-    "@auth0/angular-jwt": "^5.2.0",
-    "@ngrx/signals": "^19.2.1",
-    "@tailwindcss/postcss": "^4.1.11",
-    "ag-grid-angular": "~31.3.2",
-    "ag-grid-community": "~31.3.2",
-    "ag-grid-enterprise": "~31.3.2",
-    "chart.js": "^4.5.0",
-    "d3": "^7.9.0",
-    "juice": "^11.0.1",
-    "material-icons": "^1.13.14",
-    "ng2-charts": "^8.0.0",
-    "postcss": "^8.5.6",
-    "rxjs": "~7.8.0",
-    "tailwindcss": "^4.1.11",
-    "tslib": "^2.3.0",
-    "zone.js": "~0.15.0"
-  },
-  "devDependencies": {
-    "@angular-devkit/build-angular": "^19.2.15",
-    "@angular/cli": "^19.2.5",
-    "@angular/compiler-cli": "^19.2.0",
-    "@babel/core": "^7.28.4",
-    "@babel/preset-env": "^7.28.3",
-    "@types/d3": "^7.4.3",
-    "@types/express": "^4.17.4",
-    "@types/jasmine": "~5.1.0",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^18.8.0",
-    "angular-eslint": "21.0.1",
-    "babel-jest": "30.0.0",
-    "eslint": "^9.39.1",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
-    "jest-preset-angular": "^14.0.1",
-    "ts-jest": "^29.2.4",
-    "typescript": "~5.7.2",
-    "typescript-eslint": "8.46.4"
-  }
-}
+STEP-NPM-RUN
+2026-01-21T08:23:31.535789232Z
+2026-01-21T08:23:31.535789232Z > agwa@0.0.1 test
+2026-01-21T08:23:31.535789232Z > ng test
+2026-01-21T08:23:31.535789232Z
+2026-01-21T08:23:33.401460562Z - Generating browser application bundles (phase: setup)...
+2026-01-21T08:25:02.760174719Z
+2026-01-21T08:25:02.760174719Z <--- Last few GCs --->
+2026-01-21T08:25:02.760174719Z
+2026-01-21T08:25:02.760174719Z [22:0x55f3e776cb20] 89737 ms: Mark-Compact 1008.3 (1040.6) -> 1002.2 (1041.8) MB, 830.68 / 0.00 ms (average mu = 0.125, current mu = 0.010) allocation failure; scavenge might not succeed
+2026-01-21T08:25:02.760174719Z [22:0x55f3e776cb20] 90480 ms: Mark-Compact 1010.7 (1042.3) -> 1004.2 (1044.1) MB, 694.10 / 0.00 ms (average mu = 0.098, current mu = 0.065) allocation failure; scavenge might not succeed
+2026-01-21T08:25:02.760174719Z
+2026-01-21T08:25:02.760174719Z
+2026-01-21T08:25:02.760174719Z <--- JS stacktrace --->
+2026-01-21T08:25:02.760174719Z
+2026-01-21T08:25:02.760174719Z FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+2026-01-21T08:25:02.760174719Z ----- Native stack trace -----
+2026-01-21T08:25:02.760174719Z
+2026-01-21T08:25:02.760722411Z 1: 0x55f3e379415b [ng test]
+2026-01-21T08:25:02.761180743Z 2: 0x55f3e3b85624 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [ng test]
+2026-01-21T08:25:02.761605330Z 3: 0x55f3e3b858e3 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [ng test]
+2026-01-21T08:25:02.762138161Z 4: 0x55f3e3d7c17b [ng test]
+2026-01-21T08:25:02.762666276Z 5: 0x55f3e3d81e2a [ng test]
+2026-01-21T08:25:02.763206993Z 6: 0x55f3e3d94cf2 v8::internal::Heap::PerformGarbageCollection(v8::internal::GarbageCollector, v8::internal::GarbageCollectionReason, char const*) [ng test]
+2026-01-21T08:25:02.763734630Z 7: 0x55f3e3d9586f v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [ng test]
+2026-01-21T08:25:02.764268327Z 8: 0x55f3e3d70233 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [ng test]
+2026-01-21T08:25:02.764792691Z 9: 0x55f3e3d718c9 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [ng test]
+2026-01-21T08:25:02.765321078Z 10: 0x55f3e3d541b9 v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [ng test]
+2026-01-21T08:25:02.765945480Z 11: 0x55f3e413d597 v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [ng test]
+2026-01-21T08:25:02.766629836Z 12: 0x55f3e454f2b6 [ng test]
