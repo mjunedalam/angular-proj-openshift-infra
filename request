@@ -135,3 +135,6 @@ spec:
   volumes:
     - name: varlibcontainers
       emptyDir: {}
+
+
+above is buildah task I want image must be pushed to this repo image-registry.openshift-image-registry.svc:5000/easd-agwa-pipeline/agwa-frontend 
