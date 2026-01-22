@@ -1,67 +1,92 @@
-Auto-merging angular.json
-CONFLICT (content): Merge conflict in angular.json
-Auto-merging enviroment.ts
-Auto-merging package-lock.json
-CONFLICT (content): Merge conflict in package-lock.json
-Auto-merging package.json
-CONFLICT (content): Merge conflict in package.json
-Auto-merging src/app/app.component.spec.ts
-CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
-Auto-merging src/app/app.component.ts
-Auto-merging src/app/core/stores/email/email.store.ts
-Auto-merging package.json
-CONFLICT (content): Merge conflict in package.json
-Auto-merging src/app/app.component.spec.ts
-CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
-Auto-merging src/app/app.component.ts
-Auto-merging src/app/core/stores/email/email.store.ts
-CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
-Auto-merging src/app/features/morningreport/morningreport.component.html
-CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.html
-Auto-merging src/app/features/morningreport/morningreport.component.scss
-CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.scss
-Auto-merging src/app/features/morningreport/morningreport.component.ts
-Auto-merging package.json
-CONFLICT (content): Merge conflict in package.json
-Auto-merging src/app/app.component.spec.ts
-CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
-Auto-merging src/app/app.component.ts
-Auto-merging src/app/core/stores/email/email.store.ts
-CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
-Auto-merging src/app/features/morningreport/morningreport.component.html
-Auto-merging package.json
-CONFLICT (content): Merge conflict in package.json
-Auto-merging src/app/app.component.spec.ts
-CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
-Auto-merging src/app/app.component.ts
-Auto-merging src/app/core/stores/email/email.store.ts
-CONFLICT (content): Merge conflict in package.json
-Auto-merging src/app/app.component.spec.ts
-CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
-Auto-merging src/app/app.component.ts
-CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
-Auto-merging src/app/app.component.ts
-Auto-merging src/app/core/stores/email/email.store.ts
-CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
-Auto-merging src/app/app.component.ts
-Auto-merging src/app/core/stores/email/email.store.ts
-CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
-Auto-merging src/app/core/stores/email/email.store.ts
-CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
-Auto-merging src/app/features/morningreport/morningreport.component.html
-CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.html
-Auto-merging src/app/features/morningreport/morningreport.component.scss
-CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.scss
-Auto-merging src/app/features/morningreport/morningreport.component.ts
-CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.ts
-Auto-merging src/app/layout/main/main.component.html
-CONFLICT (content): Merge conflict in src/app/layout/main/main.component.html
-Auto-merging src/app/layout/main/main.component.ts
-CONFLICT (content): Merge conflict in src/app/layout/main/main.component.ts
-Auto-merging src/app/services/morining-report.service.ts
-Auto-merging src/app/utils/map.config.ts
-CONFLICT (content): Merge conflict in src/app/utils/map.config.ts
-Auto-merging src/app/utils/wwell-placement-utils.ts
-Auto-merging src/app/wwellmap/wwellmap.component.ts
-CONFLICT (content): Merge conflict in src/app/wwellmap/wwellmap.component.ts
-Automatic merge failed; fix conflicts and then commit the result.
+import { inject } from '@angular/core';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
+import { EmailRequest } from '../../models/EmailRequest';
+import { EmailService } from '../../services/email/email.service';
+
+type EmailState = {
+  status: 'idle' | 'sending' | 'sent' | 'failed';
+  error: string | null;
+};
+
+const initialState: EmailState = {
+  status: 'idle',
+  error: null
+};
+
+export const EmailStore = signalStore(
+  { providedIn: 'root' },
+  withState(initialState),
+  withMethods((store, emailService = inject(EmailService)) => ({
+    sendEmail(request: EmailRequest) {
+      patchState(store, { status: 'sending', error: null });
+      emailService.sendEmail(request).
+        subscribe({
+          next: () => {
+            patchState(store, { status: 'sent' });
+          },
+          error: (err) => {
+            patchState(store, { status: 'failed', error: 'Failed to send email' })
+          }
+        });
+    }
+  }))
+);
+
+import { Injectable } from '@angular/core';
+import { EmailRequest } from '../../models/EmailRequest';
+import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { environment } from '../../../../environments/enviroment';
+import { MorningReport } from '../../../models/morining-report.model';
+import { EMAIL_CC, EMAIL_FROM, EMAIL_SUBJECT, EMAIL_TEMPLATE_NAME, EMAIL_TO } from './email.config';
+import { WaterWellTestResult } from '../../../models/water-well-test-result';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class EmailService {
+
+  private apiUrl = environment.api.emailUrl;
+
+  constructor(private http: HttpClient) { }
+
+  sendEmail(emailRequest: EmailRequest): Observable<void> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.post<void>(this.apiUrl, emailRequest, { headers });
+  }
+
+  buildEmailRequest(reports: MorningReport[], mapImageData: string, waterWellTestResults?: WaterWellTestResult[]): EmailRequest {
+    return {
+      subject: EMAIL_SUBJECT,
+      from: EMAIL_FROM,
+      to: EMAIL_TO,
+      cc: EMAIL_CC,
+      bcc: [],
+      replyTo: '',
+      templateName: EMAIL_TEMPLATE_NAME,
+      generatePdf: false,
+      templateData: {
+        morningReport: reports,
+        mapImageData: mapImageData,
+        waterWellTestResults
+      }
+    };
+  }
+}
+external-config.json
+{
+    "tokenUrl": "https://token-dev.enp.aramco.com.sa/token/apps/AGWA",
+    "dailyOperationUrl": "https://agwa-dailyoperations-dev.apps.ocpb.enp.aramco.com.sa",
+    "emailUrl": "https://agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa",
+    "esriUrl": "https://eccenterprisegis.enp.aramco.com.sa/arcgis",
+    "mapServerUrl": "https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/EARTH/EARTH_Layers/MapServer",
+    "appId": "M0M4nfZyToqUlgQy"
+}
+export const environment = {
+
+  production: false,
+
+  externalConfigFileUrl: "/assets/external-config.json"
+
+};
+
