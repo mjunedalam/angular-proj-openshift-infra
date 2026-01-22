@@ -1,28 +1,54 @@
-# kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
+created route below
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: agwa-frontend
+  annotations:
 
-resources:
-  - frontend-configmap.yaml
-  - nginx-configmap.yaml
-  - deployment.yaml
-  - service.yaml
+spec:
+  host: agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa
+  to:
+    kind: Service
+    name: agwa-frontend
+    weight: 100
+  port:
+    targetPort: edge
+  tls:
+    termination: passthrough
+  wildcardPolicy: None
 
-commonLabels:
-  app: agwa-frontend
-  app.kubernetes.io/name: agwa-frontend
-  app.openshift.io/runtime: nginx
-  app.kubernetes.io/part-of: agwa-frontend
+POD is running and showing these logs
+2026/01/22 05:05:54 [notice] 1#0: using the "epoll" event method
+2026/01/22 05:05:54 [notice] 1#0: nginx/1.22.1
+2026/01/22 05:05:54 [notice] 1#0: built by gcc 8.5.0 20210514 (Red Hat 8.5.0-18) (GCC)
+2026/01/22 05:05:54 [notice] 1#0: OS: Linux 5.14.0-570.68.1.el9_6.x86_64
+2026/01/22 05:05:54 [notice] 1#0: getrlimit(RLIMIT_NOFILE): 1048576:1048576
+2026/01/22 05:05:54 [notice] 1#0: start worker processes
+2026/01/22 05:05:54 [notice] 1#0: start worker process 14
+2026/01/22 05:05:54 [notice] 1#0: start worker process 15
+2026/01/22 05:05:54 [notice] 1#0: start worker process 16
+2026/01/22 05:05:54 [notice] 1#0: start worker process 17
+2026/01/22 05:05:54 [notice] 1#0: start worker process 18
+2026/01/22 05:05:54 [notice] 1#0: start worker process 19
+2026/01/22 05:05:54 [notice] 1#0: start worker process 20
+2026/01/22 05:05:54 [notice] 1#0: start worker process 21
+2026/01/22 05:05:54 [notice] 1#0: start worker process 22
+2026/01/22 05:05:54 [notice] 1#0: start worker process 23
+2026/01/22 05:05:54 [notice] 1#0: start worker process 24
+2026/01/22 05:05:54 [notice] 1#0: start worker process 25
+2026/01/22 05:05:54 [notice] 1#0: start worker process 26
+2026/01/22 05:05:54 [notice] 1#0: start worker process 27
+2026/01/22 05:05:54 [notice] 1#0: start worker process 28
+2026/01/22 05:05:54 [notice] 1#0: start worker process 29
+2026/01/22 05:05:54 [notice] 1#0: start worker process 30
+2026/01/22 05:05:54 [notice] 1#0: start worker process 31
+2026/01/22 05:05:54 [notice] 1#0: start worker process 32
+2026/01/22 05:05:54 [notice] 1#0: start worker process 33
+2026/01/22 05:05:54 [notice] 1#0: start worker process 34
+2026/01/22 05:05:54 [notice] 1#0: start worker process 35
+2026/01/22 05:05:54 [notice] 1#0: start worker process 36
+2026/01/22 05:05:54 [notice] 1#0: s
 
-labels:
-  - pairs:
-      app.kubernetes.io/version: 0.0.1-SNAPSHOT
-
-images:
-  - name: agwa-frontend
-    newName: image-registry.openshift-image-registry.svc:5000/easd-agwa-dev/agwa-frontend
-    digest: "sha256:201bf0bd260b18ba93fb1fc2f139da71cc6bd618c75204e292d9e4262f08d683"
-
-replicas:
-  - name: agwa-frontend
-    count: 1
+i am accessing application using this url https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/
+but not showing getting this error It looks like agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa closed the connection.
+Try:
