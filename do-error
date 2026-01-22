@@ -1,13 +1,67 @@
-10.128.0.2 - - [22/Jan/2026:05:59:20 +0000] "GET / HTTP/1.1" 500 579 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:59:20 [error] 20#0: *6 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 10.128.0.2, server: _, request: "GET /favicon.ico HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa", referrer: "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/"
-10.128.0.2 - - [22/Jan/2026:05:59:20 +0000] "GET /favicon.ico HTTP/1.1" 500 579 "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:59:33 [error] 41#0: *9 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 10.128.0.2, server: _, request: "GET / HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa"
-10.128.0.2 - - [22/Jan/2026:05:59:33 +0000] "GET / HTTP/1.1" 500 579 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:59:33 [error] 42#0: *10 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 10.128.0.2, server: _, request: "GET /favicon.ico HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa", referrer: "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/"
-10.128.0.2 - - [22/Jan/2026:05:59:33 +0000] "GET /favicon.ico HTTP/1.1" 500 579 "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:59:35 [error] 43#0: *12 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 10.128.0.2, server: _, request: "GET / HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa"
-10.128.0.2 - - [22/Jan/2026:05:59:35 +0000] "GET / HTTP/1.1" 500 579 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:59:35 [error] 46#0: *13 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 10.128.0.2, server: _, request: "GET /favicon.ico HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa", referrer: "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/"
-10.128.0.2 - - [22/Jan/2026:05:59:35 +0000] "GET /favicon.ico HTTP/1.1" 500 579 "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:59:35 [error] 48#0: *14 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 10.128.0.2, server: _, request: "GET / HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa"
-10.128.0.2 - - [22/Jan/2026:05:59:35 +0000] "GET / HTTP/1.1" 500 579 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
+Auto-merging angular.json
+CONFLICT (content): Merge conflict in angular.json
+Auto-merging enviroment.ts
+Auto-merging package-lock.json
+CONFLICT (content): Merge conflict in package-lock.json
+Auto-merging package.json
+CONFLICT (content): Merge conflict in package.json
+Auto-merging src/app/app.component.spec.ts
+CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
+Auto-merging src/app/app.component.ts
+Auto-merging src/app/core/stores/email/email.store.ts
+Auto-merging package.json
+CONFLICT (content): Merge conflict in package.json
+Auto-merging src/app/app.component.spec.ts
+CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
+Auto-merging src/app/app.component.ts
+Auto-merging src/app/core/stores/email/email.store.ts
+CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
+Auto-merging src/app/features/morningreport/morningreport.component.html
+CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.html
+Auto-merging src/app/features/morningreport/morningreport.component.scss
+CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.scss
+Auto-merging src/app/features/morningreport/morningreport.component.ts
+Auto-merging package.json
+CONFLICT (content): Merge conflict in package.json
+Auto-merging src/app/app.component.spec.ts
+CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
+Auto-merging src/app/app.component.ts
+Auto-merging src/app/core/stores/email/email.store.ts
+CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
+Auto-merging src/app/features/morningreport/morningreport.component.html
+Auto-merging package.json
+CONFLICT (content): Merge conflict in package.json
+Auto-merging src/app/app.component.spec.ts
+CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
+Auto-merging src/app/app.component.ts
+Auto-merging src/app/core/stores/email/email.store.ts
+CONFLICT (content): Merge conflict in package.json
+Auto-merging src/app/app.component.spec.ts
+CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
+Auto-merging src/app/app.component.ts
+CONFLICT (content): Merge conflict in src/app/app.component.spec.ts
+Auto-merging src/app/app.component.ts
+Auto-merging src/app/core/stores/email/email.store.ts
+CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
+Auto-merging src/app/app.component.ts
+Auto-merging src/app/core/stores/email/email.store.ts
+CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
+Auto-merging src/app/core/stores/email/email.store.ts
+CONFLICT (content): Merge conflict in src/app/core/stores/email/email.store.ts
+Auto-merging src/app/features/morningreport/morningreport.component.html
+CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.html
+Auto-merging src/app/features/morningreport/morningreport.component.scss
+CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.scss
+Auto-merging src/app/features/morningreport/morningreport.component.ts
+CONFLICT (content): Merge conflict in src/app/features/morningreport/morningreport.component.ts
+Auto-merging src/app/layout/main/main.component.html
+CONFLICT (content): Merge conflict in src/app/layout/main/main.component.html
+Auto-merging src/app/layout/main/main.component.ts
+CONFLICT (content): Merge conflict in src/app/layout/main/main.component.ts
+Auto-merging src/app/services/morining-report.service.ts
+Auto-merging src/app/utils/map.config.ts
+CONFLICT (content): Merge conflict in src/app/utils/map.config.ts
+Auto-merging src/app/utils/wwell-placement-utils.ts
+Auto-merging src/app/wwellmap/wwellmap.component.ts
+CONFLICT (content): Merge conflict in src/app/wwellmap/wwellmap.component.ts
+Automatic merge failed; fix conflicts and then commit the result.
