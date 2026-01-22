@@ -1,54 +1,12 @@
-created route below
-kind: Route
-apiVersion: route.openshift.io/v1
+apiVersion: v1
+kind: Service
 metadata:
   name: agwa-frontend
-  annotations:
-
 spec:
-  host: agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa
-  to:
-    kind: Service
-    name: agwa-frontend
-    weight: 100
-  port:
-    targetPort: edge
-  tls:
-    termination: passthrough
-  wildcardPolicy: None
-
-POD is running and showing these logs
-2026/01/22 05:05:54 [notice] 1#0: using the "epoll" event method
-2026/01/22 05:05:54 [notice] 1#0: nginx/1.22.1
-2026/01/22 05:05:54 [notice] 1#0: built by gcc 8.5.0 20210514 (Red Hat 8.5.0-18) (GCC)
-2026/01/22 05:05:54 [notice] 1#0: OS: Linux 5.14.0-570.68.1.el9_6.x86_64
-2026/01/22 05:05:54 [notice] 1#0: getrlimit(RLIMIT_NOFILE): 1048576:1048576
-2026/01/22 05:05:54 [notice] 1#0: start worker processes
-2026/01/22 05:05:54 [notice] 1#0: start worker process 14
-2026/01/22 05:05:54 [notice] 1#0: start worker process 15
-2026/01/22 05:05:54 [notice] 1#0: start worker process 16
-2026/01/22 05:05:54 [notice] 1#0: start worker process 17
-2026/01/22 05:05:54 [notice] 1#0: start worker process 18
-2026/01/22 05:05:54 [notice] 1#0: start worker process 19
-2026/01/22 05:05:54 [notice] 1#0: start worker process 20
-2026/01/22 05:05:54 [notice] 1#0: start worker process 21
-2026/01/22 05:05:54 [notice] 1#0: start worker process 22
-2026/01/22 05:05:54 [notice] 1#0: start worker process 23
-2026/01/22 05:05:54 [notice] 1#0: start worker process 24
-2026/01/22 05:05:54 [notice] 1#0: start worker process 25
-2026/01/22 05:05:54 [notice] 1#0: start worker process 26
-2026/01/22 05:05:54 [notice] 1#0: start worker process 27
-2026/01/22 05:05:54 [notice] 1#0: start worker process 28
-2026/01/22 05:05:54 [notice] 1#0: start worker process 29
-2026/01/22 05:05:54 [notice] 1#0: start worker process 30
-2026/01/22 05:05:54 [notice] 1#0: start worker process 31
-2026/01/22 05:05:54 [notice] 1#0: start worker process 32
-2026/01/22 05:05:54 [notice] 1#0: start worker process 33
-2026/01/22 05:05:54 [notice] 1#0: start worker process 34
-2026/01/22 05:05:54 [notice] 1#0: start worker process 35
-2026/01/22 05:05:54 [notice] 1#0: start worker process 36
-2026/01/22 05:05:54 [notice] 1#0: s
-
-i am accessing application using this url https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/
-but not showing getting this error It looks like agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa closed the connection.
-Try:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+here is Seervice
