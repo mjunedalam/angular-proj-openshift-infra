@@ -1,8 +1,135 @@
-10.128.0.2 - - [22/Jan/2026:05:25:52 +0000] "GET / HTTP/1.1" 403 555 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:25:52 [error] 24#0: *241 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 10.128.0.2, server: _, request: "GET /favicon.ico HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa", referrer: "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/"
-10.128.0.2 - - [22/Jan/2026:05:25:52 +0000] "GET /favicon.ico HTTP/1.1" 500 579 "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:25:55 [error] 24#0: *242 directory index of "/opt/app-root/src/" is forbidden, client: 10.128.0.2, server: _, request: "GET / HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa"
-10.128.0.2 - - [22/Jan/2026:05:25:55 +0000] "GET / HTTP/1.1" 403 555 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:25:55 [error] 24#0: *242 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 10.128.0.2, server: _, request: "GET /favicon.ico HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa", referrer: "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/"
-10.128.0.2 - - [22/Jan/2026:05:25:55 +0000] "GET /favicon.ico HTTP/1.1" 500 579 "https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0" "10.6.20.91"
-2026/01/22 05:25:55 [error] 24#0: *243 directory index of "/opt/app-root/src/" is forbidden, client: 10.128.0.2, server: _, request: "GET / HTTP/1.1", host: "agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa"
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "agwa": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/agwa",
+            "index": "src/index.html",
+            "browser": "src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "/assets"
+              }
+            ],
+            "styles": [
+              "@angular/material/prebuilt-themes/azure-blue.css",
+              "src/styles.scss",
+              "material-icons/iconfont/material-icons.css"
+            ],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "5MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "agwa:build:production"
+            },
+            "development": {
+              "buildTarget": "agwa:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n"
+        },
+        "test": {
+          "builder": "@angular-builders/jest:run",
+          "options": {
+            "main": "src/test.ts",
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "tsconfig.spec.json",
+            "setupFile": "src/setup-jest.ts",
+            "jestConfig": "jest.config.js",
+            "codeCoverage": true,
+            "watch": false,
+            "passWithNoTests": true,
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "src/favicon.ico",
+              "src/assets",
+              {
+                "glob": "**/*",
+                "input": "node_modules/@arcgis/core/assets",
+                "output": "/assets/"
+              }
+            ],
+            "styles": [
+              "@angular/material/prebuilt-themes/azure-blue.css",
+              "src/styles.scss",
+              "node_modules/@arcgis/core/assets/esri/themes/light/main.css",
+              "material-icons/iconfont/material-icons.css"
+            ],
+            "scripts": []
+          }
+        },
+        "cli": {
+          "analytics": false
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "cli": {
+    "schematicCollections": [
+      "angular-eslint"
+    ]
+  }
+}
+here is angular.json and corrected
