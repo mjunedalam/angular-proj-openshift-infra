@@ -1,192 +1,28 @@
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: nginx-configmap
-data:
-  nginx.conf: |+
-    # For more information on configuration, see:            
-    #   * Official English Documentation: http://nginx.org/en/docs/
-    #   * Official Russian Documentation: http://nginx.org/ru/docs/
-  
-  
-     worker_processes auto;
-     error_log /var/log/nginx/error.log notice;
-     pid /run/nginx.pid;
-  
-     # Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
-     include /usr/share/nginx/modules/*.conf;
-  
-     events {
-      worker_connections 1024;
-     }
-  
-    http {
-    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-    '$status $body_bytes_sent "$http_referer" '
-    '"$http_user_agent" "$http_x_forwarded_for"';
-  
-    access_log  /var/log/nginx/access.log  main;    
-  
-    sendfile            on;
-    tcp_nopush          on;
-    keepalive_timeout   65;
-    types_hash_max_size 4096;
-    include             /etc/nginx/mime.types;
-    default_type        application/octet-stream;
-    client_max_body_size 30m;
-  
-    # Load modular configuration files from the /etc/nginx/conf.d directory.
-    # See http://nginx.org/en/docs/ngx_core_module.html#include
-    # for more information.
-    include /opt/app-root/etc/nginx.d/*.conf;
- 
-    server {
-      listen       8080 default_server;
-      listen       [::]:8080 default_server;
-      server_name  _;
-      root         /opt/app-root/src;
-  
-     # Load configuration files for the default server block.
-     include /opt/app-root/etc/nginx.default.d/*.conf;
-  
-    location = /404.html {
-    }
-  
-    location = /q/health/live {
-        access_log off;
-        add_header 'Content-Type' 'application/json';
-        return 200 '{"status":"UP"}';
-    }
+# kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 
-    location = /q/health/ready {
-        access_log off;
-        add_header 'Content-Type' 'application/json';
-        return 200 '{"status":"UP"}';
-    }
+resources:
+  - frontend-configmap.yaml
+  - nginx-configmap.yaml
+  - deployment.yaml
+  - service.yaml
 
-    location = /q/health/started {   
-        access_log off;
-        add_header 'Content-Type' 'application/json';
-        return 200 '{"status":"UP"}';
-    }
+commonLabels:
+  app: agwa-frontend
+  app.kubernetes.io/name: agwa-frontend
+  app.openshift.io/runtime: nginx
+  app.kubernetes.io/part-of: agwa-frontend
 
-    location /api/cwar {
-      proxy_pass "https://coins-api-dev.apps.ocpb.enp.aramco.com.sa/cwar";
-      proxy_http_version 1.1;     
-    }
+labels:
+  - pairs:
+      app.kubernetes.io/version: 0.0.1-SNAPSHOT
 
-    location /api/processing {
-      proxy_pass "https://coins-api-dev.apps.ocpb.enp.aramco.com.sa/processing";
-      proxy_http_version 1.1;      
-    }
+images:
+  - name: agwa-frontend
+    newName: image-registry.openshift-image-registry.svc:5000/easd-agwa-dev/agwa-frontend
+    digest: "sha256:201bf0bd260b18ba93fb1fc2f139da71cc6bd618c75204e292d9e4262f08d683"
 
-    location /api/projects {
-      proxy_pass "https://coins-api-dev.apps.ocpb.enp.aramco.com.sa/projects";
-      proxy_http_version 1.1;      
-    }
-    
-    location / {
-       try_files $uri$args $uri$args/ /index.html;     
-       proxy_http_version 1.1;     
-       add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
-       add_header Pragma "no-cache";
-       add_header Expires 0;
-    }
-
-    }
-    # Settings for a TLS enabled server.
-    #
-    #    server {
-    #        listen       443 ssl http2;
-    #        listen       [::]:443 ssl http2;
-    #        server_name  _;
-    #        root         /opt/app-root/src;
-    #
-    #        ssl_certificate "/etc/pki/nginx/server.crt";
-    #        ssl_certificate_key "/etc/pki/nginx/private/server.key";
-    #        ssl_session_cache shared:SSL:1m;
-    #        ssl_session_timeout  10m;
-    #        ssl_ciphers PROFILE=SYSTEM;
-    #        ssl_prefer_server_ciphers on;
-    #
-    #        # Load configuration files for the default server block.
-    #        include /opt/app-root/etc/nginx.default.d/*.conf;
-    #
-    #        location = /404.html {
-    #        }
-    #
-    #    }
-    }
-
-getting this error while deploying using argocd MountVolume.SetUp failed for volume "nginx-volume" : configmap "nginx-configmap" not found and here is deployment.yaml as welll
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: agwa-frontend
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        maistra.io/expose-route: "true"
-    spec:
-      volumes:
-        - name: nginx-volume
-          configMap:
-            name: nginx-configmap
-            defaultMode: 420
-        - name: frontend-volume
-          configMap:
-            name: frontend-configmap
-            defaultMode: 420
-      containers:
-        - name: agwa-frontend
-          image: agwa-frontend
-          imagePullPolicy: Always
-          ports:
-            - name: http
-              containerPort: 8080
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /q/health/live
-              port: 8080
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /q/health/ready
-              port: 8080
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          startupProbe:
-            httpGet:
-              path: /q/health/started
-              port: 8080
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          resources:
-            limits:
-              cpu: 100m
-              memory: 150Mi
-            requests:
-              cpu: 50m
-              memory: 110Mi
-          volumeMounts:
-            - name: nginx-volume
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-            - name: frontend-volume
-              mountPath: /opt/app-root/src/assets/external-config.json
-              subPath: external-config.json
-
+replicas:
+  - name: agwa-frontend
+    count: 1
