@@ -1,7 +1,47 @@
+2026-01-25 07:01:23,022 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Started SendEmailRoute (rest://post:/send-email)
+2026-01-25 07:01:23,022 INFO [org.apa.cam.imp.eng.AbstractCamelContext] (main) Apache Camel 4.8.0.redhat-00015 (camel-1) started in 97ms (build:0ms init:0ms start:97ms)
+2026-01-25 07:01:23,024 INFO [io.quarkus] (main) agwa-integrations 1.0.0 native (powered by Quarkus 3.15.3.redhat-00004) started in 0.400s. Listening on: http://0.0.0.0:8080
+2026-01-25 07:01:23,024 INFO [io.quarkus] (main) Profile prod activated.
+2026-01-25 07:01:23,024 INFO [io.quarkus] (main) Installed features: [camel-attachments, camel-core, camel-http, camel-ical, camel-jackson, camel-jsonpath, camel-mail, camel-microprofile-health, camel-opentelemetry, camel-platform-http, camel-rest, cdi, opentelemetry, qute, rest-client, rest-client-jackson, smallrye-context-propagation, smallrye-health, vertx]
+2026-01-25 10:23:58,960 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-0) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:23:58,960 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-0) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:24:04,764 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-0) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:24:04,765 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-0) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:24:10,760 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-0) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:24:10,760 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-0) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:24:16,401 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-0) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:24:16,401 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-0) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:24:47,165 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-0) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:24:47,165 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-0) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:27:12,616 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:27:12,616 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:27:18,342 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:27:18,342 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:28:28,902 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:28:28,902 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:28:34,476 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:28:34,476 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:28:55,048 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:28:55,048 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:29:00,657 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:29:00,657 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:31:51,529 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:31:51,529 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:31:57,239 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:31:57,239 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:50:43,185 WARNING [io.qua.ope.run.exp.otl.sen.VertxGrpcSender] (vert.x-eventloop-thread-1) Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+2026-01-25 10:50:43,185 WARNING [io.ope.exp.int.grp.GrpcExporter] (vert.x-eventloop-thread-1) Failed to export spans. Server responded with gRPC status code 2. Error message: Failed to export TraceRequestMarshalers. The request could not be executed. Full error message: Connection refused: localhost/127.0.0.1:4317
+
+
+still facing connection refused issue here is routes and Service
+
 kind: Route
 apiVersion: route.openshift.io/v1
 metadata:
   name: agwa-integrations
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"route.openshift.io/v1","kind":"Route","metadata":{"annotations":{},"name":"agwa-integrations","namespace":"easd-agwa-dev"},"spec":{"host":"agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa","port":{"targetPort":"https"},"tls":{"termination":"passthrough"},"to":{"kind":"Service","name":"agwa-integrations","weight":100},"wildcardPolicy":"None"}}
 spec:
   host: agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa
   to:
@@ -9,7 +49,21 @@ spec:
     name: agwa-integrations
     weight: 100
   port:
-    targetPort: edge
+    targetPort: http
   tls:
     termination: passthrough
   wildcardPolicy: None
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: agwa-integrations
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+
+
