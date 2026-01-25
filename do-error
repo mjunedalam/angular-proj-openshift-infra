@@ -1,3 +1,15 @@
-email.store.ts:23 
- 
- POST https://agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa/send-email net::ERR_CONNECTION_CLOSED
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: agwa-integrations
+spec:
+  host: agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa
+  to:
+    kind: Service
+    name: agwa-integrations
+    weight: 100
+  port:
+    targetPort: edge
+  tls:
+    termination: passthrough
+  wildcardPolicy: None
