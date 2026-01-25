@@ -1,267 +1,148 @@
-Getting below error after deploying in openshift
-
-main-C2ZHWTLM.js:8 
- Critical Error: Could not load App Config 
-Ku {headers: e, status: 200, statusText: 'OK', url: 'https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/assets/external-config.json?t=1769320947637', ok: false, …}
-error
-: 
-{error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON at JSON.parse (<anonymous>…, text: '<!DOCTYPE html>\n<html lang="en" data-beasties-cont…HWTLM.js" type="module">\x3C/script></body>\n</html>\n'}
-headers
-: 
-e {headers: undefined, normalizedNames: Map(0), lazyUpdate: null, lazyInit: ƒ}
-message
-: 
-"Http failure during parsing for https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/assets/external-config.json?t=1769320947637"
-name
-: 
-"HttpErrorResponse"
-ok
-: 
-false
-status
-: 
-200
-statusText
-: 
-"OK"
-type
-: 
-undefined
-url
-: 
-"https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa/assets/external-config.json?t=1769320947637"
-[[Prototype]]
-: 
-Mc
-
-below are the required files
-
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
-import { AppConfig } from '../models/app-config';
-import { environment } from '../../../environments/enviroment';
-
-@Injectable({
-  providedIn: 'root'
-})
-export class ExternalConfigService {
-
-  private http = inject(HttpClient);
-  private config: AppConfig | null = null;
-
-  async loadConfig(): Promise<void> {
-    const url = `${environment.externalConfigFileUrl}?t=${Date.now()}`;
-    try {
-      this.config = await lastValueFrom(this.http.get<AppConfig>(url));
-    } catch (err) {
-      console.error('Critical Error: Could not load App Config', err);
-      throw err;
-    }
-  }
-
-  get settings(): AppConfig {
-    if (!this.config) {
-      throw new Error('AppConfig not loaded');
-    }
-    return this.config;
-  }
-}
-
-{
-    "tokenUrl": "https://token-dev.enp.aramco.com.sa/token/apps/AGWA",
-    "dailyOperatioServicenUrl": "https://agwa-dailyoperations-dev.apps.ocpb.enp.aramco.com.sa",
-    "emailServiceUrl": "https://agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa",
-    "esriUrl": "https://eccenterprisegis.enp.aramco.com.sa/arcgis",
-    "mapServerUrl": "https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/EARTH/EARTH_Layers/MapServer",
-    "appId": "M0M4nfZyToqUlgQy"
-}
-
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: frontend-configmap
-data:
-  external-config.json: |+
-    {
-    "tokenUrl": "https://token-dev.enp.aramco.com.sa/token/apps/AGWA",
-    "dailyOperatioServicenUrl": "https://agwa-dailyoperations-dev.apps.ocpb.enp.aramco.com.sa",
-    "emailServiceUrl": "https://agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa",
-    "esriUrl": "https://eccenterprisegis.enp.aramco.com.sa/arcgis",
-    "mapServerUrl": "https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/EARTH/EARTH_Layers/MapServer",
-    "appId": "M0M4nfZyToqUlgQy"
-    }
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: agwa-frontend
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        maistra.io/expose-route: "true"
-    spec:
-      volumes:
-        - name: nginx-volume
-          configMap:
-            name: nginx-configmap
-            defaultMode: 420
-        - name: frontend-volume
-          configMap:
-            name: frontend-configmap
-            defaultMode: 420
-      containers:
-        - name: agwa-frontend
-          image: agwa-frontend
-          imagePullPolicy: Always
-          ports:
-            - name: http
-              containerPort: 8080
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /q/health/live
-              port: 8080
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /q/health/ready
-              port: 8080
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          startupProbe:
-            httpGet:
-              path: /q/health/started
-              port: 8080
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          resources:
-            limits:
-              cpu: 100m
-              memory: 150Mi
-            requests:
-              cpu: 50m
-              memory: 110Mi
-          volumeMounts:
-            - name: nginx-volume
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-            - name: frontend-volume
-              mountPath: /opt/app-root/src/assets/external-config.json
-              subPath: external-config.json
-
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: nginx-configmap
-data:
-  nginx.conf: |+
-    # For more information on configuration, see:            
-    #   * Official English Documentation: http://nginx.org/en/docs/
-    #   * Official Russian Documentation: http://nginx.org/ru/docs/
-
-
-     worker_processes auto;
-     error_log /var/log/nginx/error.log notice;
-     pid /run/nginx.pid;
-
-     # Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
-     include /usr/share/nginx/modules/*.conf;
-
-     events {
-      worker_connections 1024;
-     }
-
-    http {
-    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-    '$status $body_bytes_sent "$http_referer" '
-    '"$http_user_agent" "$http_x_forwarded_for"';
-
-    access_log  /var/log/nginx/access.log  main;    
-
-    sendfile            on;
-    tcp_nopush          on;
-    keepalive_timeout   65;
-    types_hash_max_size 4096;
-    include             /etc/nginx/mime.types;
-    default_type        application/octet-stream;
-    client_max_body_size 30m;
-
-    # Load modular configuration files from the /etc/nginx/conf.d directory.
-    # See http://nginx.org/en/docs/ngx_core_module.html#include
-    # for more information.
-    include /opt/app-root/etc/nginx.d/*.conf;
-
-    server {
-      listen       8080 default_server;
-      listen       [::]:8080 default_server;
-      server_name  _;
-      root         /opt/app-root/src/browser;
-
-     # Load configuration files for the default server block.
-     include /opt/app-root/etc/nginx.default.d/*.conf;
-
-    location = /404.html {
-    }
-
-    location = /q/health/live {
-        access_log off;
-        add_header 'Content-Type' 'application/json';
-        return 200 '{"status":"UP"}';
-    }
-
-    location = /q/health/ready {
-        access_log off;
-        add_header 'Content-Type' 'application/json';
-        return 200 '{"status":"UP"}';
-    }
-
-    location = /q/health/started {   
-        access_log off;
-        add_header 'Content-Type' 'application/json';
-        return 200 '{"status":"UP"}';
-    }
-
-    location / {
-       try_files $uri$args $uri$args/ /index.html;     
-       proxy_http_version 1.1;     
-       add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
-       add_header Pragma "no-cache";
-       add_header Expires 0;
-    }
-
-    }
-    # Settings for a TLS enabled server.
-    #
-    #    server {
-    #        listen       443 ssl http2;
-    #        listen       [::]:443 ssl http2;
-    #        server_name  _;
-    #        root         /opt/app-root/src;
-    #
-    #        ssl_certificate "/etc/pki/nginx/server.crt";
-    #        ssl_certificate_key "/etc/pki/nginx/private/server.key";
-    #        ssl_session_cache shared:SSL:1m;
-    #        ssl_session_timeout  10m;
-    #        ssl_ciphers PROFILE=SYSTEM;
-    #        ssl_prefer_server_ciphers on;
-    #
-    #        # Load configuration files for the default server block.
-    #        include /opt/app-root/etc/nginx.default.d/*.conf;
-    #
-    #        location = /404.html {
-    #        }
-    #
-    #    }
-    }
+GET https://agwa-dailyoperations-dev.apps.ocpb.enp.aramco.com.sa/morning-report net::ERR_FAILED 403 (CORS Rejected - Invalid origin)
+p @ polyfills-B6TNHZQ6.js:1
+scheduleTask @ polyfills-B6TNHZQ6.js:1
+onScheduleTask @ polyfills-B6TNHZQ6.js:1
+scheduleTask @ polyfills-B6TNHZQ6.js:1
+scheduleTask @ polyfills-B6TNHZQ6.js:1
+scheduleMacroTask @ polyfills-B6TNHZQ6.js:1
+xe @ polyfills-B6TNHZQ6.js:1
+(anonymous) @ polyfills-B6TNHZQ6.js:1
+e.<computed> @ polyfills-B6TNHZQ6.js:1
+(anonymous) @ main-C2ZHWTLM.js:8
+_trySubscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+t.subscribe.s @ main-C2ZHWTLM.js:3
+Rb._next @ main-C2ZHWTLM.js:3
+next @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+_trySubscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+y @ main-C2ZHWTLM.js:3
+f @ main-C2ZHWTLM.js:3
+Rb._next @ main-C2ZHWTLM.js:3
+next @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+_trySubscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+sR @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+subscribe @ main-C2ZHWTLM.js:3
+loadMorningReportData @ main-C2ZHWTLM.js:38
+ngOnInit @ main-C2ZHWTLM.js:38
+bR @ main-C2ZHWTLM.js:7
+kB @ main-C2ZHWTLM.js:7
+BM @ main-C2ZHWTLM.js:7
+am @ main-C2ZHWTLM.js:7
+Xz @ main-C2ZHWTLM.js:7
+D_ @ main-C2ZHWTLM.js:7
+JT @ main-C2ZHWTLM.js:7
+XT @ main-C2ZHWTLM.js:7
+Xz @ main-C2ZHWTLM.js:7
+D_ @ main-C2ZHWTLM.js:7
+JT @ main-C2ZHWTLM.js:7
+eW @ main-C2ZHWTLM.js:7
+eI @ main-C2ZHWTLM.js:7
+Xz @ main-C2ZHWTLM.js:7
+D_ @ main-C2ZHWTLM.js:7
+JT @ main-C2ZHWTLM.js:7
+XT @ main-C2ZHWTLM.js:7
+Xz @ main-C2ZHWTLM.js:7
+D_ @ main-C2ZHWTLM.js:7
+JT @ main-C2ZHWTLM.js:7
+eW @ main-C2ZHWTLM.js:7
+eI @ main-C2ZHWTLM.js:7
+Xz @ main-C2ZHWTLM.js:7
+D_ @ main-C2ZHWTLM.js:7
+Zz @ main-C2ZHWTLM.js:7
+ZT @ main-C2ZHWTLM.js:7
+fU @ main-C2ZHWTLM.js:7
+synchronizeOnce @ main-C2ZHWTLM.js:7
+synchronize @ main-C2ZHWTLM.js:7
+tickImpl @ main-C2ZHWTLM.js:7
+_tick @ main-C2ZHWTLM.js:7
+tick @ main-C2ZHWTLM.js:7
+(anonymous) @ main-C2ZHWTLM.js:7
+invoke @ polyfills-B6TNHZQ6.js:1
+onInvoke @ main-C2ZHWTLM.js:7
+invoke @ polyfills-B6TNHZQ6.js:1
+run @ polyfills-B6TNHZQ6.js:1
+run @ main-C2ZHWTLM.js:7
+next @ main-C2ZHWTLM.js:7
+next @ main-C2ZHWTLM.js:3
+_next @ main-C2ZHWTLM.js:3
+next @ main-C2ZHWTLM.js:3
+(anonymous) @ main-C2ZHWTLM.js:3
+Wl @ main-C2ZHWTLM.js:3
+next @ main-C2ZHWTLM.js:3
+emit @ main-C2ZHWTLM.js:7
+vw @ main-C2ZHWTLM.js:7
+(anonymous) @ main-C2ZHWTLM.js:7
+(anonymous) @ main-C2ZHWTLM.js:7
+P.<computed> @ polyfills-B6TNHZQ6.js:1
+invokeTask @ polyfills-B6TNHZQ6.js:1
+runTask @ polyfills-B6TNHZQ6.js:1
+invokeTask @ polyfills-B6TNHZQ6.js:1
+E.useG.invoke @ polyfills-B6TNHZQ6.js:1
+T._.args.<computed> @ polyfills-B6TNHZQ6.js:1
+requestAnimationFrame
+T @ polyfills-B6TNHZQ6.js:1
+scheduleTask @ polyfills-B6TNHZQ6.js:1
+scheduleTask @ polyfills-B6TNHZQ6.js:1
+scheduleMacroTask @ polyfills-B6TNHZQ6.js:1
+xe @ polyfills-B6TNHZQ6.js:1
+(anonymous) @ polyfills-B6TNHZQ6.js:1
+e.<computed> @ polyfills-B6TNHZQ6.js:1
+iT @ main-C2ZHWTLM.js:7
+i @ main-C2ZHWTLM.js:7
+(anonymous) @ main-C2ZHWTLM.js:7
+invoke @ polyfills-B6TNHZQ6.js:1
+run @ polyfills-B6TNHZQ6.js:1
+JB @ main-C2ZHWTLM.js:7
+i @ main-C2ZHWTLM.js:7
+onInvokeTask @ main-C2ZHWTLM.js:7
+invokeTask @ polyfills-B6TNHZQ6.js:1
+runTask @ polyfills-B6TNHZQ6.js:1
+invokeTask @ polyfills-B6TNHZQ6.js:1
+L @ polyfills-B6TNHZQ6.js:1
+H @ polyfills-B6TNHZQ6.js:1
+z @ polyfills-B6TNHZQ6.js:1
+morning-report:1  Access to XMLHttpRequest at 'https://agwa-dailyoperations-dev.apps.ocpb.enp.aramco.com.sa/morning-report/waterWellTestResults' from origin 'https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
