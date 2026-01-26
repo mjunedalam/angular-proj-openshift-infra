@@ -1,162 +1,61 @@
-Message History (source location and message history is disabled)
----------------------------------------------------------------------------------------------------------------------------------------
-Source                                   ID                             Processor                                          Elapsed (ms)
-                                         SendEmailRoute/SendEmailRoute  from[platform-http:///send-email?httpMethodRestric           40
-	...
-                                         SendEmailRoute/to1             https://email-service-test.apps.ocpa.enp.aramco.co            0
-
-Stacktrace
----------------------------------------------------------------------------------------------------------------------------------------: javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
-	at java.base@21.0.2/sun.security.ssl.Alert.createSSLException(Alert.java:130)
-	at java.base@21.0.2/sun.security.ssl.TransportContext.fatal(TransportContext.java:378)
-	at java.base@21.0.2/sun.security.ssl.TransportContext.fatal(TransportContext.java:321)
-	at java.base@21.0.2/sun.security.ssl.TransportContext.fatal(TransportContext.java:316)
-	at java.base@21.0.2/sun.security.ssl.CertificateMessage$T13CertificateConsumer.checkServerCerts(CertificateMessage.java:1318)
-	at java.base@21.0.2/sun.security.ssl.CertificateMessage$T13CertificateConsumer.onConsumeCertificate(CertificateMessage.java:1195)
-	at java.base@21.0.2/sun.security.ssl.CertificateMessage$T13CertificateConsumer.consume(CertificateMessage.java:1138)
-	at java.base@21.0.2/sun.security.ssl.SSLHandshake.consume(SSLHandshake.java:393)
-	at java.base@21.0.2/sun.security.ssl.HandshakeContext.dispatch(HandshakeContext.java:476)
-	at java.base@21.0.2/sun.security.ssl.HandshakeContext.dispatch(HandshakeContext.java:447)
-	at java.base@21.0.2/sun.security.ssl.TransportContext.dispatch(TransportContext.java:201)
-	at java.base@21.0.2/sun.security.ssl.SSLTransport.decode(SSLTransport.java:172)
-	at java.base@21.0.2/sun.security.ssl.SSLSocketImpl.decode(SSLSocketImpl.java:1506)
-	at java.base@21.0.2/sun.security.ssl.SSLSocketImpl.readHandshakeRecord(SSLSocketImpl.java:1421)
-	at java.base@21.0.2/sun.security.ssl.SSLSocketImpl.startHandshake(SSLSocketImpl.java:455)
-	at java.base@21.0.2/sun.security.ssl.SSLSocketImpl.startHandshake(SSLSocketImpl.java:426)
-	at org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory.executeHandshake(SSLConnectionSocketFactory.java:350)
-	at org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory.createLayeredSocket(SSLConnectionSocketFactory.java:318)
-	at org.apache.hc.client5.http.impl.io.DefaultHttpClientConnectionOperator.lambda$null$1(DefaultHttpClientConnectionOperator.java:97)
-	at org.apache.hc.client5.http.impl.io.DefaultHttpClientConnectionOperator.connect(DefaultHttpClientConnectionOperator.java:231)
-	at org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager.connect(PoolingHttpClientConnectionManager.java:490)
-	at org.apache.hc.client5.http.impl.classic.InternalExecRuntime.connectEndpoint(InternalExecRuntime.java:164)
-	at org.apache.hc.client5.http.impl.classic.InternalExecRuntime.connectEndpoint(InternalExecRuntime.java:174)
-	at org.apache.hc.client5.http.impl.classic.ConnectExec.execute(ConnectExec.java:144)
-	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
-	at org.apache.hc.client5.http.impl.classic.ProtocolExec.execute(ProtocolExec.java:192)
-	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
-	at org.apache.hc.client5.http.impl.classic.ContentCompressionExec.execute(ContentCompressionExec.java:150)
-	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
-	at org.apache.hc.client5.http.impl.classic.HttpRequestRetryExec.execute(HttpRequestRetryExec.java:113)
-	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
-	at org.apache.hc.client5.http.impl.classic.InternalHttpClient.doExecute(InternalHttpClient.java:174)
-	at org.apache.hc.client5.http.impl.classic.CloseableHttpClient.execute(CloseableHttpClient.java:87)
-	at org.apache.hc.client5.http.impl.classic.CloseableHttpClient.execute(CloseableHttpClient.java:55)
-	at org.apache.hc.client5.http.classic.HttpClient.executeOpen(HttpClient.java:183)
-	at org.apache.camel.component.http.HttpProducer.executeMethod(HttpProducer.java:491)
-	at org.apache.camel.component.http.HttpProducer.process(HttpProducer.java:247)
-	at org.apache.camel.support.AsyncProcessorConverterHelper$ProcessorToAsyncProcessorBridge.process(AsyncProcessorConverterHelper.java:65)
-	at org.apache.camel.processor.SendProcessor.sendUsingProducer(SendProcessor.java:252)
-	at org.apache.camel.processor.SendProcessor.process(SendProcessor.java:157)
-	at org.apache.camel.processor.errorhandler.RedeliveryErrorHandler$SimpleTask.handleFirst(RedeliveryErrorHandler.java:440)
-	at org.apache.camel.processor.errorhandler.RedeliveryErrorHandler$SimpleTask.run(RedeliveryErrorHandler.java:416)
-	at org.apache.camel.impl.engine.DefaultReactiveExecutor$Worker.doRun(DefaultReactiveExecutor.java:199)
-	at org.apache.camel.impl.engine.DefaultReactiveExecutor$Worker.executeReactiveWork(DefaultReactiveExecutor.java:189)
-	at org.apache.camel.impl.engine.DefaultReactiveExecutor$Worker.tryExecuteReactiveWork(DefaultReactiveExecutor.java:166)
-	at org.apache.camel.impl.engine.DefaultReactiveExecutor$Worker.schedule(DefaultReactiveExecutor.java:148)
-	at org.apache.camel.impl.engine.DefaultReactiveExecutor.scheduleMain(DefaultReactiveExecutor.java:59)
-	at org.apache.camel.processor.Pipeline.process(Pipeline.java:163)
-	at org.apache.camel.impl.engine.CamelInternalProcessor.processNonTransacted(CamelInternalProcessor.java:347)
-	at org.apache.camel.impl.engine.CamelInternalProcessor.process(CamelInternalProcessor.java:323)
-	at org.apache.camel.impl.engine.DefaultAsyncProcessorAwaitManager.process(DefaultAsyncProcessorAwaitManager.java:82)
-	at org.apache.camel.support.AsyncProcessorSupport.process(AsyncProcessorSupport.java:32)
-	at org.apache.camel.component.platform.http.vertx.VertxPlatformHttpConsumer.processExchange(VertxPlatformHttpConsumer.java:266)
-	at org.apache.camel.component.platform.http.vertx.VertxPlatformHttpConsumer.lambda$handleRequest$1(VertxPlatformHttpConsumer.java:226)
-	at io.vertx.core.impl.ContextImpl.lambda$executeBlocking$4(ContextImpl.java:192)
-	at io.vertx.core.impl.ContextInternal.dispatch(ContextInternal.java:270)
-	at io.vertx.core.impl.ContextImpl$1.execute(ContextImpl.java:221)
-	at io.vertx.core.impl.WorkerTask.run(WorkerTask.java:56)
-	at io.quarkus.vertx.core.runtime.VertxCoreRecorder$15.runWith(VertxCoreRecorder.java:638)
-	at org.jboss.threads.EnhancedQueueExecutor$Task.doRunWith(EnhancedQueueExecutor.java:2675)
-	at org.jboss.threads.EnhancedQueueExecutor$Task.run(EnhancedQueueExecutor.java:2654)
-	at org.jboss.threads.EnhancedQueueExecutor.runThreadBody(EnhancedQueueExecutor.java:1627)
-	at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1594)
-	at org.jboss.threads.DelegatingRunnable.run(DelegatingRunnable.java:11)
-	at org.jboss.threads.ThreadLocalResettingRunnable.run(ThreadLocalResettingRunnable.java:11)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base@21.0.2/java.lang.Thread.runWith(Thread.java:1596)
-	at java.base@21.0.2/java.lang.Thread.run(Thread.java:1583)
-	at org.graalvm.nativeimage.builder/com.oracle.svm.core.thread.PlatformThreads.threadStartRoutine(PlatformThreads.java:833)
-	at org.graalvm.nativeimage.builder/com.oracle.svm.core.posix.thread.PosixPlatformThreads.pthreadStartRoutine(PosixPlatformThreads.java:211)
-Caused by: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
-	at java.base@21.0.2/sun.security.validator.PKIXValidator.doBuild(PKIXValidator.java:388)
-	at java.base@21.0.2/sun.security.validator.PKIXValidator.engineValidate(PKIXValidator.java:271)
-	at java.base@21.0.2/sun.security.validator.Validator.validate(Validator.java:256)
-	at java.base@21.0.2/sun.security.ssl.X509TrustManagerImpl.checkTrusted(X509TrustManagerImpl.java:230)
-	at java.base@21.0.2/sun.security.ssl.X509TrustManagerImpl.checkServerTrusted(X509TrustManagerImpl.java:132)
-	at java.base@21.0.2/sun.security.ssl.CertificateMessage$T13CertificateConsumer.checkServerCerts(CertificateMessage.java:1302)
-	... 65 more
-Caused by: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
-	at java.base@21.0.2/sun.security.provider.certpath.SunCertPathBuilder.build(SunCertPathBuilder.java:148)
-	at java.base@21.0.2/sun.security.provider.certpath.SunCertPathBuilder.engineBuild(SunCertPathBuilder.java:129)
-	at java.base@21.0.2/java.security.cert.CertPathBuilder.build(CertPathBuilder.java:297)
-	at java.base@21.0.2/sun.security.validator.PKIXValidator.doBuild(PKIXValidator.java:383)
-
-facing above issue in openshift ,
-
-here is the quarkus app I am deploying in ocpb cluster , so facing above issue while calling API.
-package com.aramco.easd.agwa.integrations.routes;
-
-
-import com.aramco.easd.agwa.integrations.dto.EmailApiPayload;
-import com.aramco.easd.agwa.integrations.dto.EmailRequest;
-import com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder;
-import com.aramco.easd.agwa.integrations.service.EmailService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import org.apache.camel.Exchange;
-import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.jackson.JacksonDataFormat;
-
-@ApplicationScoped
-public class EmailRoute extends RouteBuilder {
-
-    @Inject
-    EmailPayloadBuilder payloadBuilder;
-
-    @Override
-    public void configure() {
-        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        JacksonDataFormat format = new JacksonDataFormat();
-        format.setObjectMapper(mapper);
-        format.setUnmarshalType(EmailRequest.class);
-
-/*      estConfiguration()
-                .component("platform-http")
-                .bindingMode(RestBindingMode.json)
-                .dataFormatProperty("prettyPrint", "true");
-
-        rest("/api/email")
-                .post("/send")
-                .consumes("application/json")
-                .to("direct:sendEmail");*/
-
-        from("rest:post:/send-email")
-                .unmarshal(format)
-                .log("Deserialized EmailRequest: ${body}")
-                .routeId("SendEmailRoute")
-                .log("Final email body (multipart): ${body}")
-                .process(exchange -> {
-                    EmailRequest request = exchange.getIn().getBody(EmailRequest.class);
-                    exchange.setProperty("EmailRequest", request);
-
-                })
-                .process(exchange -> {
-                    EmailApiPayload payload = payloadBuilder.buildPayload(exchange);
-                    exchange.getMessage().setBody(payload);
-                })
-
-                .marshal().json()
-                .log("JSON to send: ${body}")
-
-                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
-                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                //.to("smtp://exchange.aramco.com.sa");
-                .to("https://email-service-test.apps.ocpa.enp.aramco.com.sa?bridgeEndpoint=true")
-                .log("Email request forwarded to Email Api")
-                .setBody(constant("OK"));
-    }
-}
-
-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agwa-integrations
+spec:
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: agwa-integrations
+          image: agwa-integrations
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          envFrom:
+            - secretRef:
+                name: agwa-integrations-datasource-credentials-secret
+            - configMapRef:
+                name: datasource-configmap
+          env:
+            - name: oracle.jdbc.javaNetNio
+              value: "false"
+          resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 50m
+              memory: 110Mi
