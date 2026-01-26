@@ -216,3 +216,21 @@
         </profile>
     </profiles>
 </project>
+
+getting this error
+[ERROR] [ERROR] Some problems were encountered while processing the POMs:
+[ERROR] 'build.plugins.plugin.version' for org.apache.maven.plugins:maven-surefire-plugin must be a valid version but is '${surefire-plugin.version}'. @ line 158, column 26
+[ERROR] 'build.plugins.plugin.version' for org.apache.maven.plugins:maven-failsafe-plugin must be a valid version but is '${surefire-plugin.version}'. @ line 169, column 26
+ @ 
+[ERROR] The build could not read 1 project -> [Help 1]
+[ERROR]   
+[ERROR]   The project com.aramco.easd:agwa-integrations:1.0.0 (C:\Dev\JavaDev\Agwa-Services\agwa-integrations\pom.xml) has 2 errors
+[ERROR]     'build.plugins.plugin.version' for org.apache.maven.plugins:maven-surefire-plugin must be a valid version but is '${surefire-plugin.version}'. @ line 158, column 26
+[ERROR]     'build.plugins.plugin.version' for org.apache.maven.plugins:maven-failsafe-plugin must be a valid version but is '${surefire-plugin.version}'. @ line 169, column 26
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/ProjectBuildingException
+
