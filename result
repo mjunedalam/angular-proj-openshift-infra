@@ -17,7 +17,33 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
-          # ... (Probes kept as is) ...
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
           envFrom:
             - secretRef:
                 name: agwa-integrations-datasource-credentials-secret
@@ -27,17 +53,18 @@ spec:
             - name: oracle.jdbc.javaNetNio
               value: "false"
 
-            # 1. QUARKUS CONFIG (Primary for Native & Quarkus components)
+            # --- SSL CONFIGURATION (PEM MODE) ---
+            # Points to the raw cert file
             - name: QUARKUS_HTTP_SSL_CERTIFICATE_TRUST_STORE_FILE
-              value: "/deployments/certs/truststore.jks"
-            - name: QUARKUS_HTTP_SSL_CERTIFICATE_TRUST_STORE_PASSWORD
-              value: "changeit"
+              value: "/deployments/certs/ocpa.cert"
+            
+            # Tells Quarkus to read it as a text-based certificate
             - name: QUARKUS_HTTP_SSL_CERTIFICATE_TRUST_STORE_FILE_TYPE
-              value: "JKS"
-
-            # 2. JAVA STANDARD CONFIG (Safety net for JVM mode & legacy libs)
-            - name: JAVA_TOOL_OPTIONS
-              value: "-Djavax.net.ssl.trustStore=/deployments/certs/truststore.jks -Djavax.net.ssl.trustStorePassword=changeit"
+              value: "PEM"
+            
+            # No password is required for PEM files
+            - name: QUARKUS_HTTP_SSL_CERTIFICATE_TRUST_STORE_PASSWORD
+              value: ""
 
           volumeMounts:
             - name: ocpa-cert-vol
@@ -54,5 +81,6 @@ spec:
 
       volumes:
         - name: ocpa-cert-vol
-          secret:
-            secretName: ocpa-secret-agwa-int-service
+          configMap:
+            # Must match the name of the ConfigMap you created
+            name: ocpa-cert-config
