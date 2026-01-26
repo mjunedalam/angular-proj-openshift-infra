@@ -92,3 +92,71 @@ Caused by: sun.security.provider.certpath.SunCertPathBuilderException: unable to
 	at java.base@21.0.2/sun.security.validator.PKIXValidator.doBuild(PKIXValidator.java:383)
 
 facing above issue in openshift ,
+
+here is the quarkus app I am deploying in ocpb cluster , so facing above issue while calling API.
+package com.aramco.easd.agwa.integrations.routes;
+
+
+import com.aramco.easd.agwa.integrations.dto.EmailApiPayload;
+import com.aramco.easd.agwa.integrations.dto.EmailRequest;
+import com.aramco.easd.agwa.integrations.service.EmailPayloadBuilder;
+import com.aramco.easd.agwa.integrations.service.EmailService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.apache.camel.Exchange;
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.jackson.JacksonDataFormat;
+
+@ApplicationScoped
+public class EmailRoute extends RouteBuilder {
+
+    @Inject
+    EmailPayloadBuilder payloadBuilder;
+
+    @Override
+    public void configure() {
+        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        JacksonDataFormat format = new JacksonDataFormat();
+        format.setObjectMapper(mapper);
+        format.setUnmarshalType(EmailRequest.class);
+
+/*      estConfiguration()
+                .component("platform-http")
+                .bindingMode(RestBindingMode.json)
+                .dataFormatProperty("prettyPrint", "true");
+
+        rest("/api/email")
+                .post("/send")
+                .consumes("application/json")
+                .to("direct:sendEmail");*/
+
+        from("rest:post:/send-email")
+                .unmarshal(format)
+                .log("Deserialized EmailRequest: ${body}")
+                .routeId("SendEmailRoute")
+                .log("Final email body (multipart): ${body}")
+                .process(exchange -> {
+                    EmailRequest request = exchange.getIn().getBody(EmailRequest.class);
+                    exchange.setProperty("EmailRequest", request);
+
+                })
+                .process(exchange -> {
+                    EmailApiPayload payload = payloadBuilder.buildPayload(exchange);
+                    exchange.getMessage().setBody(payload);
+                })
+
+                .marshal().json()
+                .log("JSON to send: ${body}")
+
+                .setHeader(Exchange.HTTP_METHOD, constant("POST"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                //.to("smtp://exchange.aramco.com.sa");
+                .to("https://email-service-test.apps.ocpa.enp.aramco.com.sa?bridgeEndpoint=true")
+                .log("Email request forwarded to Email Api")
+                .setBody(constant("OK"));
+    }
+}
+
+
