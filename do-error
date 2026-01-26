@@ -1,83 +1,11 @@
+SendEmailRoute/to1 https://email-service-test.apps.ocpa.enp.aramco.co 0
 Stacktrace
----------------------------------------------------------------------------------------------------------------------------------------: com.fasterxml.jackson.databind.exc.InvalidDefinitionException: No serializer found for class com.aramco.easd.agwa.integrations.dto.EmailApiPayload and no properties discovered to create BeanSerializer (to avoid exception, disable SerializationFeature.FAIL_ON_EMPTY_BEANS). This appears to be a native image, in which case you may need to configure reflection for the class that is to be serialized
-at com.fasterxml.jackson.databind.SerializerProvider.reportBadDefinition(SerializerProvider.java:1330)
-at com.fasterxml.jackson.databind.DatabindContext.reportBadDefinition(DatabindContext.java:414)
-at com.fasterxml.jackson.databind.ser.impl.UnknownSerializer.failForEmpty(UnknownSerializer.java:49)
-at com.fasterxml.jackson.databind.ser.impl.UnknownSerializer.serialize(UnknownSerializer.java:30)
-at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider._serialize(DefaultSerializerProvider.java:502)
-at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider.serializeValue(DefaultSerializerProvider.java:341)
-at com.fasterxml.jackson.databind.ObjectWriter$Prefetch.serialize(ObjectWriter.java:1574)
-at com.fasterxml.jackson.databind.ObjectWriter._writeValueAndClose(ObjectWriter.java:1275)
-at com.fasterxml.jackson.databind.ObjectWriter.writeValue(ObjectWriter.java:1098)
-at org.apache.camel.component.jackson.AbstractJacksonDataFormat.marshal(AbstractJacksonDataFormat.java:167)
-at org.apache.camel.support.processor.MarshalProcessor.process(MarshalProcessor.java:71)
-at org.apache.camel.processor.errorhandler.RedeliveryErrorHandler$SimpleTask.handleFirst(RedeliveryErrorHandler.java:440)
-at org.apache.camel.processor.errorhandler.RedeliveryErrorHandler$SimpleTask.run(RedeliveryErrorHandler.java:416)
-
-getting above error in openshift when access the service below are the classes I have
-package com.aramco.easd.agwa.integrations.dto;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
-
-/**
- * This class is **only** used when we call the external email‑service.
- * It deliberately does NOT reuse the internal EmailRequest DTO.
- */
-public class EmailApiPayload {
-
-    @JsonProperty("from_address")
-    private String fromAddress;
-
-    @JsonProperty("to")
-    private List<String> to;
-
-    @JsonProperty("cc")
-    private List<String> cc;
-
-    @JsonProperty("subject")
-    private String subject;
-
-    @JsonProperty("content")
-    private String content;
-
-    public String getFromAddress() {
-        return fromAddress;
-    }
-
-    public void setFromAddress(String fromAddress) {
-        this.fromAddress = fromAddress;
-    }
-
-    public List<String> getTo() {
-        return to;
-    }
-
-    public void setTo(List<String> to) {
-        this.to = to;
-    }
-
-    public List<String> getCc() {
-        return cc;
-    }
-
-    public void setCc(List<String> cc) {
-        this.cc = cc;
-    }
-
-    public String getSubject() {
-        return subject;
-    }
-
-    public void setSubject(String subject) {
-        this.subject = subject;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-}
+---------------------------------------------------------------------------------------------------------------------------------------: javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+at java.base@21.0.2/sun.security.ssl.Alert.createSSLException(Alert.java:130)
+at java.base@21.0.2/sun.security.ssl.TransportContext.fatal(TransportContext.java:378)
+at java.base@21.0.2/sun.security.ssl.TransportContext.fatal(TransportContext.java:321)
+at java.base@21.0.2/sun.security.ssl.TransportContext.fatal(TransportContext.java:316)
+at java.base@21.0.2/sun.security.ssl.CertificateMessage$T13CertificateConsumer.checkServerCerts(CertificateMessage.java:1318)
+at java.base@21.0.2/sun.security.ssl.CertificateMessage$T13CertificateConsumer.onConsumeCertificate(CertificateMessage.java:1195)
+at java.base@21.0.2/sun.security.ssl.CertificateMessage$T13CertificateConsumer.consume(CertificateMessage.java:1138)
+at java.base@21.0.2/sun.security.ssl.SSLHandshake.consume(SSLHandshake.java:393)
