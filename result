@@ -1,33 +1,58 @@
-// src/app/core/config/app-config.service.ts
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
-import { AppConfig } from './app-config.interface'; // Import the separated interface
-import { environment } from '../../../environments/environment';
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agwa-integrations
+spec:
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: agwa-integrations
+          image: agwa-integrations
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # ... (Probes kept as is) ...
+          envFrom:
+            - secretRef:
+                name: agwa-integrations-datasource-credentials-secret
+            - configMapRef:
+                name: datasource-configmap
+          env:
+            - name: oracle.jdbc.javaNetNio
+              value: "false"
 
-@Injectable({
-  providedIn: 'root'
-})
-export class AppConfigService {
-  private http = inject(HttpClient);
-  private config: AppConfig | null = null;
+            # 1. QUARKUS CONFIG (Primary for Native & Quarkus components)
+            - name: QUARKUS_HTTP_SSL_CERTIFICATE_TRUST_STORE_FILE
+              value: "/deployments/certs/truststore.jks"
+            - name: QUARKUS_HTTP_SSL_CERTIFICATE_TRUST_STORE_PASSWORD
+              value: "changeit"
+            - name: QUARKUS_HTTP_SSL_CERTIFICATE_TRUST_STORE_FILE_TYPE
+              value: "JKS"
 
-  async loadConfig(): Promise<void> {
-    const url = `${environment.externalConfigFileUrl}?t=${Date.now()}`;
-    // Runtime safety: You might want to catch errors here
-    try {
-        this.config = await lastValueFrom(this.http.get<AppConfig>(url));
-    } catch (err) {
-        console.error('Critical Error: Could not load App Config', err);
-        // Best Practice: Re-throw or load a hardcoded fallback so app doesn't crash silently
-        throw err; 
-    }
-  }
+            # 2. JAVA STANDARD CONFIG (Safety net for JVM mode & legacy libs)
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Djavax.net.ssl.trustStore=/deployments/certs/truststore.jks -Djavax.net.ssl.trustStorePassword=changeit"
 
-  get settings(): AppConfig {
-    if (!this.config) {
-      throw new Error('AppConfig not loaded');
-    }
-    return this.config;
-  }
-}
+          volumeMounts:
+            - name: ocpa-cert-vol
+              mountPath: "/deployments/certs"
+              readOnly: true
+
+          resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 50m
+              memory: 110Mi
+
+      volumes:
+        - name: ocpa-cert-vol
+          secret:
+            secretName: ocpa-secret-agwa-int-service
