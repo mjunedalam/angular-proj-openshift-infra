@@ -1,3 +1,155 @@
-Object is possibly 'undefined'.ngtsc(2532)
-misc-pres-well-data.component.ts(7, 16): Error occurs in the template of component MiscPresWellDataComponent.
-(property) IWellData.RIG_ACTIVITY: IRigActivity[]
+Hirarchy of Components
+
+app-presentation
+     has below two
+        app-well-chip-list and app-wellbore-view
+        and app-wellbore-view has app-misc-pres-well-data
+
+now I want to populate data in this component  app-misc-pres-well-data on the selection/clicked wellnames chip.on the basis of epNum
+below are the all required code , now update it accordingly make sure I am using angular 19 ngrx signalstore and angular signal
+write non vulnerable code and there is no lint issue as well
+
+
+        import { Component, computed, inject, OnInit } from '@angular/core';
+import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+
+@Component({
+  selector: 'app-misc-pres-well-data',
+  imports: [],
+  templateUrl: './misc-pres-well-data.component.html',
+  styleUrl: './misc-pres-well-data.component.scss'
+})
+export class MiscPresWellDataComponent implements OnInit {
+
+
+  readonly wellStore = inject(wellDataStore);
+
+  readonly wellData = computed(() => this.wellStore.response()?.data?.[0] ?? null);
+
+  ngOnInit(): void {
+    this.wellStore.loadWellData();
+  }
+import { Component, computed, inject, signal } from '@angular/core';
+import { MoriningReportService } from '../../../services/morining-report.service';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MorningReport } from '../../../models/morining-report.model';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+
+@Component({
+  selector: 'app-well-chip-list',
+  imports: [...SHARED_MODULES],
+  providers: [MoriningReportService],
+  templateUrl: './well-chip-list.component.html',
+  styleUrl: './well-chip-list.component.scss'
+
+})
+export class WellChipListComponent {
+
+  private morningReportService = inject(MoriningReportService);
+  store = inject(MorningReportStore)
+
+  public visibleWells = computed(() => this.store.visibleWells());
+  public selectedWellId = computed(() => this.store.selectedWellId());
+  public selectedWell = this.store.selectedWell;
+
+
+  ngOnInit() {
+    this.store.loadMorningReportData();
+  }
+
+  public chipCountInfo = computed(() => {
+    const selectedId = this.selectedWellId();
+    const wells = this.store.wells();
+    const index = wells.findIndex(well => well.epANum === selectedId);
+    if (index === -1) return '';
+    return `Well ${index + 1} of ${wells.length}`;
+  });
+import { AfterViewInit, Component, ElementRef, inject, OnInit, ViewChild, viewChild } from '@angular/core';
+import { WellboreService } from '../wellbore.service';
+import * as d3 from 'd3';
+import { DepthScaleComponent } from '../depth-scale/depth-scale.component';
+import { WellCasingVisualizationComponent } from '../well-casing-visualization/well-casing-visualization.component';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { WellStatusGridComponent } from "../well-status-grid/well-status-grid.component";
+import { MiscPresWellDataComponent } from "../misc-pres-well-data/misc-pres-well-data.component";
+
+@Component({
+  selector: 'app-wellbore-view',
+  imports: [...SHARED_MODULES, DepthScaleComponent, WellCasingVisualizationComponent, WellStatusGridComponent, MiscPresWellDataComponent],
+  templateUrl: './wellbore-view.component.html',
+  styleUrl: './wellbore-view.component.scss'
+})
+export class WellboreViewComponent implements OnInit {
+
+
+  @ViewChild("wellboreSvg", { static: true })
+  svgElement!: ElementRef<SVGSVGElement>;
+
+  wellBoreService = inject(WellboreService);
+
+  yScale!: d3.ScaleLinear<number, number>;
+  centerX!: number;
+  svg!: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+
+  config = this.wellBoreService.configSignal();
+  wellData = this.wellBoreService.wellDataSignal();
+  geoLogicalLayers = this.wellBoreService.geoLogicalLayerSignal();
+  plannedDepth = this.wellBoreService.plannedDepth();
+  sizeScale = this.wellBoreService.sizeScale()
+
+  ngOnInit(): void {
+    this.initWellBoreView();
+  }
+
+  private initWellBoreView() {
+    this.svg = d3.select(this.svgElement.nativeElement);
+    this.svg.selectAll("*").remove();
+
+    // Intialize the scales
+    this.yScale = d3.scaleLinear()
+      .domain([0, this.plannedDepth])
+      .range([this.config.margin.top, this.config.wellboreHeight - this.config.margin.bottom]);
+
+    this.centerX = this.config.wellboreWidth / 2;
+
+    // Add the definitions
+    const defs = this.svg.append("defs")
+
+
+    this.svg.append("text")
+
+    const defsSelection = this.svg.select("defs")
+      .attr("id", "")
+  }
+}
+export interface MorningReport {
+    epANum: string;
+    wGnrName: string;
+    wRigCd: string;
+    racEstDdLatCord: string;
+    racEstDdLonCord: string;
+    biNum: string;
+    trgtRsvrCd: string;
+    stLongCd: string;
+    wStDmrkDpth: string;
+    wPrsntDpth: number | null;
+    wDpthChgDis: number | null;
+    wOpRmk: string;
+    foremanRmk: string;
+    plLtrlEndDpth: number | null;
+    wEvntTime: string;
+    rigStatus: string;
+}
+
+
+
+  public onWellSelect(well: MorningReport) {
+    this.store.selectWell(well.epANum);
+  }
+}
+
+  refreshWelldata() {
+    this.wellStore.refresh();
+  }
+
+}
