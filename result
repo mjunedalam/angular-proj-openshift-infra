@@ -1,44 +1,109 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
-import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+// active-wwell-view.component.ts
+import { Component, inject, OnInit } from '@angular/core';
 import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
-import { CommonModule } from '@angular/common';
+// ... other imports
 
 @Component({
-  selector: 'app-misc-pres-well-data',
+  selector: 'app-active-wwell-view',
   standalone: true,
-  imports: [CommonModule],
-  templateUrl: './misc-pres-well-data.component.html',
-  styleUrl: './misc-pres-well-data.component.scss'
+  imports: [/* ... */],
+  templateUrl: './active-wwell-view.component.html',
 })
-export class MiscPresWellDataComponent implements OnInit {
-  private readonly wellStore = inject(wellDataStore);
-  private readonly reportStore = inject(MorningReportStore);
+export class ActiveWwellViewComponent implements OnInit {
+  readonly store = inject(MorningReportStore);
 
-  // Selector: Dynamically finds the well in the detail array based on chip selection
-  readonly selectedWellData = computed(() => {
-    const selectedId = this.reportStore.selectedWellId(); // Value from Chip
-    const response = this.wellStore.response();
-
-    if (!selectedId || !response?.data) return null;
-
-    // We search the array for the item matching the ID
-    return response.data.find(item => {
-      // Access the ID from the specific nested location in your JSON
-      const detailedId = item.DRLG_OP_STATUS?.[0]?.epANum;
-      
-      // Compare dynamic values, converting both to strings to be safe
-      return String(detailedId) === String(selectedId);
-    }) ?? null;
-  });
-
-  ngOnInit(): void {
-    // Only load if data is not already present
-    if (!this.wellStore.response()) {
-      this.wellStore.loadWellData();
-    }
+  ngOnInit() {
+    this.store.loadMorningReportData();
   }
 
-  refreshWelldata(): void {
-    this.wellStore.refresh();
+  onWellSelect(id: string) {
+    this.store.selectWell(id);
   }
 }
+
+<mat-chip-listbox class="mat-mdc-chip-set-stacked">
+  @for (well of store.visibleWells(); track well.epANum) {
+    <mat-chip-option 
+      [selected]="store.selectedWellId() === well.epANum"
+      (click)="onWellSelect(well.epANum)">
+      {{ well.wGnrName }}
+    </mat-chip-option>
+  }
+</mat-chip-listbox>
+
+// wwell-header.component.ts
+import { Component, inject } from '@angular/core';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+
+@Component({
+  selector: 'app-wwell-header',
+  templateUrl: './wwell-header.component.html',
+})
+export class WwellHeaderComponent {
+  readonly store = inject(MorningReportStore);
+  // This computed signal updates automatically when store.selectedWellId changes
+  readonly well = this.store.selectedWell; 
+}
+
+<div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+    Well Header: {{ well()?.wGnrName || 'No Well Selected' }}
+  </div>
+
+  @if (well(); as data) {
+    <div class="grid grid-cols-3 gap-0 border-collapse">
+      <div class="p-3 border-r border-b border-gray-200 bg-gray-50">
+        <label class="block text-[10px] font-bold text-gray-500 uppercase">Field</label>
+        <div class="text-sm font-semibold text-gray-800">{{ data.wRigCd }}</div>
+      </div>
+
+      <div class="p-3 border-r border-b border-gray-200 bg-gray-50">
+        <label class="block text-[10px] font-bold text-gray-500 uppercase">Well</label>
+        <div class="text-sm font-semibold text-gray-800">{{ data.wGnrName }}</div>
+      </div>
+
+      <div class="p-3 border-b border-gray-200 bg-orange-50">
+        <label class="block text-[10px] font-bold text-orange-700 uppercase">Latitude (GIS)</label>
+        <div class="text-sm font-semibold">{{ data.racEstDdLatCord }}</div>
+      </div>
+
+      <div class="p-3 border-r border-b border-gray-200 bg-orange-50">
+        <label class="block text-[10px] font-bold text-orange-700 uppercase">Longitude (GIS)</label>
+        <div class="text-sm font-semibold">{{ data.racEstDdLonCord }}</div>
+      </div>
+
+      <div class="p-3 border-r border-b border-gray-200 bg-blue-400 text-white">
+        <label class="block text-[10px] font-bold uppercase opacity-80">Targeted Aquifer (IR)</label>
+        <div class="text-sm font-bold">{{ data.trgtRsvrCd }}</div>
+      </div>
+
+      <div class="p-3 border-b border-gray-200 bg-gray-50">
+        <label class="block text-[10px] font-bold text-gray-500 uppercase">Target Depth</label>
+        <div class="text-sm font-semibold">{{ data.wStDmrkDpth }} ft</div>
+      </div>
+
+      <div class="p-3 border-r border-gray-200 bg-gray-50">
+        <label class="block text-[10px] font-bold text-gray-500 uppercase">EP Num</label>
+        <div class="text-sm font-semibold">{{ data.epANum }}</div>
+      </div>
+
+      <div class="p-3 border-r border-gray-200 bg-gray-50">
+        <label class="block text-[10px] font-bold text-gray-500 uppercase">Status</label>
+        <div class="text-sm font-semibold">
+          <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs">
+            {{ data.rigStatus }}
+          </span>
+        </div>
+      </div>
+
+      <div class="p-3 bg-gray-50">
+        <label class="block text-[10px] font-bold text-gray-500 uppercase">BI</label>
+        <div class="text-sm font-semibold">{{ data.biNum }}</div>
+      </div>
+    </div>
+  } @else {
+    <div class="p-10 text-center text-gray-400 italic">
+      Please select a well from the list to view details.
+    </div>
+  }
+</div>
