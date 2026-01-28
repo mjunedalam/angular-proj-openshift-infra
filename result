@@ -1,109 +1,169 @@
-// active-wwell-view.component.ts
-import { Component, inject, OnInit } from '@angular/core';
-import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
-// ... other imports
+export const MorningReportStore = signalStore(
+  { providedIn: 'root' },
+  withState<MorningReportState>({
+    wells: [],
+    startIndex: 0,
+    selectedWellId: null,
+    chipsPerPage: 5,
+  }),
+  withMethods((store, service = inject(MoriningReportService)) => ({
+    loadMorningReportData() {
+      service.getMorningReport().subscribe({
+        next: (wells) => {
+          patchState(store, { wells });
+          // Default selection to the first well if none is selected
+          if (wells.length > 0 && !store.selectedWellId()) {
+            patchState(store, { selectedWellId: wells[0].epANum });
+          }
+        },
+      });
+    },
 
-@Component({
-  selector: 'app-active-wwell-view',
-  standalone: true,
-  imports: [/* ... */],
-  templateUrl: './active-wwell-view.component.html',
-})
-export class ActiveWwellViewComponent implements OnInit {
-  readonly store = inject(MorningReportStore);
+    selectWell(id: string) {
+      patchState(store, { selectedWellId: id });
+    },
 
-  ngOnInit() {
-    this.store.loadMorningReportData();
-  }
+    navigateNext() {
+      const wells = store.wells();
+      const currentId = store.selectedWellId();
+      const currentIndex = wells.findIndex((w) => w.epANum === currentId);
 
-  onWellSelect(id: string) {
-    this.store.selectWell(id);
-  }
-}
+      if (currentIndex < wells.length - 1) {
+        const nextIndex = currentIndex + 1;
+        const nextWellId = wells[nextIndex].epANum;
+        
+        // If the next index moves out of the current visible range, shift the page
+        const currentStart = store.startIndex();
+        if (nextIndex >= currentStart + store.chipsPerPage()) {
+           patchState(store, { startIndex: currentStart + 1 });
+        }
 
-<mat-chip-listbox class="mat-mdc-chip-set-stacked">
-  @for (well of store.visibleWells(); track well.epANum) {
-    <mat-chip-option 
-      [selected]="store.selectedWellId() === well.epANum"
-      (click)="onWellSelect(well.epANum)">
-      {{ well.wGnrName }}
-    </mat-chip-option>
-  }
-</mat-chip-listbox>
+        patchState(store, { selectedWellId: nextWellId });
+      }
+    },
 
-// wwell-header.component.ts
-import { Component, inject } from '@angular/core';
-import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+    navigatePrev() {
+      const wells = store.wells();
+      const currentId = store.selectedWellId();
+      const currentIndex = wells.findIndex((w) => w.epANum === currentId);
 
-@Component({
-  selector: 'app-wwell-header',
-  templateUrl: './wwell-header.component.html',
-})
-export class WwellHeaderComponent {
-  readonly store = inject(MorningReportStore);
-  // This computed signal updates automatically when store.selectedWellId changes
-  readonly well = this.store.selectedWell; 
-}
+      if (currentIndex > 0) {
+        const prevIndex = currentIndex - 1;
+        const prevWellId = wells[prevIndex].epANum;
 
-<div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white">
-  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
-    Well Header: {{ well()?.wGnrName || 'No Well Selected' }}
+        // If the previous index moves behind the current visible range, shift the page
+        const currentStart = store.startIndex();
+        if (prevIndex < currentStart) {
+          patchState(store, { startIndex: Math.max(0, currentStart - 1) });
+        }
+
+        patchState(store, { selectedWellId: prevWellId });
+      }
+    },
+  })),
+  // Moved computed properties here for better reactivity
+  withMethods((store) => ({
+    visibleWells: computed(() => {
+      const wells = store.wells();
+      const start = store.startIndex();
+      return wells.slice(start, start + store.chipsPerPage());
+    }),
+    selectedWell: computed(() => {
+      return store.wells().find((w) => w.epANum === store.selectedWellId());
+    })
+  }))
+);
+
+<div class="border-4 border-blue-400 bg-slate-50 shadow-2xl mt-4 rounded-lg overflow-hidden">
+  <div class="flex justify-between items-center bg-slate-800 text-white p-3 shadow-md">
+    <span class="font-bold tracking-wide uppercase text-sm">
+      <mat-icon class="align-middle mr-2">analytics</mat-icon> Single Well Review
+    </span>
+    <div class="text-xs opacity-75">v1.0.19</div>
   </div>
 
-  @if (well(); as data) {
-    <div class="grid grid-cols-3 gap-0 border-collapse">
-      <div class="p-3 border-r border-b border-gray-200 bg-gray-50">
-        <label class="block text-[10px] font-bold text-gray-500 uppercase">Field</label>
-        <div class="text-sm font-semibold text-gray-800">{{ data.wRigCd }}</div>
+  <div class="flex">
+    <div class="w-2/12 bg-white border-r border-gray-200 p-4 flex flex-col gap-4">
+      <div class="bg-amber-100 border border-amber-300 p-2 text-center rounded shadow-sm">
+        <div class="text-[10px] uppercase font-bold text-amber-800">Operational Date</div>
+        <div class="font-mono font-bold">2026-01-28</div>
       </div>
 
-      <div class="p-3 border-r border-b border-gray-200 bg-gray-50">
-        <label class="block text-[10px] font-bold text-gray-500 uppercase">Well</label>
-        <div class="text-sm font-semibold text-gray-800">{{ data.wGnrName }}</div>
-      </div>
+      <div class="flex flex-col gap-2">
+        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-tighter">Wells List</label>
+        
+        <mat-chip-listbox class="mat-mdc-chip-set-stacked w-full" aria-label="Well selection">
+          @for (well of store.visibleWells(); track well.epANum) {
+            <mat-chip-option 
+              [selected]="store.selectedWellId() === well.epANum"
+              (click)="store.selectWell(well.epANum)"
+              class="w-full">
+              <span class="truncate">{{ well.wGnrName }}</span>
+            </mat-chip-option>
+          }
+        </mat-chip-listbox>
 
-      <div class="p-3 border-b border-gray-200 bg-orange-50">
-        <label class="block text-[10px] font-bold text-orange-700 uppercase">Latitude (GIS)</label>
-        <div class="text-sm font-semibold">{{ data.racEstDdLatCord }}</div>
-      </div>
-
-      <div class="p-3 border-r border-b border-gray-200 bg-orange-50">
-        <label class="block text-[10px] font-bold text-orange-700 uppercase">Longitude (GIS)</label>
-        <div class="text-sm font-semibold">{{ data.racEstDdLonCord }}</div>
-      </div>
-
-      <div class="p-3 border-r border-b border-gray-200 bg-blue-400 text-white">
-        <label class="block text-[10px] font-bold uppercase opacity-80">Targeted Aquifer (IR)</label>
-        <div class="text-sm font-bold">{{ data.trgtRsvrCd }}</div>
-      </div>
-
-      <div class="p-3 border-b border-gray-200 bg-gray-50">
-        <label class="block text-[10px] font-bold text-gray-500 uppercase">Target Depth</label>
-        <div class="text-sm font-semibold">{{ data.wStDmrkDpth }} ft</div>
-      </div>
-
-      <div class="p-3 border-r border-gray-200 bg-gray-50">
-        <label class="block text-[10px] font-bold text-gray-500 uppercase">EP Num</label>
-        <div class="text-sm font-semibold">{{ data.epANum }}</div>
-      </div>
-
-      <div class="p-3 border-r border-gray-200 bg-gray-50">
-        <label class="block text-[10px] font-bold text-gray-500 uppercase">Status</label>
-        <div class="text-sm font-semibold">
-          <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs">
-            {{ data.rigStatus }}
-          </span>
+        <div class="flex justify-between mt-2">
+           <button mat-icon-button (click)="store.navigatePrev()" [disabled]="store.startIndex() === 0">
+             <mat-icon>chevron_left</mat-icon>
+           </button>
+           <button mat-icon-button (click)="store.navigateNext()" 
+             [disabled]="store.startIndex() + store.chipsPerPage() >= store.wells().length">
+             <mat-icon>chevron_right</mat-icon>
+           </button>
         </div>
       </div>
+    </div>
 
-      <div class="p-3 bg-gray-50">
-        <label class="block text-[10px] font-bold text-gray-500 uppercase">BI</label>
-        <div class="text-sm font-semibold">{{ data.biNum }}</div>
+    <div class="w-10/12 p-6 bg-white overflow-y-auto max-h-[85vh]">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="h-10 w-2 bg-blue-600 rounded-full"></div>
+        <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tight">
+          GWD Daily Report <span class="text-blue-500 text-sm ml-2">#{{ store.selectedWell()?.epANum }}</span>
+        </h1>
+      </div>
+
+      <div class="grid grid-cols-12 gap-6">
+        <div class="col-span-9 space-y-6">
+          <app-wwell-header></app-wwell-header>
+          
+          <div class="bg-white border rounded-xl shadow-sm p-4">
+             <app-database-info></app-database-info>
+          </div>
+
+          <app-operation-summary></app-operation-summary>
+          
+          <div class="group border-2 border-dashed border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+            <label class="inline-block bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded mb-2 uppercase font-bold">
+              Drilling Remarks
+            </label>
+            <textarea 
+              class="w-full p-3 bg-gray-50 rounded border-none focus:ring-2 focus:ring-blue-400 outline-none text-sm"
+              rows="3"
+              placeholder="Enter operational remarks here...">{{ store.selectedWell()?.wOpRmk }}</textarea>
+          </div>
+
+          <app-formation-tops-and-casing></app-formation-tops-and-casing>
+          <app-wwell-test></app-wwell-test>
+        </div>
+
+        <div class="col-span-3 space-y-4">
+          <div class="sticky top-4">
+             <app-file-upload></app-file-upload>
+             
+             <div class="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+               <label class="block text-[10px] font-bold text-orange-800 uppercase mb-2">Well Status</label>
+               <mat-form-field appearance="outline" class="w-full bg-white">
+                 <mat-select [(ngModel)]="selectedValue">
+                   @for (status of statuses; track status.value) {
+                     <mat-option [value]="status.value">{{ status.value }}</mat-option>
+                   }
+                 </mat-select>
+               </mat-form-field>
+             </div>
+          </div>
+        </div>
       </div>
     </div>
-  } @else {
-    <div class="p-10 text-center text-gray-400 italic">
-      Please select a well from the list to view details.
-    </div>
-  }
+  </div>
 </div>
