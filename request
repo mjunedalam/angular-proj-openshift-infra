@@ -1,84 +1,106 @@
-interface MorningReportState {
-    wells: MorningReport[];
-    startIndex: number;
-    selectedWellId: string | null;
-    chipsPerPage: number;
-    showAll: boolean; // New state property
+import { Component, computed, inject, OnInit } from '@angular/core';
+import { MoriningReportService } from '../../../services/morining-report.service';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MorningReport } from '../../../models/morining-report.model';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+import { FileUploadComponent } from "../../../shared/components/file-upload/file-upload.component";
+
+@Component({
+  selector: 'app-well-chip-list',
+  imports: [...SHARED_MODULES, FileUploadComponent],
+  providers: [MoriningReportService],
+  templateUrl: './well-chip-list.component.html',
+  styleUrl: './well-chip-list.component.scss'
+
+})
+export class WellChipListComponent implements OnInit {
+
+  private morningReportService = inject(MoriningReportService);
+  store = inject(MorningReportStore)
+
+  public visibleWells = computed(() => this.store.visibleWells());
+  public selectedWellId = computed(() => this.store.selectedWellId());
+  public selectedWell = this.store.selectedWell;
+
+
+  ngOnInit() {
+    this.store.loadMorningReportData();
+  }
+
+  public chipCountInfo = computed(() => {
+    const selectedId = this.selectedWellId();
+    const wells = this.store.wells();
+    const index = wells.findIndex(well => well.epANum === selectedId);
+    if (index === -1) return '';
+    return `Well ${index + 1} of ${wells.length}`;
+  });
+
+  public onWellSelect(well: MorningReport) {
+    this.store.selectWell(well.epANum);
+  }
 }
 
-export const MorningReportStore = signalStore(
-    { providedIn: 'root' },
-    withState<MorningReportState>({
-        wells: [],
-        startIndex: 0,
-        selectedWellId: null,
-        chipsPerPage: 5,
-        showAll: false, // Default to paginated view
-    }),
-    withMethods((store, service = inject(MoriningReportService)) => ({
-        loadMorningReportData() {
-            service.getMorningReport().subscribe({
-                next: (wells) => {
-                    patchState(store, { wells });
-                    if (wells.length > 0 && !store.selectedWellId()) {
-                        patchState(store, { selectedWellId: wells[0].epANum });
-                    }
-                },
-            });
-        },
+<header
+  class="bg-white h-14 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200 mb-5"
+>
+  <div class="flex items-center gap-4">
+    <div class="h-6 w-px bg-slate-300 hidden sm:block"></div>
+  </div>
+  <mat-chip-listbox
+    aria-label="Well Name Chips"
+    class="px-3 py-1 bg-white text-blue-700 shadow-sm rounded transition-all font-bold items-center"
+  >
+    <!-- Previous Button -->
+    <button
+      mat-icon-button
+      class="inline-chip-button"
+      (click)="store.navigatePrev()"
+      [disabled]="store.startIndex() === 0"
+      aria-label="Previous page"
+    >
+      <mat-icon>keyboard_arrow_left</mat-icon>
+    </button>
 
-        selectWell(id: string) {
-            patchState(store, { selectedWellId: id });
-        },
+    @for (well of visibleWells(); track $index; let i = $index) {
+      <mat-chip-option
+        [selected]="well.epANum === selectedWellId()"
+        (click)="onWellSelect(well)"
+      >
+        {{ well.wGnrName }}
+      </mat-chip-option>
+    }
 
-        toggleShowAll() {
-            patchState(store, { showAll: !store.showAll() });
-        },
+    <!-- Inline Next Button -->
+    <button
+      mat-icon-button
+      class="inline-chip-button"
+      (click)="store.navigateNext()"
+      [disabled]="
+        store.startIndex() + store.chipsPerPage() >= store.wells().length
+      "
+      aria-label="Next page"
+    >
+      <mat-icon>keyboard_arrow_right</mat-icon>
+    </button>
+  </mat-chip-listbox>
+  <div class="flex items-center gap-4 text-xs">
+    <div class="hidden lg:flex items-center gap-2 text-slate-500 font-medium">
+      <i class="fa-regular fa-calendar text-blue-600"></i>
+      <span>Mon, 20 Oct 2025</span>
+    </div>
+    <div
+      class="flex items-center gap-2 pl-4 lg:border-l border-slate-200"
+    ></div>
+  </div>
+</header>
 
-        navigateNext() {
-            const wells = store.wells();
-            const currentId = store.selectedWellId();
-            const currentIndex = wells.findIndex((w) => w.epANum === currentId);
+<!-- Selected Well Info -->
+<!-- @if (selectedWell(); as selectedWell) {
 
-            if (currentIndex < wells.length - 1) {
-                const nextIndex = currentIndex + 1;
-                const currentStart = store.startIndex();
-                
-                // Only shift pagination if we aren't in "Show All" mode
-                if (!store.showAll() && nextIndex >= currentStart + store.chipsPerPage()) {
-                    patchState(store, { startIndex: currentStart + 1 });
-                }
-                patchState(store, { selectedWellId: wells[nextIndex].epANum });
-            }
-        },
+<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+  <div><strong>ID:</strong> {{ selectedWell.epANum }}</div>
+  <div><strong>Name:</strong> {{ selectedWell.wGnrName }}</div>
+  <div><strong>BI Number:</strong> {{ selectedWell.biNum }}</div>
+</div>
+} -->
 
-        navigatePrev() {
-            const wells = store.wells();
-            const currentId = store.selectedWellId();
-            const currentIndex = wells.findIndex((w) => w.epANum === currentId);
-
-            if (currentIndex > 0) {
-                const prevIndex = currentIndex - 1;
-                const currentStart = store.startIndex();
-
-                if (!store.showAll() && prevIndex < currentStart) {
-                    patchState(store, { startIndex: Math.max(0, currentStart - 1) });
-                }
-                patchState(store, { selectedWellId: wells[prevIndex].epANum });
-            }
-        },
-    })),
-    withMethods((store) => ({
-        visibleWells: computed(() => {
-            const wells = store.wells();
-            if (store.showAll()) {
-                return wells; // Return everything
-            }
-            const start = store.startIndex();
-            return wells.slice(start, start + store.chipsPerPage());
-        }),
-        selectedWell: computed(() => {
-            return store.wells().find((w) => w.epANum === store.selectedWellId());
-        })
-    }))
-);
