@@ -1,15 +1,10 @@
-import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
-import { computed, inject } from '@angular/core';
-import { MoriningReportService } from '../../../services/morining-report.service'
-import { MorningReport } from '../../../models/morining-report.model';
-
 interface MorningReportState {
     wells: MorningReport[];
     startIndex: number;
     selectedWellId: string | null;
     chipsPerPage: number;
+    showAll: boolean; // New state property
 }
-
 
 export const MorningReportStore = signalStore(
     { providedIn: 'root' },
@@ -18,83 +13,72 @@ export const MorningReportStore = signalStore(
         startIndex: 0,
         selectedWellId: null,
         chipsPerPage: 5,
+        showAll: false, // Default to paginated view
     }),
     withMethods((store, service = inject(MoriningReportService)) => ({
         loadMorningReportData() {
             service.getMorningReport().subscribe({
                 next: (wells) => {
                     patchState(store, { wells });
-                    if (wells.length > 0) {
+                    if (wells.length > 0 && !store.selectedWellId()) {
                         patchState(store, { selectedWellId: wells[0].epANum });
                     }
                 },
             });
         },
+
         selectWell(id: string) {
             patchState(store, { selectedWellId: id });
         },
+
+        toggleShowAll() {
+            patchState(store, { showAll: !store.showAll() });
+        },
+
         navigateNext() {
             const wells = store.wells();
-            const selectedId = store.selectedWellId();
-            const chipsPerPage = store.chipsPerPage();
-            const startIndex = store.startIndex();
-            const endIndex = startIndex + chipsPerPage;
-            const currentIndex = wells.findIndex(w => w.epANum === selectedId);
+            const currentId = store.selectedWellId();
+            const currentIndex = wells.findIndex((w) => w.epANum === currentId);
 
-            // If currently selected chip is the **last visible chip**
-            if (currentIndex === endIndex - 1) {
-                // Move to next page
-                const newStartIndex = Math.min(startIndex + chipsPerPage, wells.length - chipsPerPage);
-                const newVisibleWells = wells.slice(newStartIndex, newStartIndex + chipsPerPage);
-                patchState(store, {
-                    startIndex: newStartIndex,
-                    selectedWellId: newVisibleWells[0]?.epANum,
-                });
-            } else {
-                // Move to next chip in list
-                const nextIndex = Math.min(currentIndex + 1, wells.length - 1);
-                patchState(store, {
-                    selectedWellId: wells[nextIndex]?.epANum,
-                });
+            if (currentIndex < wells.length - 1) {
+                const nextIndex = currentIndex + 1;
+                const currentStart = store.startIndex();
+                
+                // Only shift pagination if we aren't in "Show All" mode
+                if (!store.showAll() && nextIndex >= currentStart + store.chipsPerPage()) {
+                    patchState(store, { startIndex: currentStart + 1 });
+                }
+                patchState(store, { selectedWellId: wells[nextIndex].epANum });
             }
         },
 
         navigatePrev() {
             const wells = store.wells();
-            const selectedId = store.selectedWellId();
-            const chipsPerPage = store.chipsPerPage();
-            const startIndex = store.startIndex();
-            const currentIndex = wells.findIndex(w => w.epANum === selectedId);
+            const currentId = store.selectedWellId();
+            const currentIndex = wells.findIndex((w) => w.epANum === currentId);
 
-            // If currently selected chip is the **first visible chip**
-            if (currentIndex === startIndex) {
-                // Move to previous page
-                const newStartIndex = Math.max(startIndex - chipsPerPage, 0);
-                const newVisibleWells = wells.slice(newStartIndex, newStartIndex + chipsPerPage);
-                patchState(store, {
-                    startIndex: newStartIndex,
-                    selectedWellId: newVisibleWells[newVisibleWells.length - 1]?.epANum,
-                });
-            } else {
-                // Move to previous chip in list
-                const prevIndex = Math.max(currentIndex - 1, 0);
-                patchState(store, {
-                    selectedWellId: wells[prevIndex]?.epANum,
-                });
+            if (currentIndex > 0) {
+                const prevIndex = currentIndex - 1;
+                const currentStart = store.startIndex();
+
+                if (!store.showAll() && prevIndex < currentStart) {
+                    patchState(store, { startIndex: Math.max(0, currentStart - 1) });
+                }
+                patchState(store, { selectedWellId: wells[prevIndex].epANum });
             }
         },
+    })),
+    withMethods((store) => ({
         visibleWells: computed(() => {
-            const wells = store.wells() || [];
+            const wells = store.wells();
+            if (store.showAll()) {
+                return wells; // Return everything
+            }
             const start = store.startIndex();
-            const count = store.chipsPerPage();
-            return wells.slice(start, start + count);
+            return wells.slice(start, start + store.chipsPerPage());
         }),
-
         selectedWell: computed(() => {
-            const wells = store.wells() || [];
-            const selectedId = store.selectedWellId();
-            return wells.find(well => well.epANum === selectedId);
-        }),
+            return store.wells().find((w) => w.epANum === store.selectedWellId());
+        })
     }))
-)
-
+);
