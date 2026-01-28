@@ -1,35 +1,311 @@
-Hirarchy of Components
+import { Component, computed, inject } from '@angular/core';
+import { SHARED_MODULES } from '../../../shared/shared.module';
 
-app-presentation
-     has below two
-        app-well-chip-list and app-wellbore-view
-        and app-wellbore-view has app-misc-pres-well-data
-
-now I want to populate data in this component  app-misc-pres-well-data on the selection/clicked wellnames chip.on the basis of epNum
-below are the all required code , now update it accordingly make sure I am using angular 19 ngrx signalstore and angular signal
-write non vulnerable code and there is no lint issue as well
-
-
-        import { Component, computed, inject, OnInit } from '@angular/core';
-import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+import { WellChipListComponent } from "../../persentation/well-chip-list/well-chip-list.component";
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+import { WwellTestComponent } from "../wwell-test/wwell-test.component";
+import { DatabaseInfoComponent } from "../database-info/database-info.component";
+import { WwellHeaderComponent } from "../wwell-header/wwell-header.component";
+import { OperationSummaryComponent } from "../operation-summary/operation-summary.component";
+import { FormationTopsAndCasingComponent } from "../formation-tops-and-casing/formation-tops-and-casing.component";
+import { FileUploadComponent } from "../../../shared/components/file-upload/file-upload.component";
 
 @Component({
-  selector: 'app-misc-pres-well-data',
-  imports: [],
-  templateUrl: './misc-pres-well-data.component.html',
-  styleUrl: './misc-pres-well-data.component.scss'
+  selector: 'app-active-wwell-view',
+  imports: [...SHARED_MODULES, WwellTestComponent, DatabaseInfoComponent, WwellHeaderComponent, OperationSummaryComponent, FormationTopsAndCasingComponent, FileUploadComponent],
+  templateUrl: './active-wwell-view.component.html',
+  styleUrl: './active-wwell-view.component.scss'
 })
-export class MiscPresWellDataComponent implements OnInit {
+export class ActiveWwellViewComponent {
 
+  store = inject(MorningReportStore)
 
-  readonly wellStore = inject(wellDataStore);
+  selectedValue: string | undefined;
+  statuses = [{ value: 'Test1' },
+  { value: 'Test2' }
+  ];
 
-  readonly wellData = computed(() => this.wellStore.response()?.data?.[0] ?? null);
+  public visibleWells = computed(() => this.store.visibleWells());
 
-  ngOnInit(): void {
-    this.wellStore.loadWellData();
+  ngOnInit() {
+    this.store.loadMorningReportData();
   }
-import { Component, computed, inject, signal } from '@angular/core';
+
+  files: File[] = [];
+
+  onFileChange(event: any) {
+    const files = event.target.files;
+    this.files = Array.from(files);
+  }
+
+  previewFile(file: File) {
+    // Add your preview logic here
+    console.log(file);
+  }
+
+  removeFile(index: number) {
+    this.files.splice(index, 1);
+  }
+
+}
+
+<div class="border-4 border-blue-300 bg-white shadow-lg mt-[3%]">
+  <div
+    class="flex justify-between items-center bg-gray-200 p-1 border-b border-gray-400"
+  >
+    <span class="font-bold"> Single Well Review</span>
+  </div>
+
+  <div class="flex">
+    <div
+      class="w-1/12 bg-gray-100 text-white p-2 border-r border-gray-100 flex flex-col gap-4 text-center"
+    >
+      <div class="font-bold pb-2 text-white">
+        <div
+          class="bg-yellow-100 border border-black px-8 py-1 font-bold text-center text-black"
+        >
+          Date
+        </div>
+
+        Wells List
+        <mat-chip-listbox
+          class="mat-mdc-chip-set-stacked"
+          aria-label="Cutest dog breeds"
+        >
+          @for (well of visibleWells(); track $index; let i = $index) {
+          <mat-chip-option [id]="well.epANum" click="onWellSelect"
+            >{{ well.wGnrName }}
+          </mat-chip-option>
+          }
+        </mat-chip-listbox>
+      </div>
+      <div class="mt-20 leading-tight text-gray-700 text-xl">
+        Wellsite & Water Operation Department
+      </div>
+    </div>
+
+    <div class="w-11/12 p-2">
+      <div class="flex gap-2 mb-2">
+        <div
+          class="bg-yellow-100 border border-black px-8 py-1 font-bold text-center grow"
+        >
+          GWD Daily Report
+        </div>
+        <div class="bg-yellow-100 px-4 py-1 border border-gray-400 font-bold">
+          File Uploader List
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <div class="col-span-2 space-y-4">
+          <app-wwell-header></app-wwell-header>
+          <app-database-info></app-database-info>
+          <app-operation-summary></app-operation-summary>
+          <div class="border border-gray-300 p-1">
+            <div
+              class="bg-yellow-100 font-bold mb-1 px-1 border border-black Inline-block"
+            >
+              Drilling Remarks
+            </div>
+            <input type="text" class="p-1 w-full h-15" />
+          </div>
+          <app-formation-tops-and-casing></app-formation-tops-and-casing>
+
+          <app-wwell-test></app-wwell-test>
+        </div>
+
+        <div class="col-span-1 flex flex-col gap-2">
+          <app-file-upload></app-file-upload>
+          <div>
+            <mat-form-field
+              class="bg-orange-300 p-2 border border-black text-center font-bold"
+            >
+              <mat-label> Status </mat-label>
+              <mat-select [(ngModel)]="selectedValue" name="food">
+                @for (status of statuses; track status) {
+                <mat-option [value]="status.value">{{
+                  status.value
+                }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div
+            class="bg-orange-300 p-2 border border-black text-center font-bold"
+          >
+            Area (RAK, Central, etc.)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="border-t border-gray-400 p-4 flex justify-between items-end bg-gray-50"
+  >
+    <div class="text-[12px] text-gray-500">
+      Saudi Aramco Company General Use
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="font-bold italic text-sm mr-4 text-gray-700"
+        >Data Source Legend</span
+      >
+      <div class="grid grid-cols-2 gap-2">
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-gray-500"></div>
+          Drill Eye
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-white border border-black"></div>
+          Manually Written
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-orange-500"></div>
+          GIS
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-yellow-100"></div>
+          Headers
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-blue-400"></div>
+          IR
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-orange-200"></div>
+          List Insert
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+well-header
+<div class="p-4 border border-gray-300">
+  <div
+    class="bg-yellow-100 font-bold mb-1 px-1 border border-black Inline-block"
+  >
+    Well Header
+  </div>
+
+  <div class="flex-1 overflow-y-auto p-4">
+    <div class="grid grid-cols-3 gap-2 mb-2">
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Field</div>
+        <div class="text-gray-600">Dummy Field Value</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Well</div>
+        <div class="text-gray-600">Dummy Well Value</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Latitude</div>
+        <div class="text-gray-600">45.123456</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mb-2">
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">UTM Easting</div>
+        <div class="text-gray-600">123456</div>
+      </div>
+
+      <div class="bg-blue-400 p-2 rounded">
+        <div class="font-bold">Targeted Aquifer</div>
+        <div class="text-white font-bold">Dummy Aquifer Value</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Target Depth</div>
+        <div class="text-gray-600">1000 ft</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mb-2">
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Longitude</div>
+        <div class="text-gray-600">-120.123456</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">UTM Norting</div>
+        <div class="text-gray-600">654321</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">BI</div>
+        <div class="text-gray-600">Dummy BI Value</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mb-2">
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Well Type</div>
+        <div class="text-gray-600">Dummy Well Type Value</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">EP Num</div>
+        <div class="text-gray-600">1234</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Well Classification</div>
+        <div class="text-gray-600">Dummy Classification Value</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mb-2">
+      <div class="bg-blue-400 p-2 rounded">
+        <div class="font-bold">Supporting Well</div>
+        <div class="text-white">Dummy Supporting Well Value</div>
+      </div>
+
+      <div class="bg-blue-400 p-2 rounded">
+        <div class="font-bold">Surface Deviation</div>
+        <div class="text-white">10 ft</div>
+      </div>
+
+      <div class="bg-blue-400 p-2 rounded">
+        <div class="font-bold">Est. Water level</div>
+        <div class="text-white">500 ft</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mb-2">
+      <div class="bg-blue-400 p-2 rounded">
+        <div class="font-bold">Pump Setting Depth</div>
+        <div class="text-white">800 ft</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Additional Info</div>
+        <div class="text-gray-600">Dummy Additional Info Value</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded">
+        <div class="font-bold">Notes</div>
+        <div class="text-gray-600">Dummy Notes Value</div>
+      </div>
+    </div>
+  </div>
+</div>
+import { Component } from '@angular/core';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+
+@Component({
+  selector: 'app-wwell-header',
+  imports: [...SHARED_MODULES],
+  templateUrl: './wwell-header.component.html',
+  styleUrl: './wwell-header.component.scss'
+})
+export class WwellHeaderComponent {
+
+}
+
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { MoriningReportService } from '../../../services/morining-report.service';
 import { SHARED_MODULES } from '../../../shared/shared.module';
 import { MorningReport } from '../../../models/morining-report.model';
@@ -43,7 +319,7 @@ import { MorningReportStore } from '../../../core/stores/moringreport/morning-re
   styleUrl: './well-chip-list.component.scss'
 
 })
-export class WellChipListComponent {
+export class WellChipListComponent implements OnInit {
 
   private morningReportService = inject(MoriningReportService);
   store = inject(MorningReportStore)
@@ -64,64 +340,111 @@ export class WellChipListComponent {
     if (index === -1) return '';
     return `Well ${index + 1} of ${wells.length}`;
   });
-import { AfterViewInit, Component, ElementRef, inject, OnInit, ViewChild, viewChild } from '@angular/core';
-import { WellboreService } from '../wellbore.service';
-import * as d3 from 'd3';
-import { DepthScaleComponent } from '../depth-scale/depth-scale.component';
-import { WellCasingVisualizationComponent } from '../well-casing-visualization/well-casing-visualization.component';
-import { SHARED_MODULES } from '../../../shared/shared.module';
-import { WellStatusGridComponent } from "../well-status-grid/well-status-grid.component";
-import { MiscPresWellDataComponent } from "../misc-pres-well-data/misc-pres-well-data.component";
 
-@Component({
-  selector: 'app-wellbore-view',
-  imports: [...SHARED_MODULES, DepthScaleComponent, WellCasingVisualizationComponent, WellStatusGridComponent, MiscPresWellDataComponent],
-  templateUrl: './wellbore-view.component.html',
-  styleUrl: './wellbore-view.component.scss'
-})
-export class WellboreViewComponent implements OnInit {
-
-
-  @ViewChild("wellboreSvg", { static: true })
-  svgElement!: ElementRef<SVGSVGElement>;
-
-  wellBoreService = inject(WellboreService);
-
-  yScale!: d3.ScaleLinear<number, number>;
-  centerX!: number;
-  svg!: d3.Selection<SVGSVGElement, unknown, null, undefined>;
-
-  config = this.wellBoreService.configSignal();
-  wellData = this.wellBoreService.wellDataSignal();
-  geoLogicalLayers = this.wellBoreService.geoLogicalLayerSignal();
-  plannedDepth = this.wellBoreService.plannedDepth();
-  sizeScale = this.wellBoreService.sizeScale()
-
-  ngOnInit(): void {
-    this.initWellBoreView();
-  }
-
-  private initWellBoreView() {
-    this.svg = d3.select(this.svgElement.nativeElement);
-    this.svg.selectAll("*").remove();
-
-    // Intialize the scales
-    this.yScale = d3.scaleLinear()
-      .domain([0, this.plannedDepth])
-      .range([this.config.margin.top, this.config.wellboreHeight - this.config.margin.bottom]);
-
-    this.centerX = this.config.wellboreWidth / 2;
-
-    // Add the definitions
-    const defs = this.svg.append("defs")
-
-
-    this.svg.append("text")
-
-    const defsSelection = this.svg.select("defs")
-      .attr("id", "")
+  public onWellSelect(well: MorningReport) {
+    this.store.selectWell(well.epANum);
   }
 }
+import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
+import { computed, inject } from '@angular/core';
+import { MoriningReportService } from '../../../services/morining-report.service'
+import { MorningReport } from '../../../models/morining-report.model';
+
+interface MorningReportState {
+    wells: MorningReport[];
+    startIndex: number;
+    selectedWellId: string | null;
+    chipsPerPage: number;
+}
+
+
+export const MorningReportStore = signalStore(
+    { providedIn: 'root' },
+    withState<MorningReportState>({
+        wells: [],
+        startIndex: 0,
+        selectedWellId: null,
+        chipsPerPage: 5,
+    }),
+    withMethods((store, service = inject(MoriningReportService)) => ({
+        loadMorningReportData() {
+            service.getMorningReport().subscribe({
+                next: (wells) => {
+                    patchState(store, { wells });
+                    if (wells.length > 0) {
+                        patchState(store, { selectedWellId: wells[0].epANum });
+                    }
+                },
+            });
+        },
+        selectWell(id: string) {
+            patchState(store, { selectedWellId: id });
+        },
+        navigateNext() {
+            const wells = store.wells();
+            const selectedId = store.selectedWellId();
+            const chipsPerPage = store.chipsPerPage();
+            const startIndex = store.startIndex();
+            const endIndex = startIndex + chipsPerPage;
+            const currentIndex = wells.findIndex(w => w.epANum === selectedId);
+
+            // If currently selected chip is the **last visible chip**
+            if (currentIndex === endIndex - 1) {
+                // Move to next page
+                const newStartIndex = Math.min(startIndex + chipsPerPage, wells.length - chipsPerPage);
+                const newVisibleWells = wells.slice(newStartIndex, newStartIndex + chipsPerPage);
+                patchState(store, {
+                    startIndex: newStartIndex,
+                    selectedWellId: newVisibleWells[0]?.epANum,
+                });
+            } else {
+                // Move to next chip in list
+                const nextIndex = Math.min(currentIndex + 1, wells.length - 1);
+                patchState(store, {
+                    selectedWellId: wells[nextIndex]?.epANum,
+                });
+            }
+        },
+
+        navigatePrev() {
+            const wells = store.wells();
+            const selectedId = store.selectedWellId();
+            const chipsPerPage = store.chipsPerPage();
+            const startIndex = store.startIndex();
+            const currentIndex = wells.findIndex(w => w.epANum === selectedId);
+
+            // If currently selected chip is the **first visible chip**
+            if (currentIndex === startIndex) {
+                // Move to previous page
+                const newStartIndex = Math.max(startIndex - chipsPerPage, 0);
+                const newVisibleWells = wells.slice(newStartIndex, newStartIndex + chipsPerPage);
+                patchState(store, {
+                    startIndex: newStartIndex,
+                    selectedWellId: newVisibleWells[newVisibleWells.length - 1]?.epANum,
+                });
+            } else {
+                // Move to previous chip in list
+                const prevIndex = Math.max(currentIndex - 1, 0);
+                patchState(store, {
+                    selectedWellId: wells[prevIndex]?.epANum,
+                });
+            }
+        },
+        visibleWells: computed(() => {
+            const wells = store.wells() || [];
+            const start = store.startIndex();
+            const count = store.chipsPerPage();
+            return wells.slice(start, start + count);
+        }),
+
+        selectedWell: computed(() => {
+            const wells = store.wells() || [];
+            const selectedId = store.selectedWellId();
+            return wells.find(well => well.epANum === selectedId);
+        }),
+    }))
+)
+
 export interface MorningReport {
     epANum: string;
     wGnrName: string;
@@ -143,13 +466,7 @@ export interface MorningReport {
 
 
 
-  public onWellSelect(well: MorningReport) {
-    this.store.selectWell(well.epANum);
-  }
-}
 
-  refreshWelldata() {
-    this.wellStore.refresh();
-  }
+once we click wellname chip it should populate active-wwell form once we click we will get MorningReport object
 
-}
+and also make UI quality good as well
