@@ -1,128 +1,199 @@
-<header class="bg-white h-16 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200 mb-5">
+// morning-report.store.ts
+import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
+import { computed, inject } from '@angular/core';
+import { MoriningReportService } from '../../../services/morining-report.service';
+import { MorningReport } from '../../../models/morining-report.model';
+
+interface MorningReportState {
+  wells: MorningReport[];
+  startIndex: number;
+  selectedWellId: string | null;
+  chipsPerPage: number;
+  showAll: boolean;
+}
+
+export const MorningReportStore = signalStore(
+  { providedIn: 'root' },
+  withState<MorningReportState>({
+    wells: [],
+    startIndex: 0,
+    selectedWellId: null,
+    chipsPerPage: 5,
+    showAll: false,
+  }),
+  withMethods((store, service = inject(MoriningReportService)) => ({
+    loadMorningReportData() {
+      service.getMorningReport().subscribe({
+        next: (wells) => {
+          patchState(store, { wells });
+          if (wells.length > 0 && !store.selectedWellId()) {
+            patchState(store, { selectedWellId: wells[0].epANum, startIndex: 0 });
+          }
+        },
+      });
+    },
+
+    setConfig(showAll: boolean, pageSize: number) {
+      patchState(store, { showAll, chipsPerPage: pageSize });
+    },
+
+    selectWell(id: string) {
+      const wells = store.wells();
+      const index = wells.findIndex(w => w.epANum === id);
+      if (index === -1) return;
+
+      const currentStart = store.startIndex();
+      const pageSize = store.chipsPerPage();
+      let newStart = currentStart;
+
+      // Adjust window if selection is outside visible range
+      if (index < currentStart) {
+        newStart = index;
+      } else if (index >= currentStart + pageSize) {
+        newStart = index - pageSize + 1;
+      }
+
+      patchState(store, { selectedWellId: id, startIndex: newStart });
+    },
+
+    navigateNext() {
+      const wells = store.wells();
+      const currentIndex = wells.findIndex(w => w.epANum === store.selectedWellId());
+      if (currentIndex < wells.length - 1) {
+        this.selectWell(wells[currentIndex + 1].epANum);
+      }
+    },
+
+    navigatePrev() {
+      const wells = store.wells();
+      const currentIndex = wells.findIndex(w => w.epANum === store.selectedWellId());
+      if (currentIndex > 0) {
+        this.selectWell(wells[currentIndex - 1].epANum);
+      }
+    }
+  })),
+  withMethods((store) => ({
+    visibleWells: computed(() => {
+      if (store.showAll()) return store.wells();
+      return store.wells().slice(store.startIndex(), store.startIndex() + store.chipsPerPage());
+    }),
+    selectedWell: computed(() => store.wells().find(w => w.epANum === store.selectedWellId()))
+  }))
+);
+
+// well-chip-list.component.ts
+import { Component, inject, input, effect, OnInit } from '@angular/core';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+
+@Component({
+  selector: 'app-well-chip-list',
+  standalone: true,
+  imports: [SHARED_MODULES],
+  templateUrl: './well-chip-list.component.html',
+  styleUrl: './well-chip-list.component.scss'
+})
+export class WellChipListComponent implements OnInit {
+  readonly store = inject(MorningReportStore);
+
+  // Angular 19 Signal Inputs
+  readonly mode = input<'horizontal' | 'vertical'>('horizontal');
+  readonly showAll = input<boolean>(false);
+  readonly pageSize = input<number>(5);
+
+  constructor() {
+    // Sync inputs to store
+    effect(() => {
+      this.store.setConfig(this.showAll(), this.pageSize());
+    });
+  }
+
+  ngOnInit() {
+    this.store.loadMorningReportData();
+  }
+}
+<div class="chip-container" [class.vertical-mode]="mode() === 'vertical'" [class.all-mode]="store.showAll()">
   
-  <div class="flex items-center gap-3 min-w-max">
-    <button 
-      mat-flat-button 
-      (click)="store.toggleShowAll()"
-      class="view-all-btn">
-      <mat-icon>{{ store.showAll() ? ' view_carousel' : 'grid_view' }}</mat-icon>
-      {{ store.showAll() ? 'Slider View' : 'View All Wells' }}
+  @if (mode() === 'horizontal' && !store.showAll()) {
+    <button mat-icon-button (click)="store.navigatePrev()" 
+            [disabled]="store.wells().findIndex(w => w.epANum === store.selectedWellId()) === 0">
+      <mat-icon>chevron_left</mat-icon>
     </button>
-    <div class="h-8 w-px bg-slate-200 mx-2"></div>
+  }
+
+  <div class="chips-viewport">
+    <mat-chip-listbox [class.mat-mdc-chip-set-stacked]="mode() === 'vertical'">
+      @for (well of store.visibleWells(); track well.epANum) {
+        <mat-chip-option
+          [selected]="well.epANum === store.selectedWellId()"
+          (click)="store.selectWell(well.epANum)"
+          class="custom-well-chip">
+          {{ well.wGnrName }}
+        </mat-chip-option>
+      }
+    </mat-chip-listbox>
   </div>
 
-  <div class="flex-1 flex items-center justify-center overflow-hidden px-2">
-    
-    @if (!store.showAll()) {
-      <button
-        mat-icon-button
-        (click)="store.navigatePrev()"
-        [disabled]="store.selectedWellId() === store.wells()[0]?.epANum"
-        class="nav-arrow">
-        <mat-icon>keyboard_arrow_left</mat-icon>
-      </button>
-    }
-
-    <div class="chips-wrapper" [class.all-mode]="store.showAll()">
-      <mat-chip-listbox aria-label="Well selection">
-        @for (well of visibleWells(); track well.epANum) {
-          <mat-chip-option
-            [selected]="well.epANum === selectedWellId()"
-            (click)="onWellSelect(well)"
-            class="custom-well-chip">
-            {{ well.wGnrName }}
-          </mat-chip-option>
-        }
-      </mat-chip-listbox>
-    </div>
-
-    @if (!store.showAll()) {
-      <button
-        mat-icon-button
-        (click)="store.navigateNext()"
-        [disabled]="store.selectedWellId() === store.wells()[store.wells().length - 1]?.epANum"
-        class="nav-arrow">
-        <mat-icon>keyboard_arrow_right</mat-icon>
-      </button>
-    }
-  </div>
-
-  <div class="flex items-center gap-4 min-w-max ml-4">
-    <span class="chip-counter">{{ chipCountInfo() }}</span>
-    <div class="hidden lg:flex items-center gap-2 text-slate-500 font-medium border-l pl-4">
-      <mat-icon class="text-blue-500 scale-75">calendar_today</mat-icon>
-      <span class="text-[11px]">28 Jan 2026</span>
-    </div>
-  </div>
-</header>
-
-/* custom-well-chip selection styles */
+  @if (mode() === 'horizontal' && !store.showAll()) {
+    <button mat-icon-button (click)="store.navigateNext()" 
+            [disabled]="store.wells().findIndex(w => w.epANum === store.selectedWellId()) === store.wells().length - 1">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  }
+</div>
+/* Global Overrides for Active State */
 ::ng-deep {
   .mat-mdc-chip-option.custom-well-chip {
     --mdc-chip-label-text-size: 12px;
-    
-    /* Default State */
-    background-color: #f1f5f9 !important; 
+    background-color: #f8fafc !important;
     border: 1px solid #e2e8f0 !important;
 
-    /* Selected State: Light Blue background, White Bold text */
     &.mat-mdc-chip-selected {
-      background-color: #60a5fa !important; /* light-blue-400 */
+      background-color: #3b82f6 !important; /* Brighter light blue for contrast */
+      border-color: #2563eb !important;
+      
       .mdc-chip__text-label {
-        color: white !important;
-        font-weight: 800 !important;
+        color: #ffffff !important; /* Pure white */
+        font-weight: 800 !important; /* Extra bold */
       }
-      .mat-mdc-chip-selection-overlay {
-        display: none; /* remove default material dark overlay */
-      }
+      .mat-mdc-chip-checkmark { display: none !important; }
     }
   }
 }
 
-.view-all-btn {
-  background-color: #1e293b !important; /* Dark slate */
-  color: white !important;
-  font-size: 11px !important;
-  font-weight: 600;
-  border-radius: 6px;
-  height: 36px !important;
-  
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    margin-right: 4px;
-  }
-}
-
-.chips-wrapper {
+.chip-container {
   display: flex;
-  justify-content: center;
-  overflow: hidden;
-  
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+
+  /* Horizontal Mode Layout */
+  &.horizontal-mode {
+    justify-content: center;
+    .chips-viewport { overflow: hidden; display: flex; }
+  }
+
+  /* Vertical Mode Layout */
+  &.vertical-mode {
+    flex-direction: column;
+    align-items: stretch;
+    .chips-viewport {
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+  }
+
+  /* Grid/All Mode */
   &.all-mode {
-    overflow-x: auto;
-    max-width: 100%;
-    justify-content: flex-start;
-    padding-bottom: 5px;
-    
-    /* Custom scrollbar for "View All" */
-    &::-webkit-scrollbar { height: 4px; }
-    &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .chips-viewport mat-chip-listbox {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 }
 
-.chip-counter {
-  background: #eff6ff;
-  color: #2563eb;
-  padding: 4px 10px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 700;
-  border: 1px solid #dbeafe;
-}
-
-.nav-arrow {
-  color: #64748b;
-  &:disabled { opacity: 0.3; }
-}
+/* Custom Scrollbar for Vertical */
+.chips-viewport::-webkit-scrollbar { width: 5px; }
+.chips-viewport::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
