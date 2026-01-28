@@ -1,91 +1,128 @@
-<header class="bg-white h-14 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200 mb-5">
-  <div class="flex items-center gap-4">
-    <div class="h-6 w-px bg-slate-300 hidden sm:block"></div>
+<header class="bg-white h-16 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200 mb-5">
+  
+  <div class="flex items-center gap-3 min-w-max">
     <button 
-      mat-stroked-button 
-      color="primary" 
-      class="text-[10px] !h-8 !px-3"
-      (click)="store.toggleShowAll()">
-      {{ store.showAll() ? 'Back to Slider' : 'View All Wells' }}
+      mat-flat-button 
+      (click)="store.toggleShowAll()"
+      class="view-all-btn">
+      <mat-icon>{{ store.showAll() ? ' view_carousel' : 'grid_view' }}</mat-icon>
+      {{ store.showAll() ? 'Slider View' : 'View All Wells' }}
     </button>
+    <div class="h-8 w-px bg-slate-200 mx-2"></div>
   </div>
 
-  <div class="flex items-center flex-1 justify-center overflow-hidden">
-    <mat-chip-listbox 
-      aria-label="Well Name Chips" 
-      class="transition-all"
-      [class.overflow-x-auto]="store.showAll()"
-    >
-      <div class="flex items-center gap-2" [class.flex-wrap]="store.showAll()">
-        
-        @if (!store.showAll()) {
-          <button
-            mat-icon-button
-            class="scale-90"
-            (click)="store.navigatePrev()"
-            [disabled]="store.selectedWellId() === store.wells()[0]?.epANum"
-          >
-            <mat-icon>keyboard_arrow_left</mat-icon>
-          </button>
-        }
+  <div class="flex-1 flex items-center justify-center overflow-hidden px-2">
+    
+    @if (!store.showAll()) {
+      <button
+        mat-icon-button
+        (click)="store.navigatePrev()"
+        [disabled]="store.selectedWellId() === store.wells()[0]?.epANum"
+        class="nav-arrow">
+        <mat-icon>keyboard_arrow_left</mat-icon>
+      </button>
+    }
 
+    <div class="chips-wrapper" [class.all-mode]="store.showAll()">
+      <mat-chip-listbox aria-label="Well selection">
         @for (well of visibleWells(); track well.epANum) {
           <mat-chip-option
             [selected]="well.epANum === selectedWellId()"
             (click)="onWellSelect(well)"
-            class="transition-all"
-          >
-            <span class="text-xs font-bold">{{ well.wGnrName }}</span>
+            class="custom-well-chip">
+            {{ well.wGnrName }}
           </mat-chip-option>
         }
+      </mat-chip-listbox>
+    </div>
 
-        @if (!store.showAll()) {
-          <button
-            mat-icon-button
-            class="scale-90"
-            (click)="store.navigateNext()"
-            [disabled]="store.selectedWellId() === store.wells()[store.wells().length - 1]?.epANum"
-          >
-            <mat-icon>keyboard_arrow_right</mat-icon>
-          </button>
-        }
-      </div>
-    </mat-chip-listbox>
+    @if (!store.showAll()) {
+      <button
+        mat-icon-button
+        (click)="store.navigateNext()"
+        [disabled]="store.selectedWellId() === store.wells()[store.wells().length - 1]?.epANum"
+        class="nav-arrow">
+        <mat-icon>keyboard_arrow_right</mat-icon>
+      </button>
+    }
   </div>
 
-  <div class="flex items-center gap-4 text-xs ml-4">
-    <div class="hidden lg:flex items-center gap-2 text-slate-500 font-medium">
-      <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100">
-        {{ chipCountInfo() }}
-      </span>
-      <i class="fa-regular fa-calendar text-blue-600 ml-2"></i>
-      <span>Mon, 20 Oct 2025</span>
+  <div class="flex items-center gap-4 min-w-max ml-4">
+    <span class="chip-counter">{{ chipCountInfo() }}</span>
+    <div class="hidden lg:flex items-center gap-2 text-slate-500 font-medium border-l pl-4">
+      <mat-icon class="text-blue-500 scale-75">calendar_today</mat-icon>
+      <span class="text-[11px]">28 Jan 2026</span>
     </div>
   </div>
 </header>
 
-:host {
-  display: block;
-}
+/* custom-well-chip selection styles */
+::ng-deep {
+  .mat-mdc-chip-option.custom-well-chip {
+    --mdc-chip-label-text-size: 12px;
+    
+    /* Default State */
+    background-color: #f1f5f9 !important; 
+    border: 1px solid #e2e8f0 !important;
 
-mat-chip-listbox {
-  &.overflow-x-auto {
-    max-width: 60vw; // Prevents the header from stretching too wide
-    padding: 4px 0;
-  }
-}
-
-.mat-mdc-chip-option {
-  transition: transform 0.2s ease;
-  &.mat-mdc-chip-selected {
-    background-color: #1e40af !important; // Deep blue
-    .mdc-chip__text-label {
-      color: white !important;
+    /* Selected State: Light Blue background, White Bold text */
+    &.mat-mdc-chip-selected {
+      background-color: #60a5fa !important; /* light-blue-400 */
+      .mdc-chip__text-label {
+        color: white !important;
+        font-weight: 800 !important;
+      }
+      .mat-mdc-chip-selection-overlay {
+        display: none; /* remove default material dark overlay */
+      }
     }
   }
 }
 
-// Ensure icons don't shrink
-.mat-icon-button {
-  flex-shrink: 0;
+.view-all-btn {
+  background-color: #1e293b !important; /* Dark slate */
+  color: white !important;
+  font-size: 11px !important;
+  font-weight: 600;
+  border-radius: 6px;
+  height: 36px !important;
+  
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+  }
+}
+
+.chips-wrapper {
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  
+  &.all-mode {
+    overflow-x: auto;
+    max-width: 100%;
+    justify-content: flex-start;
+    padding-bottom: 5px;
+    
+    /* Custom scrollbar for "View All" */
+    &::-webkit-scrollbar { height: 4px; }
+    &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  }
+}
+
+.chip-counter {
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #dbeafe;
+}
+
+.nav-arrow {
+  color: #64748b;
+  &:disabled { opacity: 0.3; }
 }
