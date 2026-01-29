@@ -1,61 +1,314 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: agwa-integrations
-spec:
-  replicas: 1
-  template:
-    metadata:
-      annotations:
-        sidecar.istio.io/inject: "true"
-    spec:
-      containers:
-        - name: agwa-integrations
-          image: agwa-integrations
-          imagePullPolicy: IfNotPresent
-          ports:
-            - name: http
-              containerPort: 8080
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /q/health/live
-              port: http
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /q/health/ready
-              port: http
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          startupProbe:
-            httpGet:
-              path: /q/health/started
-              port: http
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          envFrom:
-            - secretRef:
-                name: agwa-integrations-datasource-credentials-secret
-            - configMapRef:
-                name: datasource-configmap
-          env:
-            - name: oracle.jdbc.javaNetNio
-              value: "false"
-          resources:
-            limits:
-              cpu: 100m
-              memory: 150Mi
-            requests:
-              cpu: 50m
-              memory: 110Mi
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\guard\auth.guard.spec.ts
+   2:34  error  'CanActivateFn' is defined but never used    @typescript-eslint/no-unused-vars
+  69:11  error  'result' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\guard\auth.guard.ts
+  5:42  error  'route' is defined but never used  @typescript-eslint/no-unused-vars
+  5:49  error  'state' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\interceptors\error.interceptor.ts
+   9:9  error  'authStore' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  10:9  error  'router' is assigned a value but never used     @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\stores\auth\auth.store.ts
+  24:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-unused-vars')
+  46:33  error    'err' is defined but never used                                                                       @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\stores\moringreport\morning-presentation.store.ts
+  8:6  error  Use an `interface` instead of a `type`  @typescript-eslint/consistent-type-definitions
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\stores\morning-pres\well-design.store.ts
+  33:17  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  33:63  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\login\login.component.html
+  29:14  error  Use built-in control flow instead of directive ngIf  @angular-eslint/template/prefer-control-flow
+  47:14  error  Use built-in control flow instead of directive ngIf  @angular-eslint/template/prefer-control-flow
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\login\login.component.spec.ts
+  33:12  error  'setForm' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\login\login.component.ts
+  22:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  22:46  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\morningreport\morningreport.component.spec.ts
+  94:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  95:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\morningreport\morningreport.component.ts
+   27:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   27:62  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   27:93  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   92:15  error  'error' is defined but never used                                                                                                                          
+             @typescript-eslint/no-unused-vars
+  141:14  error  'error' is defined but never used                                                                                                                          
+             @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\depth-scale\depth-scale.component.spec.ts
+  16:7  error  'mockConfig' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  28:7  error  'component' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\depth-scale\depth-scale.component.ts
+   25:61  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+   73:21  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  162:11  error  'labelGroup' is assigned a value but never used                               @typescript-eslint/no-unused-vars
+  198:11  error  'margin' is assigned a value but never used                                   @typescript-eslint/no-unused-vars
+  304:53  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  308:5   error  Type string trivially inferred from a string literal, remove type annotation  @typescript-eslint/no-inferrable-types
+  309:5   error  Type number trivially inferred from a number literal, remove type annotation  @typescript-eslint/no-inferrable-types
+  326:53  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  332:13  error  'midY' is assigned a value but never used                                     @typescript-eslint/no-unused-vars
+  383:53  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  417:13  error  'midY' is assigned a value but never used                                     @typescript-eslint/no-unused-vars
+  420:13  error  'rectHeight' is assigned a value but never used                               @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\persentation.component.ts
+  15:3   error  Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  15:20  error  Unexpected empty method 'ngOnInit'     @typescript-eslint/no-empty-function
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\well-casing-visualization\well-casing-visualization.component.spec.ts
+  6:7  error  'component' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\well-casing-visualization\well-casing-visualization.component.ts
+  130:11  error  'spec' is assigned a value but never used                                                                   @typescript-eslint/no-unused-vars
+  135:28  error  Optional chain expressions can return undefined by design - using a non-null assertion is unsafe and wrong  @typescript-eslint/no-non-null-asserted-optional-chain
+  325:11  error  'gridOffset' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\well-chip-list\well-chip-list.component.ts
+   1:39  error    'signal' is defined but never used                                                                                                         @typescript-eslint/no-unused-vars
+  25:3   warning  Lifecycle interface 'OnInit' should be implemented for method 'ngOnInit'. (https://angular.dev/style-guide#use-lifecycle-hook-interfaces)  @angular-eslint/use-lifecycle-interface
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\well-status-grid\well-status-grid.component.ts
+   1:47  error    'Signal' is defined but never used                                                                                                                       @typescript-eslint/no-unused-vars
+  37:3   warning  Lifecycle interface 'AfterViewInit' should be implemented for method 'ngAfterViewInit'. (https://angular.dev/style-guide#use-lifecycle-hook-interfaces)  @angular-eslint/use-lifecycle-interface
+  43:23  error    Unexpected any. Specify a different type                                                                                                                 @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\wellbore-view\wellbore-view.component.ts
+   1:10  error  'AfterViewInit' is defined but never used           @typescript-eslint/no-unused-vars
+   1:75  error  'viewChild' is defined but never used               @typescript-eslint/no-unused-vars
+  49:11  error  'defs' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  54:11  error  'defsSelection' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\wellbore.service.ts
+  242:17  error  Unexpected empty constructor  @typescript-eslint/no-empty-function
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\models\well-design\morning-pres-wells.ts
+  32:18  error  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  41:40  error  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  42:26  error  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  48:11  error  'toBool' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  48:24  error  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\services\presentation.service.spec.ts
+  6:7  error  'service' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\services\presentation.service.ts
+  30:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\services\well-design.service.spec.ts
+  6:7  error  'service' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\shared\components\card\card.component.ts
+  15:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\shared\components\sidebar\sidebar.component.ts
+  47:34  error  Type boolean trivially inferred from a boolean literal, remove type annotation  @typescript-eslint/no-inferrable-types
+  47:34  error  'exclusive' is assigned a value but never used                                  @typescript-eslint/no-unused-vars
+  47:68  error  Unexpected empty method 'toggleExpand'                                          @typescript-eslint/no-empty-function
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\utils\casing-builder.util.ts
+  17:84  error  Irregular whitespace not allowed  no-irregular-whitespace
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\utils\map.config.ts
+   4:21  error  '_ArcGISPoint' is defined but never used  @typescript-eslint/no-unused-vars
+  86:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  96:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\utils\wwell-placement-utils.ts
+  74:52  error  Irregular whitespace not allowed  no-irregular-whitespace
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\wwellmap\wwellmap.component.spec.ts
+   97:27  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  123:27  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  145:29  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  163:7   error  'httpTestingController' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  164:7   error  'mockMorningReportService' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  166:9   error  'mockRawWWells' is assigned a value but never used             @typescript-eslint/no-unused-vars
+  198:10  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  209:71  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\wwellmap\wwellmap.component.ts
+   3:41  error  'inject' is defined but never used       @typescript-eslint/no-unused-vars
+  13:10  error  'environment' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\setup-jest.ts
+  3:13  error  Unexpected empty method 'observe'         @typescript-eslint/no-empty-function
+  4:15  error  Unexpected empty method 'unobserve'       @typescript-eslint/no-empty-function
+  5:16  error  Unexpected empty method 'disconnect'      @typescript-eslint/no-empty-function
+  7:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 84 problems (81 errors, 3 warnings)
+  4 errors and 3 warnings potentially fixable with the `--fix` option.
+
+Lint warnings found in the listed files.
+
+Lint errors found in the listed files.
+
+PS C:\Dev\JavaDev\AGWA\agwa-ui> npm run lint --fix
+
+> agwa@0.0.1 lint
+> ng lint
+
+
+Linting "agwa"...
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\guard\auth.guard.spec.ts
+   2:34  error  'CanActivateFn' is defined but never used    @typescript-eslint/no-unused-vars
+  69:11  error  'result' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\guard\auth.guard.ts
+  5:42  error  'route' is defined but never used  @typescript-eslint/no-unused-vars
+  5:49  error  'state' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\interceptors\error.interceptor.ts
+   9:9  error  'authStore' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  10:9  error  'router' is assigned a value but never used     @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\stores\auth\auth.store.ts
+  24:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-unused-vars')
+  46:33  error    'err' is defined but never used                                                                       @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\stores\moringreport\morning-presentation.store.ts
+  8:6  error  Use an `interface` instead of a `type`  @typescript-eslint/consistent-type-definitions
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\core\stores\morning-pres\well-design.store.ts
+  33:17  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  33:63  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\login\login.component.html
+  29:14  error  Use built-in control flow instead of directive ngIf  @angular-eslint/template/prefer-control-flow
+  47:14  error  Use built-in control flow instead of directive ngIf  @angular-eslint/template/prefer-control-flow
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\login\login.component.spec.ts
+  33:12  error  'setForm' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\login\login.component.ts
+  22:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+  22:46  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\morningreport\morningreport.component.spec.ts
+  94:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  95:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\morningreport\morningreport.component.ts
+   27:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   27:62  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   27:93  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+   92:15  error  'error' is defined but never used                                                                                                                          
+             @typescript-eslint/no-unused-vars
+  141:14  error  'error' is defined but never used                                                                                                                          
+             @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\depth-scale\depth-scale.component.spec.ts
+  16:7  error  'mockConfig' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  28:7  error  'component' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\depth-scale\depth-scale.component.ts
+   25:61  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+   73:21  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  162:11  error  'labelGroup' is assigned a value but never used                               @typescript-eslint/no-unused-vars
+  198:11  error  'margin' is assigned a value but never used                                   @typescript-eslint/no-unused-vars
+  304:53  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  308:5   error  Type string trivially inferred from a string literal, remove type annotation  @typescript-eslint/no-inferrable-types
+  309:5   error  Type number trivially inferred from a number literal, remove type annotation  @typescript-eslint/no-inferrable-types
+  326:53  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  332:13  error  'midY' is assigned a value but never used                                     @typescript-eslint/no-unused-vars
+  383:53  error  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  417:13  error  'midY' is assigned a value but never used                                     @typescript-eslint/no-unused-vars
+  420:13  error  'rectHeight' is assigned a value but never used                               @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\persentation.component.ts
+  15:3   error  Lifecycle methods should not be empty  @angular-eslint/no-empty-lifecycle-method
+  15:20  error  Unexpected empty method 'ngOnInit'     @typescript-eslint/no-empty-function
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\well-casing-visualization\well-casing-visualization.component.spec.ts
+  6:7  error  'component' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\well-casing-visualization\well-casing-visualization.component.ts
+  130:11  error  'spec' is assigned a value but never used                                                                   @typescript-eslint/no-unused-vars
+  135:28  error  Optional chain expressions can return undefined by design - using a non-null assertion is unsafe and wrong  @typescript-eslint/no-non-null-asserted-optional-chain
+  325:11  error  'gridOffset' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\well-chip-list\well-chip-list.component.ts
+   1:39  error    'signal' is defined but never used                                                                                                         @typescript-eslint/no-unused-vars
+  25:3   warning  Lifecycle interface 'OnInit' should be implemented for method 'ngOnInit'. (https://angular.dev/style-guide#use-lifecycle-hook-interfaces)  @angular-eslint/use-lifecycle-interface
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\well-status-grid\well-status-grid.component.ts
+   1:47  error    'Signal' is defined but never used                                                                                                                       @typescript-eslint/no-unused-vars
+  37:3   warning  Lifecycle interface 'AfterViewInit' should be implemented for method 'ngAfterViewInit'. (https://angular.dev/style-guide#use-lifecycle-hook-interfaces)  @angular-eslint/use-lifecycle-interface
+  43:23  error    Unexpected any. Specify a different type                                                                                                                 @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\wellbore-view\wellbore-view.component.ts
+   1:10  error  'AfterViewInit' is defined but never used           @typescript-eslint/no-unused-vars
+   1:75  error  'viewChild' is defined but never used               @typescript-eslint/no-unused-vars
+  49:11  error  'defs' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  54:11  error  'defsSelection' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\features\persentation\wellbore.service.ts
+  242:17  error  Unexpected empty constructor  @typescript-eslint/no-empty-function
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\models\well-design\morning-pres-wells.ts
+  32:18  error  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  41:40  error  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  42:26  error  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  48:11  error  'toBool' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  48:24  error  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\services\presentation.service.spec.ts
+  6:7  error  'service' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\services\presentation.service.ts
+  30:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\services\well-design.service.spec.ts
+  6:7  error  'service' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\shared\components\card\card.component.ts
+  15:15  error  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\shared\components\sidebar\sidebar.component.ts
+  47:34  error  Type boolean trivially inferred from a boolean literal, remove type annotation  @typescript-eslint/no-inferrable-types
+  47:34  error  'exclusive' is assigned a value but never used                                  @typescript-eslint/no-unused-vars
+  47:68  error  Unexpected empty method 'toggleExpand'                                          @typescript-eslint/no-empty-function
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\utils\casing-builder.util.ts
+  17:84  error  Irregular whitespace not allowed  no-irregular-whitespace
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\utils\map.config.ts
+   4:21  error  '_ArcGISPoint' is defined but never used  @typescript-eslint/no-unused-vars
+  86:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  96:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\utils\wwell-placement-utils.ts
+  74:52  error  Irregular whitespace not allowed  no-irregular-whitespace
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\wwellmap\wwellmap.component.spec.ts
+   97:27  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  123:27  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  145:29  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  163:7   error  'httpTestingController' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  164:7   error  'mockMorningReportService' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  166:9   error  'mockRawWWells' is assigned a value but never used             @typescript-eslint/no-unused-vars
+  198:10  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+  209:71  error  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\app\wwellmap\wwellmap.component.ts
+   3:41  error  'inject' is defined but never used       @typescript-eslint/no-unused-vars
+  13:10  error  'environment' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\JavaDev\AGWA\agwa-ui\src\setup-jest.ts
+  3:13  error  Unexpected empty method 'observe'         @typescript-eslint/no-empty-function
+  4:15  error  Unexpected empty method 'unobserve'       @typescript-eslint/no-empty-function
+  5:16  error  Unexpected empty method 'disconnect'      @typescript-eslint/no-empty-function
+  7:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
