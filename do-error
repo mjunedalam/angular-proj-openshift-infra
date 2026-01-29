@@ -1,62 +1,55 @@
-I am getting below error 
-'imports' must be an array of components, directives, pipes, or NgModules.
-  Value is of type '[HttpClientModule, MatListModule, MatIconModule, (not statically analyzable), (not statically analyzable), MatToolbarModule, MatButtonModule, MatSidenavModule, MatCardModule, MatSortModule, MatTableModule, MatPaginatorModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSnackBarModule, DatePipe, MatChipsModule, MatChipListbox, MatChipOption, MatTableModule, MatCardModule, CommonModule, ReactiveFormsModule, MatSelectModule, FormsModule, AgGridModule, WwellTestComponent, DatabaseInfoComponent, WwellHeaderComponent, OperationSummaryComponent, FormationTopsAndCasingComponent, FileUploadComponent]'.(-991010)
-'imports' must be an array of components, directives, pipes, or NgModules.
-  Value is of type '[HttpClientModule, MatListModule, MatIconModule, (not statically analyzable), (not statically analyzable), MatToolbarModule, MatButtonModule, MatSidenavModule, MatCardModule, MatSortModule, MatTableModule, MatPaginatorModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSnackBarModule, DatePipe, MatChipsModule, MatChipListbox, MatChipOption, MatTableModule, MatCardModule, CommonModule, ReactiveFormsModule, MatSelectModule, FormsModule, AgGridModule, WwellTestComponent, DatabaseInfoComponent, WwellHeaderComponent, OperationSummaryComponent, FormationTopsAndCasingComponent, FileUploadComponent]'.(-991010)
-(alias) const SHARED_MODULES: (typeof HttpClientModule | typeof RouterLinkActive | typeof DatePipe | typeof MatChipListbox | typeof MatChipOption)[]
-import SHARED_MODULES
-
-import { Component, computed, inject, OnInit } from '@angular/core';
-import { SHARED_MODULES } from '../../../shared/shared.module';
-import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
-import { WwellTestComponent } from "../wwell-test/wwell-test.component";
-import { DatabaseInfoComponent } from "../database-info/database-info.component";
-import { WwellHeaderComponent } from "../wwell-header/wwell-header.component";
-import { OperationSummaryComponent } from "../operation-summary/operation-summary.component";
-import { FormationTopsAndCasingComponent } from "../formation-tops-and-casing/formation-tops-and-casing.component";
-import { FileUploadComponent } from "../../../shared/components/file-upload/file-upload.component";
-
-@Component({
-  selector: 'app-active-wwell-view',
-  imports: [...SHARED_MODULES, WwellTestComponent, DatabaseInfoComponent, WwellHeaderComponent, OperationSummaryComponent, FormationTopsAndCasingComponent, FileUploadComponent],
-  templateUrl: './active-wwell-view.component.html',
-  styleUrl: './active-wwell-view.component.scss'
-})
-export class ActiveWwellViewComponent implements OnInit {
-
-  store = inject(MorningReportStore)
-
-  selectedValue: string | undefined;
-  statuses = [{ value: 'Test1' },
-  { value: 'Test2' }
-  ];
-
-  public visibleWells = computed(() => this.store.visibleWells());
+import { MatButtonModule } from "@angular/material/button";
+import { MatIconModule } from "@angular/material/icon";
+import { MatListModule } from "@angular/material/list";
+import { MatSidenavModule } from "@angular/material/sidenav";
+import { MatToolbarModule } from "@angular/material/toolbar";
+import { RouterLinkActive, RouterModule } from "@angular/router";
+import { ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { HttpClientModule } from "@angular/common/http";
+import { MatTableModule } from '@angular/material/table';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSortModule } from '@angular/material/sort';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input'
+import { MatSnackBarModule } from "@angular/material/snack-bar";
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
+import { DatePipe } from "@angular/common";
+import { MatChipListbox, MatChipOption, MatChipsModule } from '@angular/material/chips';
+import { MatSelectModule } from '@angular/material/select';
+import { FormsModule } from '@angular/forms';
+import { AgGridModule } from 'ag-grid-angular';
 
 
-  ngOnInit() {
-    this.store.showAll();
-    this.store.loadMorningReportData();
-  }
 
-  files: File[] = [];
+export const SHARED_MODULES = [
 
-  onFileChange(event: any) {
-    const files = event.target.files;
-    this.files = Array.from(files);
-  }
-
-  previewFile(file: File) {
-    // Add your preview logic here
-    console.log(file);
-  }
-
-  removeFile(index: number) {
-    this.files.splice(index, 1);
-  }
-
-  onWellSelect(id: string) {
-    this.store.selectWell(id);
-  }
-
-}
+    HttpClientModule,
+    MatListModule,
+    MatIconModule,
+    RouterModule,
+    RouterLinkActive,
+    MatToolbarModule,
+    MatButtonModule,
+    MatSidenavModule,
+    MatCardModule,
+    MatSortModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    DatePipe,
+    MatChipsModule,
+    MatChipListbox,
+    MatChipOption,
+    MatTableModule,
+    MatCardModule,
+    CommonModule,
+    ReactiveFormsModule,
+    MatSelectModule,
+    FormsModule,
+    AgGridModule
+]
