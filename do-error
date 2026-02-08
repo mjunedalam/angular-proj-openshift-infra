@@ -304,3 +304,35 @@ public interface WaterWellTestResultMapper {
 </project>
 
 using Mybatis
+
+
+
+
+2026-02-08T07:53:46.616469874Z Finished generating 'dailyoperations-1.0.0-runner' in 1m 6s.
+2026-02-08T07:53:46.788231439Z [INFO] ------------------------------------------------------------------------
+2026-02-08T07:53:46.788231439Z [INFO] BUILD FAILURE
+2026-02-08T07:53:46.788231439Z [INFO] ------------------------------------------------------------------------
+2026-02-08T07:53:46.789023966Z [INFO] Total time: 01:24 min
+2026-02-08T07:53:46.789174890Z [INFO] Finished at: 2026-02-08T07:53:46Z
+2026-02-08T07:53:46.789189696Z [INFO] ------------------------------------------------------------------------
+2026-02-08T07:53:46.790476411Z [ERROR] Failed to execute goal com.redhat.quarkus.platform:quarkus-maven-plugin:3.20.3.redhat-00006:build (default) on project dailyoperations: Failed to build quarkus application: io.quarkus.builder.BuildException: Build failure: Build failed due to errors
+2026-02-08T07:53:46.790490704Z [ERROR] [error]: Build step io.quarkus.deployment.pkg.steps.NativeImageBuildStep#build threw an exception: io.quarkus.deployment.pkg.steps.NativeImageBuildStep$ImageGenerationFailureException: Image generation failed. Exit code: 1
+2026-02-08T07:53:46.790499751Z [ERROR] at io.quarkus.deployment.pkg.steps.NativeImageBuildStep.imageGenerationFailed(NativeImageBuildStep.java:496)
+2026-02-08T07:53:46.790510761Z [ERROR] at io.quarkus.deployment.pkg.steps.NativeImageBuildStep.build(NativeImageBuildStep.java:287)
+2026-02-08T07:53:46.790520302Z [ERROR] at java.base/java.lang.invoke.MethodHandle.invokeWithArguments(MethodHandle.java:733)
+2026-02-08T07:53:46.790526462Z [ERROR] at io.quarkus.deployment.ExtensionLoader$3.execute(ExtensionLoader.java:856)
+2026-02-08T07:53:46.790536396Z [ERROR] at io.quarkus.builder.BuildContext.run(BuildContext.java:255)
+2026-02-08T07:53:46.790544970Z [ERROR] at org.jboss.threads.ContextHandler$1.runWith(ContextHandler.java:18)
+2026-02-08T07:53:46.790553342Z [ERROR] at org.jboss.threads.EnhancedQueueExecutor$Task.doRunWith(EnhancedQueueExecutor.java:2675)
+2026-02-08T07:53:46.790562452Z [ERROR] at org.jboss.threads.EnhancedQueueExecutor$Task.run(EnhancedQueueExecutor.java:2654)
+2026-02-08T07:53:46.790570146Z [ERROR] at org.jboss.threads.EnhancedQueueExecutor.runThreadBody(EnhancedQueueExecutor.java:1627)
+2026-02-08T07:53:46.790588612Z [ERROR] at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1594)
+2026-02-08T07:53:46.790588612Z [ERROR] at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-02-08T07:53:46.790601015Z [ERROR] at org.jboss.threads.JBossThread.run(JBossThread.java:499)
+2026-02-08T07:53:46.790612414Z [ERROR] -> [Help 1]
+2026-02-08T07:53:46.790623204Z [ERROR]
+2026-02-08T07:53:46.790641764Z [ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+2026-02-08T07:53:46.790655677Z [ERROR] Re-run Maven using the -X switch to enable full debug logging.
+2026-02-08T07:53:46.790664422Z [ERROR]
+2026-02-08T07:53:46.790672919Z [ERROR] For more information about the errors and possible solutions, please read the following articles:
+2026-02-08T07:53:46.790688930Z [ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
