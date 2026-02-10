@@ -1,18 +1,73 @@
+package com.aramco.easd.dailyoperations.mappers;
+
+import org.apache.ibatis.type.BaseTypeHandler;
+import org.apache.ibatis.type.JdbcType;
+
+import java.sql.*;
+import java.io.StringReader;
+
+public class OracleClobTypeHandler extends BaseTypeHandler<String> {
+
+    @Override
+    public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
+        // Critical Fix: Create a temporary CLOB object
+        // This satisfies Oracle's requirement for IN OUT CLOB parameters
+        Clob clob = ps.getConnection().createClob();
+        clob.setString(1, parameter);
+        ps.setClob(i, clob);
+    }
+
+    @Override
+    public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
+        Clob clob = rs.getClob(columnName);
+        return clobToString(clob);
+    }
+
+    @Override
+    public String getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
+        Clob clob = rs.getClob(columnIndex);
+        return clobToString(clob);
+    }
+
+    @Override
+    public String getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
+        Clob clob = cs.getClob(columnIndex);
+        return clobToString(clob);
+    }
+
+    // Helper to convert Clob back to String
+    private String clobToString(Clob clob) throws SQLException {
+        if (clob == null) {
+            return null;
+        }
+        try {
+            return clob.getSubString(1, (int) clob.length());
+        } finally {
+            try {
+                // Free resources if supported by driver
+                clob.free();
+            } catch (AbstractMethodError | SQLFeatureNotSupportedException e) {
+                // Ignore if driver doesn't support free()
+            }
+        }
+    }
+}
+
 <mapper namespace="com.aramco.easd.dailyoperations.mappers.DrillingEyeMapper">
 
     <select id="fetchDrillingEyeData" statementType="CALLABLE">
         {call EXAD.EXAD_AGWA_QUERIES_PKG.drlg_mr(
-            #{jsonIn,  
-              mode=INOUT, 
-              jdbcType=CLOB, 
+            #{jsonIn,
+              mode=INOUT,
+              jdbcType=CLOB,
               javaType=java.lang.String,
-              typeHandler=org.apache.ibatis.type.ClobTypeHandler},
+              typeHandler=com.aramco.easd.dailyoperations.mappers.OracleClobTypeHandler},
             
-            #{jsonOut, 
-              mode=OUT, 
-              jdbcType=CLOB, 
+            #{jsonOut,
+              mode=OUT,
+              jdbcType=CLOB,
               javaType=java.lang.String,
-              typeHandler=org.apache.ibatis.type.ClobTypeHandler}
+              typeHandler=com.aramco.easd.dailyoperations.mappers.OracleClobTypeHandler}
         )}
     </select>
 
