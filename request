@@ -1,106 +1,342 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
-import { MoriningReportService } from '../../../services/morining-report.service';
-import { SHARED_MODULES } from '../../../shared/shared.module';
-import { MorningReport } from '../../../models/morining-report.model';
-import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
-import { FileUploadComponent } from "../../../shared/components/file-upload/file-upload.component";
-
-@Component({
-  selector: 'app-well-chip-list',
-  imports: [...SHARED_MODULES, FileUploadComponent],
-  providers: [MoriningReportService],
-  templateUrl: './well-chip-list.component.html',
-  styleUrl: './well-chip-list.component.scss'
-
-})
-export class WellChipListComponent implements OnInit {
-
-  private morningReportService = inject(MoriningReportService);
-  store = inject(MorningReportStore)
-
-  public visibleWells = computed(() => this.store.visibleWells());
-  public selectedWellId = computed(() => this.store.selectedWellId());
-  public selectedWell = this.store.selectedWell;
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aramco.easd.dailyoperations.mappers.DrillingEyeMapper">
 
 
-  ngOnInit() {
-    this.store.loadMorningReportData();
-  }
+    <select id="fetchDrillingEyeData"
+            statementType="CALLABLE"
+            resultType="string"
+            jdbcType="CLOB">
 
-  public chipCountInfo = computed(() => {
-    const selectedId = this.selectedWellId();
-    const wells = this.store.wells();
-    const index = wells.findIndex(well => well.epANum === selectedId);
-    if (index === -1) return '';
-    return `Well ${index + 1} of ${wells.length}`;
-  });
 
-  public onWellSelect(well: MorningReport) {
-    this.store.selectWell(well.epANum);
-  }
+        {call EXAD.EXAD_AGWA_QUERIES_PKG.drlg_mr(
+                #{jsonIn,  jdbcType=CLOB, mode=INOUT},
+                #{jsonOut, jdbcType=CLOB, mode=OUT}
+              )}
+    </select>
+
+
+
+</mapper>
+package com.aramco.easd.dailyoperations.mappers;
+
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+@Mapper
+public interface DrillingEyeMapper {
+
+    String fetchDrillingEyeData(@Param("jsonIn") String jsonIn);
 }
+package com.aramco.easd.dailyoperations.services;
 
-<header
-  class="bg-white h-14 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200 mb-5"
->
-  <div class="flex items-center gap-4">
-    <div class="h-6 w-px bg-slate-300 hidden sm:block"></div>
-  </div>
-  <mat-chip-listbox
-    aria-label="Well Name Chips"
-    class="px-3 py-1 bg-white text-blue-700 shadow-sm rounded transition-all font-bold items-center"
-  >
-    <!-- Previous Button -->
-    <button
-      mat-icon-button
-      class="inline-chip-button"
-      (click)="store.navigatePrev()"
-      [disabled]="store.startIndex() === 0"
-      aria-label="Previous page"
-    >
-      <mat-icon>keyboard_arrow_left</mat-icon>
-    </button>
 
-    @for (well of visibleWells(); track $index; let i = $index) {
-      <mat-chip-option
-        [selected]="well.epANum === selectedWellId()"
-        (click)="onWellSelect(well)"
-      >
-        {{ well.wGnrName }}
-      </mat-chip-option>
+import com.aramco.easd.dailyoperations.mappers.DrillingEyeMapper;
+import com.aramco.easd.dailyoperations.models.DrillingEyeRequestModel;
+import com.aramco.easd.dailyoperations.util.JsonUtil;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+@ApplicationScoped
+public class DrillingEyeService {
+
+    @Inject
+    DrillingEyeMapper drillingEyeMapper;
+
+    public String loadDrillingEyeData(DrillingEyeRequestModel drillingEyeRequestModel) {
+        String inputJson = JsonUtil.toJson(drillingEyeRequestModel);
+        return drillingEyeMapper.fetchDrillingEyeData(inputJson);
     }
 
-    <!-- Inline Next Button -->
-    <button
-      mat-icon-button
-      class="inline-chip-button"
-      (click)="store.navigateNext()"
-      [disabled]="
-        store.startIndex() + store.chipsPerPage() >= store.wells().length
-      "
-      aria-label="Next page"
-    >
-      <mat-icon>keyboard_arrow_right</mat-icon>
-    </button>
-  </mat-chip-listbox>
-  <div class="flex items-center gap-4 text-xs">
-    <div class="hidden lg:flex items-center gap-2 text-slate-500 font-medium">
-      <i class="fa-regular fa-calendar text-blue-600"></i>
-      <span>Mon, 20 Oct 2025</span>
-    </div>
-    <div
-      class="flex items-center gap-2 pl-4 lg:border-l border-slate-200"
-    ></div>
-  </div>
-</header>
 
-<!-- Selected Well Info -->
-<!-- @if (selectedWell(); as selectedWell) {
+}
+package com.aramco.easd.dailyoperations.util;
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-  <div><strong>ID:</strong> {{ selectedWell.epANum }}</div>
-  <div><strong>Name:</strong> {{ selectedWell.wGnrName }}</div>
-  <div><strong>BI Number:</strong> {{ selectedWell.biNum }}</div>
-</div>
-} -->
+import com.aramco.easd.dailyoperations.models.DrillingEyeRequestModel;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class JsonUtil {
+
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    public static String toJson(DrillingEyeRequestModel drillingEyeRequestModel) {
+        try {
+            return mapper.writeValueAsString(drillingEyeRequestModel);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize DrLgRequest to JSON", e);
+        }
+    }
+
+}
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.aramco.easd</groupId>
+    <artifactId>dailyoperations</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <properties>
+        <compiler-plugin.version>3.13.0</compiler-plugin.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>com.redhat.quarkus.platform</quarkus.platform.group-id>
+        <quarkus.platform.version>3.8.6.redhat-00005</quarkus.platform.version>
+        <quarkus.mybatis.version>2.2.4</quarkus.mybatis.version>
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.1</surefire-plugin.version>
+        <commons-lang3.version>3.12.0</commons-lang3.version>
+        <quarkus-mybatis.version>2.2.4</quarkus-mybatis.version>
+        <checkstyle-plugin.version>3.5.0</checkstyle-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-reactive-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-reactive</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-csrf-reactive</artifactId>
+        </dependency>
+        <!-- To address CVE-2024-7254 -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.25.5.redhat-00003</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.mybatis</groupId>
+            <artifactId>quarkus-mybatis</artifactId>
+            <version>${quarkus-mybatis.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-resteasy-reactive</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-oracle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>io.quarkus</groupId>-->
+<!--            <artifactId>quarkus-vertx-http</artifactId>-->
+<!--        </dependency>-->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-security</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons-lang3.version}</version>
+        </dependency>
+    </dependencies>
+    <repositories>
+        <repository>
+            <releases>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>redhat</id>
+            <url>https://maven.repository.redhat.com/ga</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <releases>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>redhat</id>
+            <url>https://maven.repository.redhat.com/ga</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                                <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                                <maven.home>${maven.home}</maven.home>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${checkstyle-plugin.version}</version>
+                <configuration>
+                    <configLocation>google_checks.xml</configLocation>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <skipITs>false</skipITs>
+                <quarkus.package.type>native</quarkus.package.type>
+            </properties>
+        </profile>
+    </profiles>
+</project>
+I am getting the below error see if we can get rid of jdbcType
+Caused by: org.apache.ibatis.builder.BuilderException: Error creating document instance.  Cause: org.xml.sax.SAXParseException; lineNumber: 11; columnNumber: 29; Attribute "jdbcType" must be declared for element type "select".
+	at org.apache.ibatis.parsing.XPathParser.createDocument(XPathParser.java:262)
+	at org.apache.ibatis.parsing.XPathParser.<init>(XPathParser.java:127)
+	at io.quarkiverse.mybatis.runtime.MyBatisRecorder.buildXmlMapper(MyBatisRecorder.java:148)
+	at io.quarkiverse.mybatis.runtime.MyBatisRecorder.lambda$buildFromMapperLocations$1(MyBatisRecorder.java:129)
+	at java.base/java.util.Optional.ifPresent(Optional.java:178)
+	at io.quarkiverse.mybatis.runtime.MyBatisRecorder.buildFromMapperLocations(MyBatisRecorder.java:98)
+	at io.quarkiverse.mybatis.runtime.MyBatisRecorder.addMappers(MyBatisRecorder.java:182)
+	at io.quarkiverse.mybatis.runtime.MyBatisRecorder.createSqlSessionFactory(MyBatisRecorder.java:91)
+	at io.quarkus.runner.recorded.MyBatisProcessor$generateSqlSessionFactory136316061.deploy_0(Unknown Source)
+	at io.quarkus.runner.recorded.MyBatisProcessor$generateSqlSessionFactory136316061.deploy(Unknown Source)
+	... 11 more
+Caused by: org.xml.sax.SAXParseException; lineNumber: 11; columnNumber: 29; Attribute "jdbcType" must be declared for element type "select".
+	at java.xml/com.sun.org.apache.xerces.internal.util.ErrorHandlerWrapper.createSAXParseException(ErrorHandlerWrapper.java:204)
+	at java.xml/com.sun.org.apache.xerces.internal.util.ErrorHandlerWrapper.error(ErrorHandlerWrapper.java:135)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLErrorReporter.reportError(XMLErrorReporter.java:396)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLErrorReporter.reportError(XMLErrorReporter.java:327)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLErrorReporter.reportError(XMLErrorReporter.java:284)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.dtd.XMLDTDValidator.addDTDDefaultAttrsAndValidate(XMLDTDValidator.java:1237)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.dtd.XMLDTDValidator.handleStartElement(XMLDTDValidator.java:1846)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.dtd.XMLDTDValidator.startElement(XMLDTDValidator.java:728)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLDocumentFragmentScannerImpl.scanStartElement(XMLDocumentFragmentScannerImpl.java:1407)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLDocumentFragmentScannerImpl$FragmentContentDriver.next(XMLDocumentFragmentScannerImpl.java:2726)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLDocumentScannerImpl.next(XMLDocumentScannerImpl.java:605)
+	at java.xml/com.sun.org.apache.xerces.internal.impl.XMLDocumentFragmentScannerImpl.scanDocument(XMLDocumentFragmentScannerImpl.java:542)
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.XML11Configuration.parse(XML11Configuration.java:889)
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.XML11Configuration.parse(XML11Configuration.java:825)
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.XMLParser.parse(XMLParser.java:141)
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.DOMParser.parse(DOMParser.java:247)
+	at java.xml/com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderImpl.parse(DocumentBuilderImpl.java:342)
+	at org.apache.ibatis.parsing.XPathParser.createDocument(XPathParser.java:260)
+	... 20 more
+
+Press [space] to restart, [e] to edit command line args (currently ''), [r] to resume testing, [o] Toggle test output, [h] for more options>
+10:16:11,789 INFO  [io.qua.dep.dev.IsolatedDevModeMain] Attempting to start live reload endpoint to recover from previous Quarkus startup failure
+2026-02-10 10:16:11,789 INFO  [io.qua.dep.dev.IsolatedDevModeMain] (main) Attempting to start live reload endpoint to recover from previous Quarkus startup failure
+
 
