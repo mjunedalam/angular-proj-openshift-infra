@@ -1,88 +1,78 @@
-400	
-Error: Bad Request
+ getWellDataByEPANum(): Observable<ApiResponse<IWellData>> {
+    return this.http.get<ApiResponse<IWellData>>(`${this.apiUrl}/drilling-eye`);
+  } getWellDataByEPANum(): Observable<ApiResponse<IWellData>> {
+    return this.http.get<ApiResponse<IWellData>>(`${this.apiUrl}/drilling-eye`);
+  }
+import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
+import { inject } from '@angular/core';
+import { ApiResponse } from '../../models/api-response.model';
+import { IWellData } from '../../../models/well-design/wwell-data.model';
+import { WwellDataService } from '../../../services/wwell-data.service';
+import { LoadingService } from '../../services/loading.service';
 
-Response headers
- access-control-allow-credentials: false 
- access-control-allow-headers: Content-Type,Authorization 
- access-control-allow-methods: GET,POST,PUT,DELETE,OPTIONS 
- access-control-allow-origin: https://agwa-dailyoperations-dev.apps.ocpb.enp.aramco.com.sa 
- connection: close 
- content-length: 0 
+interface WellDataState {
 
-My api is working fine in local but this one is giving above error
-code below FYR
-package com.aramco.easd.dailyoperations.resources;
-
-
-import com.aramco.easd.dailyoperations.dto.ApiResponse;
-import com.aramco.easd.dailyoperations.models.DrillingEyeRequestModel;
-import com.aramco.easd.dailyoperations.services.DrillingEyeService;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-@Path("/drilling-eye")
-@Produces(MediaType.APPLICATION_JSON)
-public class DrillingEyeResource {
-
-    @Inject
-    DrillingEyeService drillingEyeService;
-
-    private static final Logger LOGGER = Logger.getLogger(DrillingEyeResource.class.getName());
-
-    @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response getDrillingEyeData(DrillingEyeRequestModel request) {
-        LOGGER.log(Level.INFO, "getDrillingEyeData executed with ", request);
-        ApiResponse<String> apiResponse = drillingEyeService.loadDrillingEyeData(request);
-        return apiResponse.buildResponse();
-    }
+    response: ApiResponse<IWellData> | null;
 }
 
-#datasource
-quarkus.datasource.db-kind=oracle
-quarkus.datasource.jdbc.driver=oracle.jdbc.driver.OracleDriver
-quarkus.native.add-all-charsets=true
-quarkus.datasource.jdbc.url=${JDBC_URL}
-quarkus.datasource.username=${AGWA_USERNAME}
-quarkus.datasource.password=${AGWA_PASSWORD}
+export const wellDataStore = signalStore(
+    { providedIn: 'root' },
+    withState<WellDataState>({ response: null }),
+    withMethods(
+        (
+            store,
+            service = inject(WwellDataService),
+            loading = inject(LoadingService)
+        ) => ({
 
-quarkus.http.test-port=9696
+            loadWellData: () => {
+                loading.show();
+                patchState(store, { response: null });
 
-#mybatis
-quarkus.mybatis.mapper-locations=mappers/
-quarkus.mybatis.jdbc-type-for-null=varchar
-quarkus.mybatis.use-actual-param-name=true
-
-#CSRF
-quarkus.rest-csrf.cookie-name=XSRF-TOKEN
-quarkus.rest-csrf.token-header-name=X-XSRF-TOKEN
-quarkus.rest-csrf.cookie-http-only=false
-quarkus.rest-csrf.enabled=true
-
-
-%dev.quarkus.rest-csrf.enabled=false
-%test.rest-quarkus.csrf.enabled=false
-
-#opentelemetry
-quarkus.otel.exporter.otlp.endpoint=http://otel-collector.tempo-monolithic.svc.cluster.local:4317/
-
-quarkus.rest-client.logging.scope=request-response
-quarkus.rest-client.logging.body-limit=5000
-
-quarkus.http.cors=true
-#quarkus.http.cors.origins=http://localhost:4200,https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa,
-quarkus.http.cors.methods=GET,POST,PUT,DELETE,OPTIONS
-quarkus.http.cors.headers=Content-Type,Authorization
-
-quarkus.http.cors.origins=*
-quarkus.swagger-ui.always-include=true
+                service.getWellData().subscribe({
+                    next: (res) => {
+                        console.log("well data ", res);
+                        patchState(store, { response: res });
+                        loading.hide();
+                    },
+                    error: (err) => {
+                        patchState(store, {
+                            response: {
+                                statusCode: 500,
+                                error: true,
+                                message: err.message,
+                                data: [],
+                            },
+                        });
+                        loading.hide();
+                    },
+                });
+            },
 
 
+            refresh: () => {
+                loading.show();
+                service.getWellData().subscribe({
+                    next: (res) => patchState(store, { response: res }),
+                    error: (err) =>
+                        patchState(store, {
+                            response: {
+                                statusCode: 500,
+                                error: true,
+                                message: err.message,
+                                data: [],
+                            },
+                        }),
+                    complete: () => loading.hide(),
+                });
+            },
+        })
+    )
+);
+
+   @GET
+    public Response getDrillingEyeDataByEPNum(@QueryParam("epNum") String epNum) {
+        LOGGER.log(Level.INFO, "getDrillingEyeData executed with ", epNum);
+        ApiResponse<String> apiResponse = drillingEyeService.loadDrillingData(epNum);
+        return apiResponse.buildResponse();
+    }
