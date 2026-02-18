@@ -1,3 +1,51 @@
+400	
+Error: Bad Request
+
+Response headers
+ access-control-allow-credentials: false 
+ access-control-allow-headers: Content-Type,Authorization 
+ access-control-allow-methods: GET,POST,PUT,DELETE,OPTIONS 
+ access-control-allow-origin: https://agwa-dailyoperations-dev.apps.ocpb.enp.aramco.com.sa 
+ connection: close 
+ content-length: 0 
+
+My api is working fine in local but this one is giving above error
+code below FYR
+package com.aramco.easd.dailyoperations.resources;
+
+
+import com.aramco.easd.dailyoperations.dto.ApiResponse;
+import com.aramco.easd.dailyoperations.models.DrillingEyeRequestModel;
+import com.aramco.easd.dailyoperations.services.DrillingEyeService;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+@Path("/drilling-eye")
+@Produces(MediaType.APPLICATION_JSON)
+public class DrillingEyeResource {
+
+    @Inject
+    DrillingEyeService drillingEyeService;
+
+    private static final Logger LOGGER = Logger.getLogger(DrillingEyeResource.class.getName());
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getDrillingEyeData(DrillingEyeRequestModel request) {
+        LOGGER.log(Level.INFO, "getDrillingEyeData executed with ", request);
+        ApiResponse<String> apiResponse = drillingEyeService.loadDrillingEyeData(request);
+        return apiResponse.buildResponse();
+    }
+}
+
 #datasource
 quarkus.datasource.db-kind=oracle
 quarkus.datasource.jdbc.driver=oracle.jdbc.driver.OracleDriver
@@ -30,35 +78,11 @@ quarkus.rest-client.logging.scope=request-response
 quarkus.rest-client.logging.body-limit=5000
 
 quarkus.http.cors=true
-quarkus.http.cors.origins=http://localhost:4200,https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa
-quarkus.http.cors.methods=GET,POST,PUT,DELETE
+#quarkus.http.cors.origins=http://localhost:4200,https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa,
+quarkus.http.cors.methods=GET,POST,PUT,DELETE,OPTIONS
 quarkus.http.cors.headers=Content-Type,Authorization
 
+quarkus.http.cors.origins=*
 quarkus.swagger-ui.always-include=true
 
-
-GET http://localhost:8080/morning-report
-
-HTTP/1.1 500 Internal Server Error
-Content-Type: application/json;charset=UTF-8
-content-length: 1589
-
-### Error querying database.  Cause: io.quarkus.arc.InactiveBeanException: Bean is not active: SYNTHETIC bean [class=io.agroal.api.AgroalDataSource, id=sqqLi56D50iCdXmOjyjPSAxbLu0]
-Reason: Datasource '<default>' was deactivated automatically because its URL is not set. To activate the datasource, set configuration property 'quarkus.datasource.jdbc.url'. Refer to https: //quarkus.io/guides/datasource for guidance.
-To avoid this exception while keeping the bean inactive: - Configure all extensions consuming this bean as inactive as well, if they allow it, e.g. 'quarkus.someextension.active=false'
-- Make sure that custom code only accesses this bean if it is active
-### The error may exist in C:\Dev\JavaDev\Agwa-Services\dailyoperations\target\classes\mappers\MorningReportMapper.xml
-### The error may involve com.aramco.easd.dailyoperations.mappers.MorningReportMapper.morningReport
-### The error occurred while executing a query
-### Cause: io.quarkus.arc.InactiveBeanException: Bean is not active: SYNTHETIC bean [class=io.agroal.api.AgroalDataSource, id=sqqLi56D50iCdXmOjyjPSAxbLu0]
-Reason: Datasource '<default>' was deactivated automatically because its URL is not set. To activate the datasource, set configuration property 'quarkus.datasource.jdbc.url'. Refer to https: //quarkus.io/guides/datasource for guidance.
-To avoid this exception while keeping the bean inactive: - Configure all extensions consuming this bean as inactive as well, if they allow it, e.g. 'quarkus.someextension.active=false'
-- Make sure that custom code only accesses this bean if it is active
-Response file saved.
-> 2026-02-18T124003.500.json
-
-Response code: 500 (Internal Server Error); Time: 1532ms (1 s 532 ms); Content length: 1589 bytes (1.59 kB)
-
-Cookies are preserved between requests:
-> C:\Dev\JavaDev\AGWA\dailyoperations\.idea\httpRequests\http-client.cookies
 
