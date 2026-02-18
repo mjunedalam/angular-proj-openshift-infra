@@ -1,74 +1,53 @@
-package com.aramco.easd.dailyoperations.mappers;
+export const wellDataStore = signalStore(
+    { providedIn: 'root' },
+    withState<WellDataState>({ response: null }),
+    withMethods(
+        (
+            store,
+            service = inject(WwellDataService),
+            loading = inject(LoadingService)
+        ) => ({
+            // Updated to accept the parameter
+            loadWellData: (epNum: string) => {
+                loading.show();
+                patchState(store, { response: null });
 
-import org.apache.ibatis.type.BaseTypeHandler;
-import org.apache.ibatis.type.JdbcType;
+                service.getWellDataByEPANum(epNum).subscribe({
+                    next: (res) => {
+                        console.log("Well data loaded:", res);
+                        patchState(store, { response: res });
+                    },
+                    error: (err) => {
+                        patchState(store, {
+                            response: {
+                                statusCode: err.status || 500,
+                                error: true,
+                                message: err.message,
+                                data: null as any, // Adjusted to match your IWellData type
+                            },
+                        });
+                    },
+                    complete: () => loading.hide()
+                });
+            },
 
-import java.sql.*;
-import java.io.StringReader;
-
-public class OracleClobTypeHandler extends BaseTypeHandler<String> {
-
-    @Override
-    public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
-        // Critical Fix: Create a temporary CLOB object
-        // This satisfies Oracle's requirement for IN OUT CLOB parameters
-        Clob clob = ps.getConnection().createClob();
-        clob.setString(1, parameter);
-        ps.setClob(i, clob);
-    }
-
-    @Override
-    public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
-        Clob clob = rs.getClob(columnName);
-        return clobToString(clob);
-    }
-
-    @Override
-    public String getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
-        Clob clob = rs.getClob(columnIndex);
-        return clobToString(clob);
-    }
-
-    @Override
-    public String getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
-        Clob clob = cs.getClob(columnIndex);
-        return clobToString(clob);
-    }
-
-    // Helper to convert Clob back to String
-    private String clobToString(Clob clob) throws SQLException {
-        if (clob == null) {
-            return null;
-        }
-        try {
-            return clob.getSubString(1, (int) clob.length());
-        } finally {
-            try {
-                // Free resources if supported by driver
-                clob.free();
-            } catch (AbstractMethodError | SQLFeatureNotSupportedException e) {
-                // Ignore if driver doesn't support free()
-            }
-        }
-    }
+            // If refresh needs the same epNum, you might want to store epNum in state 
+            // or pass it here as well.
+            refresh: (epNum: string) => {
+                loading.show();
+                service.getWellDataByEPANum(epNum).subscribe({
+                    next: (res) => patchState(store, { response: res }),
+                    error: (err) => patchState(store, { /* handle error */ }),
+                    complete: () => loading.hide(),
+                });
+            },
+        })
+    )
+);
+// wwell-data.service.ts
+getWellDataByEPANum(epNum: string): Observable<ApiResponse<IWellData>> {
+  // This sends: /drilling-eye?epNum=your_value
+  return this.http.get<ApiResponse<IWellData>>(`${this.apiUrl}/drilling-eye`, {
+    params: { epNum }
+  });
 }
-
-<mapper namespace="com.aramco.easd.dailyoperations.mappers.DrillingEyeMapper">
-
-    <select id="fetchDrillingEyeData" statementType="CALLABLE">
-        {call EXAD.EXAD_AGWA_QUERIES_PKG.drlg_mr(
-            #{jsonIn,
-              mode=INOUT,
-              jdbcType=CLOB,
-              javaType=java.lang.String,
-              typeHandler=com.aramco.easd.dailyoperations.mappers.OracleClobTypeHandler},
-            
-            #{jsonOut,
-              mode=OUT,
-              jdbcType=CLOB,
-              javaType=java.lang.String,
-              typeHandler=com.aramco.easd.dailyoperations.mappers.OracleClobTypeHandler}
-        )}
-    </select>
-
-</mapper>
