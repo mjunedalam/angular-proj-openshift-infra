@@ -29,3 +29,67 @@ export class MiscPresWellDataComponent {
     return found ?? null;
   });
 }
+============
+import { Component, computed, inject, input, OnInit, effect } from '@angular/core';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MorningReport } from '../../../models/morining-report.model';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+
+@Component({
+  selector: 'app-well-chip-list',
+  standalone: true,
+  imports: [...SHARED_MODULES],
+  templateUrl: './well-chip-list.component.html',
+  styleUrl: './well-chip-list.component.scss'
+})
+export class WellChipListComponent implements OnInit {
+  readonly store = inject(MorningReportStore);
+  
+  readonly mode = input<'horizontal' | 'vertical'>('horizontal');
+  readonly showAll = input<boolean>(false);
+  readonly pageSize = input<number>(5);
+
+  public visibleWells = computed(() => this.store.visibleWells());
+  public selectedWellId = computed(() => this.store.selectedWellId());
+
+  constructor() {
+    effect(() => {
+      this.store.setConfig(this.showAll(), this.pageSize());
+    });
+  }
+
+  ngOnInit(): void {
+    this.store.loadMorningReportData();
+  }
+
+  public onWellSelect(well: MorningReport): void {
+    console.log('Flow Step 1: Chip clicked:', well.epANum);
+    this.store.selectWell(well.epANum);
+  }
+
+  public chipCountInfo = computed(() => {
+    const wells = this.store.wells();
+    const selectedId = this.selectedWellId();
+    const index = wells.findIndex(well => well.epANum === selectedId);
+    return index === -1 ? '' : `Well ${index + 1} of ${wells.length}`;
+  });
+}
+=========
+@if (selectedWellData(); as data) {
+  <div class="grid grid-cols-3 gap-3">
+    <div class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white">
+      <div class="text-[10px] opacity-80 mb-1">Well Name</div>
+      <div class="font-bold text-sm leading-tight">{{ data.WELL_MASTER || 'No Name' }}</div>
+    </div>
+    
+    <div class="col-span-1 bg-white p-3 rounded-2xl border border-slate-100">
+      <div class="text-[10px] text-slate-500 mb-1">Targeted Aquifer</div>
+      <div class="font-bold text-blue-800">{{ data.AQUIFER || 'Jafurah' }}</div>
+    </div>
+  </div>
+} @else {
+  <div class="flex flex-col items-center justify-center p-10 bg-slate-50 rounded-2xl">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    <p class="text-slate-400 mt-2 text-xs">Loading Well Details...</p>
+  </div>
+}
