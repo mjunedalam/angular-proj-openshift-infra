@@ -1,78 +1,129 @@
- getWellDataByEPANum(): Observable<ApiResponse<IWellData>> {
-    return this.http.get<ApiResponse<IWellData>>(`${this.apiUrl}/drilling-eye`);
-  } getWellDataByEPANum(): Observable<ApiResponse<IWellData>> {
-    return this.http.get<ApiResponse<IWellData>>(`${this.apiUrl}/drilling-eye`);
+import { Component, computed, effect, inject, input, OnInit } from '@angular/core';
+import { MoriningReportService } from '../../../services/morining-report.service';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MorningReport } from '../../../models/morining-report.model';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+
+@Component({
+  selector: 'app-well-chip-list',
+  imports: [...SHARED_MODULES],
+  providers: [MoriningReportService],
+  templateUrl: './well-chip-list.component.html',
+  styleUrl: './well-chip-list.component.scss'
+
+})
+export class WellChipListComponent implements OnInit {
+
+  private morningReportService = inject(MoriningReportService);
+  store = inject(MorningReportStore)
+  readonly mode = input<'horizontal' | 'vertical'>('horizontal');
+  readonly showAll = input<boolean>(false);
+  readonly pageSize = input<number>(5);
+
+  public visibleWells = computed(() => this.store.visibleWells());
+  public selectedWellId = computed(() => this.store.selectedWellId());
+  public selectedWell = this.store.selectedWell;
+
+  constructor() {
+    effect(() => {
+      this.store.setConfig(this.showAll(), this.pageSize());
+    });
   }
-import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
-import { inject } from '@angular/core';
-import { ApiResponse } from '../../models/api-response.model';
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-import { WwellDataService } from '../../../services/wwell-data.service';
-import { LoadingService } from '../../services/loading.service';
 
-interface WellDataState {
 
-    response: ApiResponse<IWellData> | null;
+  ngOnInit() {
+    this.store.loadMorningReportData();
+  }
+
+  public chipCountInfo = computed(() => {
+    const selectedId = this.selectedWellId();
+    const wells = this.store.wells();
+    const index = wells.findIndex(well => well.epANum === selectedId);
+    if (index === -1) return '';
+    return `Well ${index + 1} of ${wells.length}`;
+  });
+
+  public onWellSelect(well: MorningReport) {
+    this.store.selectWell(well.epANum);
+  }
 }
 
-export const wellDataStore = signalStore(
-    { providedIn: 'root' },
-    withState<WellDataState>({ response: null }),
-    withMethods(
-        (
-            store,
-            service = inject(WwellDataService),
-            loading = inject(LoadingService)
-        ) => ({
+<header
+  class="bg-white h-16 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200 mb-5"
+>
+  <!-- <div class="flex items-center gap-3 min-w-max">
+    <button mat-flat-button (click)="store.showAll()" class="view-all-btn">
+      <mat-icon>{{
+        store.showAll() ? " view_carousel" : "grid_view"
+      }}</mat-icon>
+      {{ store.showAll() ? "Slider View" : "View All Wells" }}
+    </button>
+    <div class="h-8 w-px bg-slate-200 mx-2"></div>
+  </div> -->
 
-            loadWellData: () => {
-                loading.show();
-                patchState(store, { response: null });
-
-                service.getWellData().subscribe({
-                    next: (res) => {
-                        console.log("well data ", res);
-                        patchState(store, { response: res });
-                        loading.hide();
-                    },
-                    error: (err) => {
-                        patchState(store, {
-                            response: {
-                                statusCode: 500,
-                                error: true,
-                                message: err.message,
-                                data: [],
-                            },
-                        });
-                        loading.hide();
-                    },
-                });
-            },
-
-
-            refresh: () => {
-                loading.show();
-                service.getWellData().subscribe({
-                    next: (res) => patchState(store, { response: res }),
-                    error: (err) =>
-                        patchState(store, {
-                            response: {
-                                statusCode: 500,
-                                error: true,
-                                message: err.message,
-                                data: [],
-                            },
-                        }),
-                    complete: () => loading.hide(),
-                });
-            },
-        })
-    )
-);
-
-   @GET
-    public Response getDrillingEyeDataByEPNum(@QueryParam("epNum") String epNum) {
-        LOGGER.log(Level.INFO, "getDrillingEyeData executed with ", epNum);
-        ApiResponse<String> apiResponse = drillingEyeService.loadDrillingData(epNum);
-        return apiResponse.buildResponse();
+  <div class="flex-1 flex items-center justify-center overflow-hidden px-2">
+    @if (!store.showAll()) {
+      <button
+        mat-icon-button
+        (click)="store.navigatePrev()"
+        [disabled]="store.selectedWellId() === store.wells()[0].epANum"
+        class="nav-arrow"
+      >
+        <mat-icon>keyboard_arrow_left</mat-icon>
+      </button>
     }
+
+    <div class="chips-wrapper" [class.all-mode]="store.showAll()">
+      <mat-chip-listbox aria-label="Well selection">
+        @for (well of visibleWells(); track well.epANum) {
+          <mat-chip-option
+            [selected]="well.epANum === selectedWellId()"
+            (click)="onWellSelect(well)"
+            class="custom-well-chip"
+          >
+            {{ well.wGnrName }}
+          </mat-chip-option>
+        }
+      </mat-chip-listbox>
+    </div>
+
+    @if (!store.showAll()) {
+      <button
+        mat-icon-button
+        (click)="store.navigateNext()"
+        [disabled]="
+          store.selectedWellId() ===
+          store.wells()[store.wells().length - 1].epANum
+        "
+        class="nav-arrow"
+      >
+        <mat-icon>keyboard_arrow_right</mat-icon>
+      </button>
+    }
+  </div>
+
+  <div class="flex items-center gap-4 min-w-max ml-4">
+    <span class="chip-counter">{{ chipCountInfo() }}</span>
+    <div
+      class="hidden lg:flex items-center gap-2 text-slate-500 font-medium border-l pl-4"
+    >
+      <mat-icon class="text-blue-500 scale-75">calendar_today</mat-icon>
+      <span class="text-[11px]">15 Feb 2026</span>
+    </div>
+  </div>
+</header>
+
+
+
+I want to do same like this <mat-chip-listbox class="mat-mdc-chip-set-stacked">
+    @for (well of morningReportStore.visibleWells(); track well.epANum) {
+      <mat-chip-option
+        [selected]="morningReportStore.selectedWellId() === well.epANum"
+        (click)="onWellSelect(well.epANum)"
+      >
+        {{ well.wGnrName }}
+      </mat-chip-option>
+    }
+  </mat-chip-listbox>
+
+in our custom componnets so modify accordingly
