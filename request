@@ -47,7 +47,6 @@ export class WellChipListComponent implements OnInit {
     this.store.selectWell(well.epANum);
   }
 }
-
 <header
   class="bg-white h-16 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200 mb-5"
 >
@@ -112,5 +111,258 @@ export class WellChipListComponent implements OnInit {
     </div>
   </div>
 </header>
+<div class="main-container">
+  <app-well-chip-list
+    [mode]="horizontal"
+    [pageSize]="5"
+    [showAll]="true"
+    (selectedChange)="onWellSelect('')"
+  ></app-well-chip-list>
 
-i already have on custom components let use this instead of 
+  <!-- <mat-chip-listbox class="mat-mdc-chip-set-stacked">
+    @for (well of morningReportStore.visibleWells(); track well.epANum) {
+      <mat-chip-option
+        [selected]="morningReportStore.selectedWellId() === well.epANum"
+        (click)="onWellSelect(well.epANum)"
+      >
+        {{ well.wGnrName }}
+      </mat-chip-option>
+    }
+  </mat-chip-listbox> -->
+
+  <app-wellbore-view></app-wellbore-view>
+</div>
+
+<!-- <div class="container">
+  <app-scale
+    class="scale"
+    [maxDepth]="maxDepth"
+    [plotHeight]="plotHeight"
+    [axisWidth]="70"
+  >
+  </app-scale>
+
+  <svg
+    class="drawing"
+    [attr.width]="svgWidth"
+    [attr.height]="plotHeight + 100"
+    [attr.viewBox]="'0 0 ' + svgWidth + ' ' + (plotHeight + 100)"
+  >
+    <line
+      [attr.x1]="0"
+      [attr.y1]="groundLevelY"
+      [attr.x2]="svgWidth"
+      [attr.y2]="groundLevelY"
+      stroke="#c5410a"
+      stroke-width="3"
+    ></line>
+    <text [attr.x]="613" [attr.y]="-11">Ground Level</text>
+
+    <g [attr.transform]="'translate(10,50)'">
+      <app-casing></app-casing>
+
+      <app-depth-marks></app-depth-marks>
+
+      <app-water-level></app-water-level>
+
+      <app-open-hole></app-open-hole>
+
+      <app-line-screen></app-line-screen>
+
+      <text
+        [attr.x]="613"
+        [attr.y]="plotHeight + 45"
+        style="font-size: 13px; font-weight: bold"
+      >
+        Total Depth : {{ totalDepth }} ft
+      </text>
+    </g>
+  </svg>
+</div> -->
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { SHARED_MODULES } from '../../shared/shared.module';
+import { WellboreViewComponent } from "./wellbore-view/wellbore-view.component";
+import { WellChipListComponent } from "./well-chip-list/well-chip-list.component";
+import { MorningReportStore } from '../../core/stores/moringreport/morning-report.store';
+
+
+@Component({
+  selector: 'app-persentation',
+  imports: [...SHARED_MODULES, WellboreViewComponent, WellChipListComponent],
+  templateUrl: './persentation.component.html',
+  styleUrl: './persentation.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class PersentationComponent {
+
+  horizontal: "horizontal" | "vertical" = "horizontal";
+  morningReportStore = inject(MorningReportStore);
+
+  onWellSelect(id: string) {
+    console.log("executing " + id)
+    this.morningReportStore.selectWell(id);
+  }
+
+}
+
+<div class="grid grid-cols-3 gap-3">
+  <!--  Well title card -->
+  <div
+    class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm overflow-hidden hover:shadow-xl transition-shadow duration-300 animate-pulse-shadow"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Well Name</div>
+    <div class="font-bold text-sm leading-tight">THURAYYA - Lg3 / THRY-845</div>
+    <div class="text-[10px] opacity-80">SP-276 Drilling Water Supply</div>
+  </div>
+
+  <!--  Targeted Aquifer -->
+  <div
+    class="col-span-1 bg-white p-3 rounded-2xl shadow-sm flex flex-col justify-center border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] text-slate-500 mb-1">Targeted Aquifer</div>
+    <div class="font-bold text-blue-800 flex items-center gap-1">
+      <i class="fa-solid fa-droplet text-blue-500"></i> Jafurah
+    </div>
+  </div>
+
+  <!--  Current status -->
+  <div
+    class="col-span-2 bg-white p-3 rounded-2xl shadow-sm flex items-center justify-between border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div>
+      <div class="text-[10px] text-slate-500 mb-1">Current Status</div>
+      <div class="font-bold text-blue-800">On Target</div>
+    </div>
+    <div
+      class="bg-gradient-cyan-blue p-2 rounded-full text-white shadow-sm animate-pulse"
+    >
+      <i class="fa-solid fa-gear animate-spin-slow"></i>
+    </div>
+  </div>
+
+  <!--  Days indicator -->
+  <div
+    class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="flex items-center gap-2 mb-1">
+      <i class="fa-regular fa-calendar text-cyan-300"></i>
+      <div class="text-[10px] opacity-80">Days</div>
+    </div>
+    <div class="font-bold text-sm">29.34/49</div>
+  </div>
+
+  <!--  Days‑since & Target‑days circles -->
+  <div
+    class="col-span-2 grid grid-cols-2 gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-center">
+      <div class="text-[10px] text-slate-500 mb-1">Days since Sup</div>
+      <div
+        class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-cyan-500 border-r-blue-500 mx-auto flex items-center justify-center shadow-sm bg-white animate-pulse"
+      >
+        <span class="text-base font-extrabold text-blue-900">42</span>
+      </div>
+    </div>
+
+    <div class="text-center">
+      <div class="text-[10px] text-slate-500 mb-1">Target Days</div>
+      <div
+        class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-300 mx-auto flex items-center justify-center shadow-sm bg-white animate-pulse"
+      >
+        <span class="text-base font-extrabold text-blue-900">60</span>
+      </div>
+    </div>
+  </div>
+
+  <!--  Supporting BI -->
+  <div
+    class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="font-bold text-lg leading-none mb-1">BI34</div>
+    <div class="text-[10px] opacity-80">Supporting</div>
+    <div class="font-bold text-xs">Well THRY-5</div>
+  </div>
+
+  <!--  Total footage -->
+  <div
+    class="col-span-2 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex items-center justify-between relative overflow-hidden hover:shadow-xl transition-shadow duration-300"
+  >
+    <div>
+      <div class="font-extrabold text-2xl">9,890</div>
+      <div class="text-[10px] opacity-80">Feet</div>
+    </div>
+    <div class="text-cyan-300 opacity-50 absolute right-2 bottom-0 text-4xl">
+      <i class="fa-solid fa-water"></i>
+    </div>
+    <div class="text-white absolute top-2 right-1/3">
+      <i class="fa-solid fa-arrow-down"></i>
+    </div>
+  </div>
+
+  <!--  Previous well -->
+  <div
+    class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Previous Well</div>
+    <div class="font-bold text-sm">THRY-845</div>
+  </div>
+
+  <!--  Current depth -->
+  <div
+    class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex items-center justify-between hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 font-medium">Current Depth (FT.DF)</div>
+    <div class="font-extrabold text-2xl">3591</div>
+  </div>
+
+  <!-- Next well -->
+  <div
+    class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Next Well</div>
+    <div class="font-bold text-sm">THRY-841</div>
+  </div>
+</div>
+
+import { Component, computed, effect, inject, OnInit } from '@angular/core';
+import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+
+@Component({
+  selector: 'app-misc-pres-well-data',
+  imports: [],
+  templateUrl: './misc-pres-well-data.component.html',
+  styleUrl: './misc-pres-well-data.component.scss'
+})
+export class MiscPresWellDataComponent implements OnInit {
+
+  private readonly wellStore = inject(wellDataStore);
+  private readonly reportStore = inject(MorningReportStore);
+
+  readonly selectedWellData = computed(() => {
+    const response = this.wellStore.response();
+
+    //if (!selectedId || !response?.data) return null;
+
+    return response?.data.find(item => {
+
+      const detailedId = item.DRLG_OP_STATUS?.[0]?.epANum;
+
+
+      return Number(detailedId) === Number(99327);
+    }) ?? null;
+  });
+
+  ngOnInit(): void {
+
+    if (!this.wellStore.response()) {
+      this.wellStore.loadWellData("98098");
+    }
+  }
+
+  refreshWelldata(): void {
+    this.wellStore.refresh("98098");
+  }
+
+}
+
