@@ -113,17 +113,4 @@ export class WellChipListComponent implements OnInit {
   </div>
 </header>
 
-
-
-I want to do same like this <mat-chip-listbox class="mat-mdc-chip-set-stacked">
-    @for (well of morningReportStore.visibleWells(); track well.epANum) {
-      <mat-chip-option
-        [selected]="morningReportStore.selectedWellId() === well.epANum"
-        (click)="onWellSelect(well.epANum)"
-      >
-        {{ well.wGnrName }}
-      </mat-chip-option>
-    }
-  </mat-chip-listbox>
-
-in our custom componnets so modify accordingly
+i already have on custom components let use this instead of 
