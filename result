@@ -1,41 +1,137 @@
-import { Component, computed, inject, effect } from '@angular/core';
-import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
-import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
-import { CommonModule } from '@angular/common';
+package com.aramco.easd.dailyoperations.models.drilling;
 
-@Component({
-  selector: 'app-misc-pres-well-data',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './misc-pres-well-data.component.html',
-  styleUrl: './misc-pres-well-data.component.scss'
-})
-export class MiscPresWellDataComponent {
-  private readonly reportStore = inject(MorningReportStore);
-  private readonly wellStore = inject(wellDataStore);
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.List;
 
-  // Computed signal to extract the specific well data from the response
-  readonly selectedWellData = computed(() => {
-    const activeId = this.reportStore.selectedWellId();
-    const responseData = this.wellStore.response()?.data;
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record DrillingEyeResponse(
+    @JsonProperty("RIG_ACTIVITY") List<RigActivity> rigActivity,
+    @JsonProperty("WELL_MASTER") List<WellMaster> wellMaster,
+    @JsonProperty("RIG_IDENTIFICATION") List<RigIdentification> rigIdentification,
+    @JsonProperty("CONTACT") List<Contact> contacts,
+    @JsonProperty("DRLG_OP_STATUS") List<DrlgOpStatus> opStatus,
+    @JsonProperty("DRLG_FM_TOPS") List<DrlgFmTops> fmTops,
+    @JsonProperty("DRLG_FD_TDAY") List<DrlgFootage> footageToday,
+    @JsonProperty("ROP_DATA") List<RopData> ropData,
+    @JsonProperty("NEXT_2_WELL_ACTIVITY") List<NextWellActivity> nextActivities,
+    @JsonProperty("NEW_TARGET_DAYS") List<TargetDays> targetDays,
+    @JsonProperty("DRLG_OP_SMRY") List<DrlgOpSummary> opSummary,
+    @JsonProperty("BITINFO") List<Object> bitInfo
+) {}
 
-    if (!responseData || !activeId) return null;
+record RigActivity(
+    String wellName, String wellName2, String spuddate, String wRigCd,
+    int racMovTruckloadTot, int wDrlgTrgtDay, String wDrlgTypeDesc, String wWellTypeDesc
+) {}
 
-    // find returns the first match or undefined
-    return responseData.find(item => 
-      String(item.DRLG_OP_STATUS?.[0]?.epANum) === String(activeId)
-    ) ?? null;
-  });
+record WellMaster(
+    String well, String offshore, double utmNorth, double utmEast, double lon, double lat
+) {}
 
-  constructor() {
-    // This effect acts as the "glue". Whenever selectedWellId changes, 
-    // it triggers the API load in the other store.
-    effect(() => {
-      const id = this.reportStore.selectedWellId();
-      if (id) {
-        console.log('Flow Step 2: Selection change detected. Fetching data for:', id);
-        this.wellStore.loadWellData(id);
-      }
-    });
-  }
+record RigIdentification(
+    String rigname, int rigStatus, String code, String description, 
+    String rigCntrctNum, double rigHeight, int rigHp
+) {}
+
+record Contact(
+    String rigContNum, String description, String rigContNumPdf
+) {}
+
+record DrlgOpStatus(
+    Long epANum, String wActDt, double wPrsntDpth, double wPrevDpth,
+    String wDrlgEngName, String wFmanName, String wOpRmk, String foremanRmk
+) {}
+
+record DrlgFmTops(
+    Long epANum, String stLongCd, double wStDmrkDpth, String wStDmrkRmk
+) {}
+
+record DrlgFootage(int footage) {}
+
+record RopData(double rop) {}
+
+record TargetDays(int targetDays) {}
+
+record NextWellActivity(
+    Long epANum, String wGnrName, String nextWellActivity, String wDrlgStaDt
+) {}
+
+record DrlgOpSummary(
+    String wOpCd, String wEvntTime, String toTm, double wOpDur, 
+    String wHolSz, String wOpRmk, String wMajOpCd
+) {}
+
+====
+package com.aramco.easd.dailyoperations.services;
+
+import com.aramco.easd.dailyoperations.dto.ApiResponse;
+import com.aramco.easd.dailyoperations.mappers.DrillingEyeMapper;
+import com.aramco.easd.dailyoperations.models.drilling.DrillingEyeResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.core.Response;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+@ApplicationScoped
+public class DrillingEyeService {
+
+    private static final Logger LOGGER = Logger.getLogger(DrillingEyeService.class.getName());
+
+    @Inject
+    DrillingEyeMapper drillingEyeMapper;
+
+    @Inject
+    ObjectMapper objectMapper; // Use Quarkus's managed ObjectMapper
+
+    public ApiResponse<List<DrillingEyeResponse>> loadDrillingDataByEpANum(String epAnum) {
+        try {
+            if (epAnum == null || epAnum.isBlank()) {
+                return error(Response.Status.BAD_REQUEST, "epAnum is required.");
+            }
+
+            Map<String, Object> params = new HashMap<>();
+            params.put("jsonIn", epAnum);
+
+            // Execute MyBatis procedure call
+            drillingEyeMapper.fetchDrillingEyeData(params);
+
+            Object result = params.get("jsonOut");
+
+            if (result == null || result.toString().isEmpty()) {
+                return error(Response.Status.NOT_FOUND, "No data found for epAnum: " + epAnum);
+            }
+
+            // DESERIALIZATION: Convert raw string to List of Java Records
+            List<DrillingEyeResponse> data = objectMapper.readValue(
+                result.toString(), 
+                new TypeReference<List<DrillingEyeResponse>>() {}
+            );
+
+            return new ApiResponse.ApiResponseBuilder<List<DrillingEyeResponse>>()
+                    .withStatusCode(Response.Status.OK.getStatusCode())
+                    .withError(false)
+                    .withMessage("Success")
+                    .withData(data)
+                    .build();
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to parse DrillingEye data", e);
+            return error(Response.Status.INTERNAL_SERVER_ERROR, "Critical Error: " + e.getMessage());
+        }
+    }
+
+    private <T> ApiResponse<T> error(Response.Status status, String msg) {
+        return new ApiResponse.ApiResponseBuilder<T>()
+                .withStatusCode(status.getStatusCode())
+                .withError(true)
+                .withMessage(msg)
+                .build();
+    }
 }
