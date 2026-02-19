@@ -1,137 +1,119 @@
 package com.aramco.easd.dailyoperations.models.drilling;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL) // Best practice: Removes nulls from API output
 public record DrillingEyeResponse(
     @JsonProperty("RIG_ACTIVITY") List<RigActivity> rigActivity,
     @JsonProperty("WELL_MASTER") List<WellMaster> wellMaster,
     @JsonProperty("RIG_IDENTIFICATION") List<RigIdentification> rigIdentification,
-    @JsonProperty("CONTACT") List<Contact> contacts,
-    @JsonProperty("DRLG_OP_STATUS") List<DrlgOpStatus> opStatus,
-    @JsonProperty("DRLG_FM_TOPS") List<DrlgFmTops> fmTops,
-    @JsonProperty("DRLG_FD_TDAY") List<DrlgFootage> footageToday,
+    @JsonProperty("CONTACT") List<Contact> contact,
+    @JsonProperty("DRLG_OP_STATUS") List<DrlgOpStatus> drlgOpStatus,
+    @JsonProperty("DRLG_FM_TOPS") List<DrlgFmTops> drlgFmTops,
+    @JsonProperty("DRLG_FD_TDAY") List<DrlgFootage> drlgFdTday,
     @JsonProperty("ROP_DATA") List<RopData> ropData,
-    @JsonProperty("NEXT_2_WELL_ACTIVITY") List<NextWellActivity> nextActivities,
-    @JsonProperty("NEW_TARGET_DAYS") List<TargetDays> targetDays,
-    @JsonProperty("DRLG_OP_SMRY") List<DrlgOpSummary> opSummary,
+    @JsonProperty("NEXT_2_WELL_ACTIVITY") List<NextWellActivity> next2WellActivity,
+    @JsonProperty("NEW_TARGET_DAYS") List<TargetDays> newTargetDays,
+    @JsonProperty("DRLG_OP_SMRY") List<DrlgOpSummary> drlgOpSmry,
     @JsonProperty("BITINFO") List<Object> bitInfo
 ) {}
 
+// Jackson maps these automatically because the Java variable names match the JSON keys exactly.
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record RigActivity(
-    String wellName, String wellName2, String spuddate, String wRigCd,
-    int racMovTruckloadTot, int wDrlgTrgtDay, String wDrlgTypeDesc, String wWellTypeDesc
+    Integer racMovTruckloadTot, Integer racMovPreRelsTruckloads, String racMovLegalRoadFlg,
+    Integer racMovWinchTruckCnt, Integer racMovFlatbedTruckCnt, Integer racMovCranesCnt,
+    Integer racMovForkliftsCnt, Double racMovAsphaltRoadDis, Double racMovSkidRoadDis,
+    Double wRigMoveDis, String drlgOpTypCd, String wDrlgTypeDesc, String wWellTypeDesc,
+    String biNum, String biNumDesc, String drlgPlanWellDesc, String wellName2, String wellName,
+    String spuddate, String wRigCd, String wDrlgLocDesc, String welltype, Integer wDrlgTrgtDay,
+    String waterWell, String wDrlgClsfCd, String wDrlgClsfLabl, String wDrlgSftCntgcyFlg,
+    String wDrlgEndDt, String closeLpDrlgFg, String rigMainCampMvFlg, 
+    Double racCrewCampDdLatCord, Double racCrewCampDdLonCord
 ) {}
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record WellMaster(
-    String well, String offshore, double utmNorth, double utmEast, double lon, double lat
+    String well, String offshore, Double utmNorth, Double utmEast, Double lon, Double lat
 ) {}
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record RigIdentification(
-    String rigname, int rigStatus, String code, String description, 
-    String rigCntrctNum, double rigHeight, int rigHp
+    String rigname, Integer rigStatus, String code, String description, String rigShrtName,
+    String rigLocCd, String cstCtrCd, String opOrgnCd, String rigTypCd, String rigCntrctName,
+    String rigCntrctNum, String rigCntrctPlStaDt, String rigCntrctActlStaDt, 
+    String rigCntrctExpirDt, String rigEndSrvcDt, Double rigHeight, Integer rigHp, 
+    Integer rigMaxDpthCap, String drlgUnitTypCd, Double rigEstMoveRate, String svcoCd, 
+    Long sapVndrId, String opPlanFlg, String wRigActStsCd, String drlgIncentPgmFlg, 
+    String wRigAutoAdjFlg, String racExecBusRuleFlg, String rigRmk, String epCrDataCd, 
+    String epCrDataDt, String epLtDmoCd, String epLtDataModDt, String epTrigModCd, 
+    String epTrigModDt, String drlgUnitDescription
 ) {}
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record Contact(
-    String rigContNum, String description, String rigContNumPdf
+    String rigContNum, String description, String rigContNumPdf, String rigDescriptionPdf
 ) {}
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record DrlgOpStatus(
-    Long epANum, String wActDt, double wPrsntDpth, double wPrevDpth,
-    String wDrlgEngName, String wFmanName, String wOpRmk, String foremanRmk
+    Double wDrlgDlyCst2, Double wMudDlyCst2, Long epANum, String wActDt, String wRigCd,
+    Double wPrsntDpth, String epLtDataModDt, String epLtDmoCd, Double wDpthChgDis,
+    String wDrlgEngName, String wFmanName, String wMudCircPc, Double wPrevDpth, 
+    Integer wSpudOprDay, String wOpRmk, Long racNum, String wDrlgSuptName, String foremanRmk, 
+    String epCrDataCd, String epCrDataDt, String wDrlgSuptLid, Long wFmanEmpnum, 
+    Long wFmanEmpnum2, String wFmanName2, String wFmanSvcoCd, String wFmanSvcoCd2, 
+    Integer wRer100ppm, Integer wRer30ppm, String nxt24HrPlanRmk, Long wDrlgEngEmpnum, 
+    String drlgEngDivOrgnCd, String drlgOpDivOrgnCd, Double fuelEngConsVol, 
+    String foremanRmkPdf, Integer spuddays, Integer footage, String wFmanNid, 
+    String wFmanNid2, String wDrlgEngNid
 ) {}
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record DrlgFmTops(
-    Long epANum, String stLongCd, double wStDmrkDpth, String wStDmrkRmk
+    Long epANum, String wActDt, String stLongCd, Double wStDmrkDpth, String wStDmrkRmk,
+    String epLtDataModDt, String epLtDmoCd, String ltrlName, String epCrDataCd, 
+    String epCrDataDt, Long racNum, Long dftNum
 ) {}
 
-record DrlgFootage(int footage) {}
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+record DrlgFootage(Integer footage) {}
 
-record RopData(double rop) {}
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+record RopData(Double rop) {}
 
-record TargetDays(int targetDays) {}
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+record TargetDays(Integer targetDays) {}
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record NextWellActivity(
-    Long epANum, String wGnrName, String nextWellActivity, String wDrlgStaDt
+    Long racNum, String wGnrName, String nextWellActivity, String rigShrtName,
+    String wDrlgStaDt, String wDrlgEndDt, Integer today, Long wBatchNum, 
+    Integer canMove, String biNum, Long epANum, Long nextLocation, String nextBiNum
 ) {}
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record DrlgOpSummary(
-    String wOpCd, String wEvntTime, String toTm, double wOpDur, 
-    String wHolSz, String wOpRmk, String wMajOpCd
+    String toTm2, Long epANum, String wActDt, String wOpCd, String wEvntTime, 
+    String wOpTimeCd, String wOpObjCd, String wHolSz, Double wOpDur, String epLtDataModDt, 
+    String epLtDmoCd, String ltrlName, String wDrlgOpDt, String wOpRmk, String wOpRmkPdf, 
+    Long racNum, String epCrDataCd, String epCrDataDt, String holSecTypCd, Double wEvntStaDpth, 
+    Double wEvntEndDpth, String svcoCd, String wActvDrlgFlg, Long dopNum, String wMajOpCd, 
+    String lostTmFlg, Double wHoleStaDpth, Double wHoleEndDpth, String wDrlgOpDttm, 
+    String toTm, String dltsDffsNum, String ltDffType, String ltType
 ) {}
-
-====
-package com.aramco.easd.dailyoperations.services;
-
-import com.aramco.easd.dailyoperations.dto.ApiResponse;
-import com.aramco.easd.dailyoperations.mappers.DrillingEyeMapper;
-import com.aramco.easd.dailyoperations.models.drilling.DrillingEyeResponse;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.core.Response;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-@ApplicationScoped
-public class DrillingEyeService {
-
-    private static final Logger LOGGER = Logger.getLogger(DrillingEyeService.class.getName());
-
-    @Inject
-    DrillingEyeMapper drillingEyeMapper;
-
-    @Inject
-    ObjectMapper objectMapper; // Use Quarkus's managed ObjectMapper
-
-    public ApiResponse<List<DrillingEyeResponse>> loadDrillingDataByEpANum(String epAnum) {
-        try {
-            if (epAnum == null || epAnum.isBlank()) {
-                return error(Response.Status.BAD_REQUEST, "epAnum is required.");
-            }
-
-            Map<String, Object> params = new HashMap<>();
-            params.put("jsonIn", epAnum);
-
-            // Execute MyBatis procedure call
-            drillingEyeMapper.fetchDrillingEyeData(params);
-
-            Object result = params.get("jsonOut");
-
-            if (result == null || result.toString().isEmpty()) {
-                return error(Response.Status.NOT_FOUND, "No data found for epAnum: " + epAnum);
-            }
-
-            // DESERIALIZATION: Convert raw string to List of Java Records
-            List<DrillingEyeResponse> data = objectMapper.readValue(
-                result.toString(), 
-                new TypeReference<List<DrillingEyeResponse>>() {}
-            );
-
-            return new ApiResponse.ApiResponseBuilder<List<DrillingEyeResponse>>()
-                    .withStatusCode(Response.Status.OK.getStatusCode())
-                    .withError(false)
-                    .withMessage("Success")
-                    .withData(data)
-                    .build();
-
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Failed to parse DrillingEye data", e);
-            return error(Response.Status.INTERNAL_SERVER_ERROR, "Critical Error: " + e.getMessage());
-        }
-    }
-
-    private <T> ApiResponse<T> error(Response.Status status, String msg) {
-        return new ApiResponse.ApiResponseBuilder<T>()
-                .withStatusCode(status.getStatusCode())
-                .withError(true)
-                .withMessage(msg)
-                .build();
-    }
-}
