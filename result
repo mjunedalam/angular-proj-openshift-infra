@@ -1,85 +1,31 @@
-<div class="well-slider-container">
-  <button 
-    mat-icon-button 
-    (click)="store.navigatePrev()" 
-    [disabled]="store.selectedWellId() === store.wells()[0]?.epANum"
-    class="nav-btn"
-  >
-    <mat-icon>keyboard_arrow_left</mat-icon>
-  </button>
+// misc-pres-well-data.component.ts
+export class MiscPresWellDataComponent {
+  private readonly reportStore = inject(MorningReportStore);
+  private readonly wellDataStore = inject(wellDataStore);
 
-  <mat-chip-listbox aria-label="Well selection" class="horizontal-chip-list">
-    @for (well of visibleWells(); track well.epANum) {
-      <mat-chip-option
-        [selected]="well.epANum === selectedWellId()"
-        (click)="onWellSelect(well)"
-        class="well-chip"
-      >
-        @if (well.epANum === selectedWellId()) {
-          <mat-icon matChipAvatar>check</mat-icon>
-        }
-        {{ well.wGnrName }}
-      </mat-chip-option>
+  readonly selectedWellData = computed(() => {
+    const activeId = this.reportStore.selectedWellId(); // Dependency 1
+    const allData = this.wellDataStore.response()?.data; // Dependency 2
+
+    console.log('Step 2: Misc Component - Computed logic re-running...');
+    console.log('Current Selected ID from Store:', activeId);
+
+    if (!allData || !activeId) {
+      console.warn('Step 3: Data flow incomplete - Missing Data or ID');
+      return null;
     }
-  </mat-chip-listbox>
 
-  <button 
-    mat-icon-button 
-    (click)="store.navigateNext()" 
-    [disabled]="store.selectedWellId() === store.wells()[store.wells().length - 1]?.epANum"
-    class="nav-btn"
-  >
-    <mat-icon>keyboard_arrow_right</mat-icon>
-  </button>
-</div>
+    const found = allData.find(item => {
+      const wellId = item.DRLG_OP_STATUS?.[0]?.epANum;
+      return String(wellId) === String(activeId);
+    });
 
-.well-slider-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: white;
-  padding: 10px;
-}
-
-.horizontal-chip-list {
-  display: flex;
-  overflow: hidden;
-
-  ::ng-deep .mdc-chip-set {
-    flex-wrap: nowrap !important; // Keeps them in one line
-    gap: 12px;
-  }
-}
-
-.well-chip {
-  // Unselected State (matches your image grey border)
-  --mdc-chip-elevated-container-color: transparent;
-  --mdc-chip-elevated-disabled-container-color: transparent;
-  border: 1px solid #ccc !important;
-  border-radius: 8px !important; // Slightly rounded corners like image
-  height: 36px;
-
-  &.mat-mdc-chip-selected {
-    // Selected State (matches your image blue fill)
-    --mdc-chip-selected-container-color: #1976d2 !important; 
-    border-color: #1976d2 !important;
-    
-    ::ng-deep .mdc-chip__text-label {
-      color: white !important;
+    if (found) {
+      console.log('Step 3: Success! Matching data found for well:', found.WELL_NAME);
+    } else {
+      console.error('Step 3: Failure - No matching data in array for ID:', activeId);
     }
-    
-    mat-icon {
-      color: white;
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-  }
-}
 
-.nav-btn {
-  color: #333;
-  &:disabled {
-    color: #ccc;
-  }
+    return found ?? null;
+  });
 }
