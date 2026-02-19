@@ -1,53 +1,85 @@
-export const wellDataStore = signalStore(
-    { providedIn: 'root' },
-    withState<WellDataState>({ response: null }),
-    withMethods(
-        (
-            store,
-            service = inject(WwellDataService),
-            loading = inject(LoadingService)
-        ) => ({
-            // Updated to accept the parameter
-            loadWellData: (epNum: string) => {
-                loading.show();
-                patchState(store, { response: null });
+<div class="well-slider-container">
+  <button 
+    mat-icon-button 
+    (click)="store.navigatePrev()" 
+    [disabled]="store.selectedWellId() === store.wells()[0]?.epANum"
+    class="nav-btn"
+  >
+    <mat-icon>keyboard_arrow_left</mat-icon>
+  </button>
 
-                service.getWellDataByEPANum(epNum).subscribe({
-                    next: (res) => {
-                        console.log("Well data loaded:", res);
-                        patchState(store, { response: res });
-                    },
-                    error: (err) => {
-                        patchState(store, {
-                            response: {
-                                statusCode: err.status || 500,
-                                error: true,
-                                message: err.message,
-                                data: null as any, // Adjusted to match your IWellData type
-                            },
-                        });
-                    },
-                    complete: () => loading.hide()
-                });
-            },
+  <mat-chip-listbox aria-label="Well selection" class="horizontal-chip-list">
+    @for (well of visibleWells(); track well.epANum) {
+      <mat-chip-option
+        [selected]="well.epANum === selectedWellId()"
+        (click)="onWellSelect(well)"
+        class="well-chip"
+      >
+        @if (well.epANum === selectedWellId()) {
+          <mat-icon matChipAvatar>check</mat-icon>
+        }
+        {{ well.wGnrName }}
+      </mat-chip-option>
+    }
+  </mat-chip-listbox>
 
-            // If refresh needs the same epNum, you might want to store epNum in state 
-            // or pass it here as well.
-            refresh: (epNum: string) => {
-                loading.show();
-                service.getWellDataByEPANum(epNum).subscribe({
-                    next: (res) => patchState(store, { response: res }),
-                    error: (err) => patchState(store, { /* handle error */ }),
-                    complete: () => loading.hide(),
-                });
-            },
-        })
-    )
-);
-// wwell-data.service.ts
-getWellDataByEPANum(epNum: string): Observable<ApiResponse<IWellData>> {
-  // This sends: /drilling-eye?epNum=your_value
-  return this.http.get<ApiResponse<IWellData>>(`${this.apiUrl}/drilling-eye`, {
-    params: { epNum }
-  });
+  <button 
+    mat-icon-button 
+    (click)="store.navigateNext()" 
+    [disabled]="store.selectedWellId() === store.wells()[store.wells().length - 1]?.epANum"
+    class="nav-btn"
+  >
+    <mat-icon>keyboard_arrow_right</mat-icon>
+  </button>
+</div>
+
+.well-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 10px;
+}
+
+.horizontal-chip-list {
+  display: flex;
+  overflow: hidden;
+
+  ::ng-deep .mdc-chip-set {
+    flex-wrap: nowrap !important; // Keeps them in one line
+    gap: 12px;
+  }
+}
+
+.well-chip {
+  // Unselected State (matches your image grey border)
+  --mdc-chip-elevated-container-color: transparent;
+  --mdc-chip-elevated-disabled-container-color: transparent;
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important; // Slightly rounded corners like image
+  height: 36px;
+
+  &.mat-mdc-chip-selected {
+    // Selected State (matches your image blue fill)
+    --mdc-chip-selected-container-color: #1976d2 !important; 
+    border-color: #1976d2 !important;
+    
+    ::ng-deep .mdc-chip__text-label {
+      color: white !important;
+    }
+    
+    mat-icon {
+      color: white;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+.nav-btn {
+  color: #333;
+  &:disabled {
+    color: #ccc;
+  }
 }
