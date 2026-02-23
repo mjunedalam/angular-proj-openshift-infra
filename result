@@ -1,124 +1,447 @@
-import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
-import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { inject } from '@angular/core';
-import { pipe, switchMap, tap, catchError, of, filter } from 'rxjs';
-import { HttpErrorResponse } from '@angular/common/http';
-import { WwellDataService } from '../../../services/wwell-data.service';
+<div class="main-container">
+  <app-well-chip-list
+    [mode]="horizontal"
+    [pageSize]="5"
+    [showAll]="false"
+  ></app-well-chip-list>
 
-// 1. IMPORT YOUR EXISTING INTERFACES
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-import { ApiResponse } from '../../models/api-response.model';
+  <app-wellbore-view></app-wellbore-view>
+</div>
 
-// ==========================================
-// 2. VIEW MODEL FOR THE UI
-// ==========================================
-export interface PickedFormation {
-  formation: string;
-  depth: number;
-  remarks: string;
+<!-- <div class="container">
+  <app-scale
+    class="scale"
+    [maxDepth]="maxDepth"
+    [plotHeight]="plotHeight"
+    [axisWidth]="70"
+  >
+  </app-scale>
+
+  <svg
+    class="drawing"
+    [attr.width]="svgWidth"
+    [attr.height]="plotHeight + 100"
+    [attr.viewBox]="'0 0 ' + svgWidth + ' ' + (plotHeight + 100)"
+  >
+    <line
+      [attr.x1]="0"
+      [attr.y1]="groundLevelY"
+      [attr.x2]="svgWidth"
+      [attr.y2]="groundLevelY"
+      stroke="#c5410a"
+      stroke-width="3"
+    ></line>
+    <text [attr.x]="613" [attr.y]="-11">Ground Level</text>
+
+    <g [attr.transform]="'translate(10,50)'">
+      <app-casing></app-casing>
+
+      <app-depth-marks></app-depth-marks>
+
+      <app-water-level></app-water-level>
+
+      <app-open-hole></app-open-hole>
+
+      <app-line-screen></app-line-screen>
+
+      <text
+        [attr.x]="613"
+        [attr.y]="plotHeight + 45"
+        style="font-size: 13px; font-weight: bold"
+      >
+        Total Depth : {{ totalDepth }} ft
+      </text>
+    </g>
+  </svg>
+</div> -->
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { SHARED_MODULES } from '../../shared/shared.module';
+import { WellboreViewComponent } from "./wellbore-view/wellbore-view.component";
+import { WellChipListComponent } from "./well-chip-list/well-chip-list.component";
+
+
+@Component({
+  selector: 'app-persentation',
+  imports: [...SHARED_MODULES, WellboreViewComponent, WellChipListComponent],
+  templateUrl: './persentation.component.html',
+  styleUrl: './persentation.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class PersentationComponent {
+
+  horizontal: "horizontal" | "vertical" = "horizontal";
+
+
+}
+<div class="container p-0">
+  <div class="mt-1 flex justify-start">
+    <div class="w-1/3">
+      <app-misc-pres-well-data></app-misc-pres-well-data>
+
+      <br />
+      <br />
+      <app-picked-formation-tops></app-picked-formation-tops>
+    </div>
+    <div class="w-2/3 ml-4 well-svg-div">
+      <svg #wellboreSvg viewBox="10 -20 1100 950">
+        <defs>
+          <marker
+            id="arrow"
+            viewBox="0 -5 10 10"
+            refX="5"
+            refY="0"
+            markerWidth="4"
+            markerHeight="4"
+            orient="auto"
+          >
+            <path d="M0,-5L10,0L0,5" style="fill: black"></path>
+          </marker>
+          <marker
+            id="arrowblue"
+            viewBox="0 -5 10 10"
+            refX="5"
+            refY="0"
+            markerWidth="4"
+            markerHeight="4"
+            orient="auto"
+          >
+            <path d="M0,-5L10,0L0,5" style="fill: rgb(60, 195, 255)"></path>
+          </marker>
+          <linearGradient id="mainGradient">
+            <stop offset="0" stop-color="#5d6264"></stop>
+            <stop offset="0.5" stop-color="#fff"></stop>
+            <stop offset="1" stop-color="#5d6264"></stop>
+          </linearGradient>
+          <linearGradient id="complCasingGradient">
+            <stop offset="0" stop-color="#4ca746"></stop>
+            <stop offset="0.5" stop-color="#4ca746"></stop>
+            <stop offset="1" stop-color="#4ca746"></stop>
+          </linearGradient>
+          <linearGradient id="deepCasingGradient">
+            <stop offset="0" stop-color="#ff1905"></stop>
+            <stop offset="0.5" stop-color="#ff1905"></stop>
+            <stop offset="1" stop-color="#ff1905"></stop>
+          </linearGradient>
+          <pattern
+            id="gridpattern"
+            patternUnits="userSpaceOnUse"
+            width="6"
+            height="6"
+          >
+            <path
+              d="M6,-4 L6,6 L-4,6"
+              stroke="#333"
+              stroke-width="2"
+              style="fill: none"
+            ></path>
+          </pattern>
+          <pattern
+            id="dashed"
+            patternUnits="userSpaceOnUse"
+            width="5"
+            height="5"
+          >
+            <image
+              xlink:href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMCcgaGVpZ2h0PScxMCc+CiAgPHJlY3Qgd2lkdGg9JzEwJyBoZWlnaHQ9JzEwJyBmaWxsPSd3aGl0ZScgLz4KICA8Y2lyY2xlIGN4PScyLjUnIGN5PScyLjUnIHI9JzIuNScgZmlsbD0nYmxhY2snLz4KPC9zdmc+"
+            ></image>
+          </pattern>
+          <pattern
+            id="gravelpattern"
+            patternUnits="userSpaceOnUse"
+            width="8"
+            height="4"
+          >
+            <rect x="0" y="0" width="4" height="2"></rect>
+            <rect x="4" y="2" width="4" height="2"></rect>
+          </pattern>
+        </defs>
+
+        <app-well-casing-visualization
+          [wellData]="wellData"
+          [yScale]="yScale"
+          [sizeScale]="sizeScale"
+          [centerX]="centerX"
+          [config]="config"
+          [svg]="svg"
+        ></app-well-casing-visualization>
+
+        <app-depth-scale
+          [yScale]="yScale"
+          [plannedDepth]="plannedDepth"
+          [config]="config"
+          [geoLogicalLayers]="geoLogicalLayers"
+          [wellData]="wellData"
+          [svg]="svg"
+        ></app-depth-scale>
+      </svg>
+    </div>
+  </div>
+</div>
+import { AfterViewInit, Component, ElementRef, inject, OnInit, ViewChild, viewChild } from '@angular/core';
+import { WellboreService } from '../wellbore.service';
+import * as d3 from 'd3';
+import { DepthScaleComponent } from '../depth-scale/depth-scale.component';
+import { WellCasingVisualizationComponent } from '../well-casing-visualization/well-casing-visualization.component';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MiscPresWellDataComponent } from "../misc-pres-well-data/misc-pres-well-data.component";
+import { PickedFormationTopsComponent } from "../../picked-formation-tops/picked-formation-tops.component";
+
+@Component({
+  selector: 'app-wellbore-view',
+  imports: [...SHARED_MODULES, DepthScaleComponent, WellCasingVisualizationComponent, MiscPresWellDataComponent, PickedFormationTopsComponent],
+  templateUrl: './wellbore-view.component.html',
+  styleUrl: './wellbore-view.component.scss'
+})
+export class WellboreViewComponent implements OnInit {
+
+
+  @ViewChild("wellboreSvg", { static: true })
+  svgElement!: ElementRef<SVGSVGElement>;
+
+  wellBoreService = inject(WellboreService);
+
+  yScale!: d3.ScaleLinear<number, number>;
+  centerX!: number;
+  svg!: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+
+  config = this.wellBoreService.configSignal();
+  wellData = this.wellBoreService.wellDataSignal();
+  geoLogicalLayers = this.wellBoreService.geoLogicalLayerSignal();
+  plannedDepth = this.wellBoreService.plannedDepth();
+  sizeScale = this.wellBoreService.sizeScale()
+
+  ngOnInit(): void {
+    this.initWellBoreView();
+  }
+
+  private initWellBoreView() {
+    this.svg = d3.select(this.svgElement.nativeElement);
+    this.svg.selectAll("*").remove();
+
+    // Intialize the scales
+    this.yScale = d3.scaleLinear()
+      .domain([0, this.plannedDepth])
+      .range([this.config.margin.top, this.config.wellboreHeight - this.config.margin.bottom]);
+
+    this.centerX = this.config.wellboreWidth / 2;
+
+    // Add the definitions
+    const defs = this.svg.append("defs")
+
+
+    this.svg.append("text")
+
+    const defsSelection = this.svg.select("defs")
+      .attr("id", "")
+  }
 }
 
-export interface WellDataViewModel {
-  wellName: string;
-  wellType: string;
-  targetedAquifer: string;
-  currentStatus: string;
-  daysSinceSpud: number;
-  targetDays: number;
-  biNum: string;
-  waterWell: string;
-  footage: number;
-  previousWell: string;
-  currentDepth: number;
-  nextWell: string;
-  pickedFormations: PickedFormation[];
-}
+<div
+  class="relative transition-all duration-300 w-full rounded-xl overflow-hidden shadow-md border border-blue-100 flex flex-col"
+  [class.opacity-40]="store.isLoading()"
+  [class.pointer-events-none]="store.isLoading()"
+>
+  @if (store.isLoading()) {
+    <div
+      class="absolute inset-0 z-20 flex items-center justify-center bg-white/30 backdrop-blur-[1px]"
+    >
+      <div class="bg-white/90 p-2 rounded-full shadow-lg">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600"></i>
+      </div>
+    </div>
+  }
 
-// ==========================================
-// 3. BLINK-PROOF FALLBACK STATE
-// ==========================================
-const DEFAULT_VM: Readonly<WellDataViewModel> = {
-  wellName: '--', wellType: '--', targetedAquifer: '--',
-  currentStatus: 'Awaiting Selection...', daysSinceSpud: 0, targetDays: 0,
-  biNum: '--', waterWell: '--', footage: 0, previousWell: '--',
-  currentDepth: 0, nextWell: '--', pickedFormations: []
-};
+  <div
+    class="bg-gradient-to-r from-blue-700 via-blue-500 to-blue-400 p-3 text-center border-b-2 border-cyan-400 z-10"
+  >
+    <h2 class="text-white text-xl font-light tracking-wide">
+      Picked Formation
+    </h2>
+  </div>
 
-interface WellDataState {
-  viewModel: WellDataViewModel;
-  isLoading: boolean;
-  error: string | null;
-}
+  <ag-grid-angular
+    class="ag-theme-alpine w-full"
+    style="width: 100%"
+    [rowData]="store.viewModel().pickedFormations"
+    [columnDefs]="colDefs"
+    [defaultColDef]="defaultColDef"
+    [domLayout]="'autoHeight'"
+    [headerHeight]="40"
+    [rowHeight]="40"
+  >
+  </ag-grid-angular>
+</div>
 
-// ==========================================
-// 4. PURE MAPPING FUNCTION (Now uses YOUR IWellData)
-// ==========================================
-function mapToViewModel(raw?: IWellData): WellDataViewModel {
-  if (!raw) return { ...DEFAULT_VM };
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { AgGridAngular } from 'ag-grid-angular';
+import { ColDef } from 'ag-grid-community';
+import { wellDataStore } from '../../core/stores/wwell-data/wwell-data.store';
 
-  return {
-    wellName: raw.RIG_ACTIVITY?.[0]?.wellName || 'N/A',
-    wellType: raw.RIG_ACTIVITY?.[0]?.welltype || 'N/A',
-    targetedAquifer: raw.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier || raw.EXAD_RCD_PREWAP?.[0]?.targetFormation || 'N/A',
-    currentStatus: raw.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk || 'Active',
-    daysSinceSpud: raw.DRLG_OP_STATUS?.[0]?.spuddays ?? 0,
-    targetDays: raw.NEW_TARGET_DAYS?.[0]?.targetDays ?? 0,
-    biNum: raw.RIG_ACTIVITY?.[0]?.biNum || 'N/A',
-    waterWell: raw.RIG_ACTIVITY?.[0]?.waterWell || 'N/A',
-    footage: raw.DRLG_OP_STATUS?.[0]?.footage ?? 0,
-    previousWell: raw.EXAD_GWD_IR_WATER?.[0]?.offsetWaterWell || 'N/A',
-    currentDepth: raw.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
-    nextWell: raw.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity || 'N/A',
-    
-    // Map your IFormationTops gracefully, handling the 'null' possibility 
-    pickedFormations: raw.DRLG_FM_TOPS?.map(top => ({
-      formation: top.stLongCd || 'N/A',
-      depth: top.wStDmrkDpth || 0,
-      remarks: top.wStDmrkRmk || '' // || '' converts null to an empty string safely
-    })) || []
+@Component({
+  selector: 'app-picked-formation-tops',
+  standalone: true,
+  // Make sure to import AgGridAngular here
+  imports: [CommonModule, AgGridAngular],
+  templateUrl: './picked-formation-tops.component.html',
+  styleUrl: './picked-formation-tops.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class PickedFormationTopsComponent {
+  public readonly store = inject(wellDataStore);
+
+  // Define AG Grid Columns to match your image exactly
+  public colDefs: ColDef[] = [
+    {
+      headerName: 'Formation',
+      field: 'formation',
+      flex: 1,
+      // Cyan background with white text for the first column
+      cellStyle: { backgroundColor: '#48b5d3', color: 'white', fontWeight: '600', borderRight: '1px solid rgba(255,255,255,0.2)' }
+    },
+    {
+      headerName: 'Depth',
+      field: 'depth',
+      flex: 1,
+      // Format number with commas
+      valueFormatter: (params) => params.value ? Number(params.value).toLocaleString() : '',
+      // Blue text
+      cellStyle: { color: '#1e40af', fontWeight: '500', borderRight: '1px solid #e2e8f0' }
+    },
+    {
+      headerName: 'Remarks',
+      field: 'remarks',
+      flex: 2,
+      // Blue text, uppercase, slightly smaller font
+      cellStyle: { color: '#1e40af', textTransform: 'uppercase', fontSize: '12px' }
+    }
+  ];
+
+  // Optional: Default column definitions for clean layout
+  public defaultColDef: ColDef = {
+    resizable: false,
+    sortable: false,
+    filter: false,
+    // Centers the text in the cells
+    cellClass: 'text-center flex justify-center items-center'
   };
 }
 
-// ==========================================
-// 5. THE SIGNAL STORE
-// ==========================================
-export const wellDataStore = signalStore(
-  { providedIn: 'root' },
-  withState<WellDataState>({
-    viewModel: { ...DEFAULT_VM },
-    isLoading: false,
-    error: null
-  }),
-  withMethods((store, service = inject(WwellDataService)) => ({
-    
-    loadWellData: rxMethod<string | null | undefined>(
-      pipe(
-        filter((id): id is string => !!id && id.trim() !== ''), 
-        tap(() => {
-          patchState(store, { isLoading: true, error: null });
-        }),
-        switchMap((id) => 
-          service.getWellDataByEPANum(id).pipe(
-            // Let TypeScript automatically infer the response type from your service!
-            tap((res) => {
-              const rawData = res.data?.[0];
-              patchState(store, { 
-                viewModel: mapToViewModel(rawData), 
-                isLoading: false 
-              });
-            }),
-            catchError((err: HttpErrorResponse | Error) => {
-              console.error("[WellDataStore] Fetch Error:", err);
-              patchState(store, { 
-                isLoading: false, 
-                error: err.message || 'Data fetch failed' 
-              });
-              return of(null);
-            })
-          )
-        )
-      )
-    )
-    
-  }))
-);
+import { Component, computed, effect, inject, input, OnInit } from '@angular/core';
+import { MoriningReportService } from '../../../services/morining-report.service';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MorningReport } from '../../../models/morining-report.model';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+
+@Component({
+  selector: 'app-well-chip-list',
+  imports: [...SHARED_MODULES],
+  providers: [MoriningReportService],
+  templateUrl: './well-chip-list.component.html',
+  styleUrl: './well-chip-list.component.scss'
+
+})
+export class WellChipListComponent implements OnInit {
+
+  private morningReportService = inject(MoriningReportService);
+  store = inject(MorningReportStore)
+  readonly mode = input<'horizontal' | 'vertical'>('horizontal');
+  readonly showAll = input<boolean>(false);
+  readonly pageSize = input<number>(5);
+
+  public visibleWells = computed(() => this.store.visibleWells());
+  public selectedWellId = computed(() => this.store.selectedWellId());
+  public selectedWell = this.store.selectedWell;
+
+  constructor() {
+    effect(() => {
+      this.store.setConfig(this.showAll(), this.pageSize());
+    });
+  }
+
+
+  ngOnInit() {
+    this.store.loadMorningReportData();
+  }
+
+  public chipCountInfo = computed(() => {
+    const selectedId = this.selectedWellId();
+    const wells = this.store.wells();
+    const index = wells.findIndex(well => well.epANum === selectedId);
+    if (index === -1) return '';
+    return `Well ${index + 1} of ${wells.length}`;
+  });
+
+  public onWellSelect(well: MorningReport) {
+    this.store.selectWell(well.epANum);
+  }
+}
+<header
+  class="bg-white h-16 flex items-center justify-between px-4 shadow-sm shrink-0 z-10 relative border-b border-slate-200 mb-5"
+>
+  <!-- <div class="flex items-center gap-3 min-w-max">
+    <button mat-flat-button (click)="store.showAll()" class="view-all-btn">
+      <mat-icon>{{
+        store.showAll() ? " view_carousel" : "grid_view"
+      }}</mat-icon>
+      {{ store.showAll() ? "Slider View" : "View All Wells" }}
+    </button>
+    <div class="h-8 w-px bg-slate-200 mx-2"></div>
+  </div> -->
+
+  <div class="flex-1 flex items-center justify-center overflow-hidden px-2">
+    @if (!store.showAll()) {
+      <button
+        mat-icon-button
+        (click)="store.navigatePrev()"
+        [disabled]="store.selectedWellId() === store.wells()[0].epANum"
+        class="nav-arrow"
+      >
+        <mat-icon>keyboard_arrow_left</mat-icon>
+      </button>
+    }
+
+    <div class="chips-wrapper" [class.all-mode]="store.showAll()">
+      <mat-chip-listbox aria-label="Well selection">
+        @for (well of visibleWells(); track well.epANum) {
+          <mat-chip-option
+            [selected]="well.epANum === selectedWellId()"
+            (click)="onWellSelect(well)"
+            class="custom-well-chip"
+          >
+            {{ well.wGnrName }}
+          </mat-chip-option>
+        }
+      </mat-chip-listbox>
+    </div>
+
+    @if (!store.showAll()) {
+      <button
+        mat-icon-button
+        (click)="store.navigateNext()"
+        [disabled]="
+          store.selectedWellId() ===
+          store.wells()[store.wells().length - 1].epANum
+        "
+        class="nav-arrow"
+      >
+        <mat-icon>keyboard_arrow_right</mat-icon>
+      </button>
+    }
+  </div>
+
+  <div class="flex items-center gap-4 min-w-max ml-4">
+    <span class="chip-counter">{{ chipCountInfo() }}</span>
+    <div
+      class="hidden lg:flex items-center gap-2 text-slate-500 font-medium border-l pl-4"
+    >
+      <mat-icon class="text-blue-500 scale-75">calendar_today</mat-icon>
+      <span class="text-[11px]">15 Feb 2026</span>
+    </div>
+  </div>
+</header>
+
+
+above is the all code hierachy whenever I am clicking on chip name table is blinking means picked formation table blinking see this issue in depet and debug closely
+
+
