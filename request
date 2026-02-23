@@ -1,134 +1,738 @@
-"[ {   \"RIG_ACTIVITY\" :[{\"racMovTruckloadTot\":234,\"racMovPreRelsTruckloads\":1,\"racMovLegalRoadFlg\":\"Y\",\"racMovWinchTruckCnt\":3,\"racMovFlatbedTruckCnt\":22,\"racMovCranesCnt\":3,\"racMovForkliftsCnt\":2,\"racMovAsphaltRoadDis\":1,\"racMovSkidRoadDis\":1,\"wRigMoveDis\":2,\"drlgOpTypCd\":\"REN\",\"wDrlgTypeDesc\":\"RE-ENTRY\",\"wWellTypeDesc\":\"PRODUCER\",\"biNum\":\"60\",\"biNumDesc\":\"DEVELOPMENT DRILLING AND WORKOVERS\",\"drlgPlanWellDesc\":\"MK-1 Preset targeting Khuff-C reservoir\",\"wellName2\":\"MNIF-195\",\"wellName\":\"MNIF-195\",\"spuddate\":\"07/10/2025@2230\",\"wRigCd\":\"SINO25\",\"wDrlgLocDesc\":\"MNIF-195\",\"welltype\":\"MK-1 Preset targeting Khuff-C reservoir\",\"wellzone\":null,\"wDrlgTrgtDay\":49,\"waterWell\":\"MNIF-811, ABHD-916\",\"drlgPlanCmplZone\":null,\"epChrAcNum\":null,\"wRigActGrpCd\":null,\"wDrlgClsfCd\":\"W\",\"wDrlgClsfLabl\":\"6\",\"wDrlgSftCntgcyFlg\":\"N\",\"wDrlgEndDt\":\"07/22/2025\",\"closeLpDrlgFg\":\"N\",\"rigMainCampMvFlg\":\"N\",\"racCrewCampDdLatCord\":0,\"racCrewCampDdLonCord\":0}], \"WELL_MASTER\":[{\"well\":\"MNIF-195\",\"offshore\":\"Onshore\",\"utmNorth\":3062225.78,\"utmEast\":303693.18,\"lon\":49.0097925,\"lat\":27.6695644}], \"RIG_IDENTIFICATION\":[{\"rigname\":\"SINO-25\",\"rigStatus\":1,\"code\":\"SINO25\",\"description\":\"SINO-25\",\"rigShrtName\":\"SINO-25\",\"sapRigCd\":null,\"sapAstId\":null,\"rigLocCd\":\"2\",\"cstCtrCd\":\"100782\",\"ldsRigCd\":null,\"orgnCd\":null,\"opOrgnCd\":\"30027906\",\"rigTypCd\":\"L3\",\"rigCntrctName\":\"SINO-25\",\"rigCntrctNum\":\"6600044347\",\"rigCntrctPlStaDt\":\"2019-06-12T00:00:00\",\"rigCntrctActlStaDt\":\"2019-06-12T00:00:00\",\"rigCntrctExpirDt\":\"2029-06-11T00:00:00\",\"rigEndSrvcDt\":\"2029-06-11T00:00:00\",\"rigDimCd\":null,\"rigHeight\":34.5,\"rigHp\":2000,\"rigMaxBopPresRtng\":null,\"rigMaxHookLoad\":null,\"rigMaxDpthCap\":18000,\"rigCap\":null,\"rigCapableTypCd\":null,\"drlgUnitTypCd\":\"RIG\",\"rigEstMoveRate\":0.33,\"svcoCd\":\"SNO\",\"sapVndrId\":10007145,\"rigDptCd\":null,\"rigProp\":null,\"rigSchedPropCd\":null,\"opPlanFlg\":\"Y\",\"wRigActStsCd\":\"A\",\"rigFixedRdTime\":null,\"rigGasWellFlg\":null,\"rigIpAddr\":null,\"rigOldnameCd\":null,\"rigOldnameChngDt\":null,\"drlgIncentPgmFlg\":\"Y\",\"saudiScoreCntrctReq\":null,\"saudiScoreAddlPgm\":null,\"arisRigFlg\":null,\"arisSrtKey\":null,\"wRigAutoAdjFlg\":\"N\",\"racExecBusRuleFlg\":\"N\",\"rigRmk\":\" $$ Updated by script\",\"epCrDataCd\":\"ZAHIMA0E\",\"epCrDataDt\":\"2011-06-22T00:00:00\",\"epLtDmoCd\":\"ALIAA1Q\",\"epLtDataModDt\":\"2022-07-19T13:01:21\",\"epTrigModCd\":\"RAC\",\"epTrigModDt\":\"2013-11-20T00:00:00\",\"drlgUnitDescription\":\"RIG\"}], \"CONTACT\":[{\"rigContNum\":\"+8821677712340\",\"description\":\"THURAYA\",\"rigContNumPdf\":\"+882167771\\n2340\",\"rigDescriptionPdf\":\"THURAYA\"},{\"rigContNum\":\"379-5683\",\"description\":\"RIG FORMAN VSAT\",\"rigContNumPdf\":\"379-5683\",\"rigDescriptionPdf\":\"RIG FORMAN\\n VSAT\"},{\"rigContNum\":\"013-379-5688\",\"description\":\"OTHER VSAT\",\"rigContNumPdf\":\"013-379-56\\n88\",\"rigDescriptionPdf\":\"OTHER VSAT\\n\"},{\"rigContNum\":\"379-5685\",\"description\":\"CONTRACTOR/CLERK VSAT\",\"rigContNumPdf\":\"379-5685\",\"rigDescriptionPdf\":\"CONTRACTOR\\n/CLERK VSA\\nT\"},{\"rigContNum\":\"379-5688\",\"description\":\"CONTRACTOR/CLERK VSAT\",\"rigContNumPdf\":\"379-5688\",\"rigDescriptionPdf\":\"CONTRACTOR\\n/CLERK VSA\\nT\"}], \"DRLG_OP_STATUS\":[{\"wDrlgDlyCst2\":0,\"wMudDlyCst2\":0,\"landingPt\":null,\"epANum\":80665,\"wActDt\":\"2025-07-18T00:00:00\",\"wPrevDpthCd\":null,\"wPrsntDpthCd\":null,\"wRigCd\":\"SINO25\",\"wPrsntDpth\":15999,\"epLtDataModDt\":\"2025-07-20T12:04:55\",\"epLtDmoCd\":\"PLACIDAI\",\"wCsgBotDpth\":null,\"wCsgOdSz\":null,\"wCsgTopDpth\":null,\"wDpthChgDis\":0,\"wDrlgCumCst\":null,\"wDrlgDlyCst\":null,\"wDrlgEngName\":\"Abduljwaad, Suliman Mohammed Saud\",\"wFmanName\":\"Abdulmohsen, Amar Saleh\",\"wHolVol\":null,\"wMrEngIn\":null,\"wMudCircPc\":\"100\",\"wMudDlyCst\":null,\"wPrevDpth\":15720,\"wSpudOprDay\":0,\"wTrgtDayahd\":null,\"wOpRmk\":\"DRILL 22\\\" HOLE SECTION TO 2770' CP ( 50' INTO AHMADI FMN), CHC, WIPER TRIP, SPOT CSG GO PILL, GYRO, POOH, L/D BHA.\",\"wDrlgSmryRmk\":null,\"racNum\":155817,\"wDrlgSuptName\":\"Abada, Yassine\",\"primWtrSrcEpANum\":null,\"scndWtrSrcEpANum\":null,\"wCsgBotTvd\":null,\"rigNeedRmk\":null,\"wLnrOdSz\":null,\"rigLtaDay\":null,\"wLnrTopDpth\":null,\"wLnrBotDpth\":null,\"wLnrBotTvd\":null,\"bopeLtTestDt\":null,\"bopeDrillRmk\":null,\"windRmk\":null,\"safeMtngRmk\":null,\"seaRmk\":null,\"wthrRmk\":null,\"bulkDrlgWtrVol\":null,\"bulkPotWtrVol\":null,\"bulkBa\":null,\"bulkBent\":null,\"bulkCmt\":null,\"wDrlgMgmtSmryRmk\":null,\"bulkFuelVol\":null,\"equipOnLoc1\":null,\"equipOnLoc2\":null,\"equipOnLoc3\":null,\"equipOnLoc4\":null,\"rpprCmmnRmk\":null,\"rpprInstrRmk\":null,\"rpprOtherRmk\":null,\"trnspStndby\":null,\"foremanRmk\":\"==========================================WELL BJECTIVE========================================\\nUTMN-3098 PLANNED AS MK-1 PRESET TARGETING KHUFF-C RESERVOIR. DIRECTIONAL WORKS WILL BE DONE IN THE 8-3/8\\\" AND 5-7/8\\\" HOLE SECTION BELOW BASE JILH DOLOMITE TO 62 DEG INCLINATION AT PLANNED PRESET DEPTH OF +/- 13,412 FT MD/13,002 FT TVD (10\\\" TVD INTO KFCC).\\n=============================================SAFETY========================= \\nPROCEDURE TOPIC OF THE WEEK # 28 (06-12 JULY 25)\\n1) PROCEDURE OF THE WEEK : RULES TO LIVE BY\\n2) LESSON LEARNT OF THE WEEK (OPERATIONS / HSE ALERT):  ROUSTABOUT SLIP AND FALL FROM CATWALK\\n3) WEEKLY FOCUS AREAS AUDIT CHECKLIST: MUD PUMPS, MUD PITS & TANKS AREA CHECKLIST\\n ARAMCO LIFE SAVING RULE CAMPAIGN: RULE # 3.OBTAIN AUTHORIZATION BEFORE ENTERING A CONFINED SPACE\\nSANAD 10 RULES TO LIVE BY RULE # 3.VERIFY ISOLATION BEFORE WORK BEGINS (LOCK OUT / TAG OUT)\\nNGGDD SAFETY TOPIC:     3.   WORK AT HEIGHT SAFETY\\nSTOP WORK  AUTHORITY\\nWORKING IN OPEN SPACE ON THE RIG FLOOR\\nMAN RIDING OPERATION SAFETY\\nLIFTING OPERATIONS SAFETY\\n\\n================DRILLS==================\\n*DRILLS : H2S DRILL.\\n=======================ARAMCO PERSONNEL============================\\n* ARAMCO CLERK TAHIR ZAMAN #8546104 ON LOCATION 05/29/25.\\n* ARAMCO CLERK HAMAD AL MARRI #816338 ON LOCATION 07/09/2025.\\n* ARAMCO FCT MOHAMMED BUSHEHAB #818198 ON LOCATION 07/02/2025, \\n* ARAMCO PDP OSAMA AL-GHAMDI ID# 794801 OFF LOCATION 07/06/2025.\\n* NGGDD HSE ADVISOR YDZEL JUDILLA #8346933 ON LOCATION FOR ERP-HALL YARD-4 MEETING 07/07/2025\\n=======================RIG VISIT=============================\\n* SANAD SUPERINTENDENT WILLIAM STUMP VISITED RIG ON 07/08/2025.\\n* SHEHAB OTAIF, DE VISITED RIG FOR DWOP MEETING 07/08/2025\\n================================SERVICE COMPANY PERSONNEL=========\\n* 1 X EMEC MUD ENGINEER\\n========================================\\n* LP AUDIT TOTAL FINDINGS 4, CLOSED 4, OPEN 0.\\n* HSE GAP ANALYSIS 96% CONDUCTED ON AUG 09, 2024\\n* DOECD RHSEI AUDIT TOTAL FINDINGS 29, CLOSED FINDINGS 25, OPEN 01.\\n* DOECD WCEI TOTAL FINDINGS 6, CLOSED ITEMS 6, OPEN 0.\\n* 2ND QTR 3MCI AUDIT 61 TOTAL FINDINGS, 0 OPEN.\\n* CONDUCTED CEHA ON 06/11/2025: 91%\\n* CONDUCTED MMSR ON 06/11/2025: 94%\\n* CONDUCTED HAZCOM JANUARY 8, 2024 , FINAL SCORE IS 92%\\n=====================NEAR MISS & SLS===================\\n* NONE.\\n=================RIG SHORTAGE =======================\\n*  \\n======================RENTAL TOOLS======================.\\n> NPS 12\\\" SHOCK SUB WITH 7-5/8\\\" REG CONN S/N 143-12168-02 ON LOCATION 07/08/2025 07:00 AM\\n==================================COST OPTIMIZATION==========================\\n* \\n==================================SIMOPS OPERATION: SND-2001 & SITE-25==========================\\n> ON 07/03/2025 HELD SIMOPS RISK MANAGEMENT MEETING WITH SAGWCOD & SITE-25 FOREMAN AND HSE ADVISORS, RIG SND-2001 SAUDI ARAMCO FOREMAN, NGGDD HSE ADVISOR, SND-2001 SAUDI ARAMCO DRILLING ENGINEER, FCT AND RIG SND-2001 RIG MANAGER, RSTC & KEY PERSONNEL & DISCUSSED SIMOPS OPERATIONS, RISK ASSESSMENT, SPECIFIC ERP, SITE-25 OPERATION'S DURATION TIME, H2S DETECTORS, DAILY COMMUNICATION PROTOCOL, COMBINED H2S DRILL &  EVACUATION DRILL AND SGA.\\n\\n>> ON 07/07/2025 HELD MEETING IN HALLIBURTON UN-MANNED EQUIPMENT YARD-4 AND DISCUSSED COMMUNICATION PROTOCOL, RESTRICTED AREA, 24 HRS IN CHARGES PERSONS CONTACTS AND ERP.\\n\\n===============================================================================\\n* NEXT WELL: UTMN-3028\",\"epCrDataCd\":\"PLACIDAI\",\"epCrDataDt\":\"2025-07-20T12:00:57\",\"nonDrlgBhaDesc\":null,\"wDrlgSuptLid\":\"ABADYX0A\",\"vpDlyRmk\":null,\"mudAvailTypCd\":null,\"mudAvailVol\":null,\"mudReqVol\":null,\"mudReqTypCd\":null,\"mudAvailWt\":null,\"mudReqWt\":null,\"wFmanEmpnum\":284725,\"wFmanEmpnum2\":177544,\"wFmanEmpnum3\":null,\"wFmanEmpnum4\":null,\"wFmanEmpnum5\":null,\"wFmanName2\":\"Abouelghait, Mahmoud Mohamed Hamed H\",\"wFmanName3\":null,\"wFmanName4\":null,\"wFmanName5\":null,\"wFmanSvcoCd\":\"ARM\",\"wFmanSvcoCd2\":\"ARM\",\"wFmanSvcoCd3\":null,\"wFmanSvcoCd4\":null,\"wFmanSvcoCd5\":null,\"mudEngrName\":null,\"mudAramcoFluidSplst\":null,\"mudToolPusher\":null,\"mudEngrRmk\":null,\"mudWhPhoneNum\":null,\"mudCircFrt\":null,\"mudPumpPres\":null,\"mudBotUpTime\":null,\"mudTotCircTime\":null,\"mudFluidSplstRmk\":null,\"wRer100ppm\":1200,\"wRer30ppm\":2400,\"nxt24HrPlanRmk\":\"POOH, L/D BHA, RUN & CMT 18-5/8\\\" CSG. \",\"wDrlgReqmntCnclRmk\":null,\"wDrlgEngName2\":null,\"wDrlgEngName3\":null,\"wDrlgEngName4\":null,\"wDrlgEngName5\":null,\"wDrlgEngEmpnum\":767687,\"wDrlgEngEmpnum2\":null,\"wDrlgEngEmpnum3\":null,\"wDrlgEngEmpnum4\":null,\"wDrlgEngEmpnum5\":null,\"drlgEngUnitOrgnCd\":null,\"drlgEngDivOrgnCd\":\"30009927\",\"drlgOpDivOrgnCd\":\"30041751\",\"fuelEngConsVol\":24,\"nxt24HrPlanExecSmryRmk\":null,\"lc50SmplCnt\":null,\"lc50ManifNum\":null,\"lc50SmplDt\":null,\"eqvCircDensTrgtDpth\":null,\"eqvCircDensShoe\":null,\"mudActvSurfVol\":null,\"mudRsrvSurfVol\":null,\"foremanRmkPdf\":\"==========================================WELL BJECTIVE========================================\\nUTMN-3098 PLANNED AS MK-1 PRESET TARGETING KHUFF-C RESERVOIR. DIRECTIONAL WORKS WILL BE DONE IN THE 8-3/8\\\" AND 5-7/8\\\" HOLE SECTION BELOW BASE JILH DOLOMITE TO 62 DEG INCLINATION AT PLANNED PRESET DEPTH OF +/- 13,412 FT MD/13,002 FT TVD (10\\\" TVD INTO KFCC).\\n=============================================SAFETY========================= \\nPROCEDURE TOPIC OF THE WEEK # 28 (06-12 JULY 25)\\n1) PROCEDURE OF THE WEEK : RULES TO LIVE BY\\n2) LESSON LEARNT OF THE WEEK (OPERATIONS / HSE ALERT):  ROUSTABOUT SLIP AND FALL FROM CATWALK\\n3) WEEKLY FOCUS AREAS AUDIT CHECKLIST: MUD PUMPS, MUD PITS & TANKS AREA CHECKLIST\\n ARAMCO LIFE SAVING RULE CAMPAIGN: RULE # 3.OBTAIN AUTHORIZATION BEFORE ENTERING A CONFINED SPACE\\nSANAD 10 RULES TO LIVE BY RULE # 3.VERIFY ISOLATION BEFORE WORK BEGINS (LOCK OUT / TAG OUT)\\nNGGDD SAFETY TOPIC:     3.   WORK AT HEIGHT SAFETY\\nSTOP WORK  AUTHORITY\\nWORKING IN OPEN SPACE ON THE RIG FLOOR\\nMAN RIDING OPERATION SAFETY\\nLIFTING OPERATIONS SAFETY\\n\\n================DRILLS==================\\n*DRILLS : H2S DRILL.\\n=======================ARAMCO PERSONNEL============================\\n* ARAMCO CLERK TAHIR ZAMAN #8546104 ON LOCATION 05/29/25.\\n* ARAMCO CLERK HAMAD AL MARRI #816338 ON LOCATION 07/09/2025.\\n* ARAMCO FCT MOHAMMED BUSHEHAB #818198 ON LOCATION 07/02/2025, \\n* ARAMCO PDP OSAMA AL-GHAMDI ID# 794801 OFF LOCATION 07/06/2025.\\n* NGGDD HSE ADVISOR YDZEL JUDILLA #8346933 ON LOCATION FOR ERP-HALL YARD-4 MEETING 07/07/2025\\n=======================RIG VISIT=============================\\n* SANAD SUPERINTENDENT WILLIAM STUMP VISITED RIG ON 07/08/2025.\\n* SHEHAB OTAIF, DE VISITED RIG FOR DWOP MEETING 07/08/2025\\n================================SERVICE COMPANY PERSONNEL=========\\n* 1 X EMEC MUD ENGINEER\\n========================================\\n* LP AUDIT TOTAL FINDINGS 4, CLOSED 4, OPEN 0.\\n* HSE GAP ANALYSIS 96% CONDUCTED ON AUG 09, 2024\\n* DOECD RHSEI AUDIT TOTAL FINDINGS 29, CLOSED FINDINGS 25, OPEN 01.\\n* DOECD WCEI TOTAL FINDINGS 6, CLOSED ITEMS 6, OPEN 0.\\n* 2ND QTR 3MCI AUDIT 61 TOTAL FINDINGS, 0 OPEN.\\n* CONDUCTED CEHA ON 06/11/2025: 91%\\n* CONDUCTED MMSR ON 06/11/2025: 94%\\n* CONDUCTED HAZCOM JANUARY 8, 2024 , FINAL SCORE IS 92%\\n=====================NEAR MISS & SLS===================\\n* NONE.\\n=================RIG SHORTAGE =======================\\n*  \\n======================RENTAL TOOLS======================.\\n> NPS 12\\\" SHOCK SUB WITH 7-5/8\\\" REG CONN S/N 143-12168-02 ON LOCATION 07/08/2025 07:00 AM\\n==================================COST OPTIMIZATION==========================\\n* \\n==================================SIMOPS OPERATION: SND-2001 & SITE-25==========================\\n> ON 07/03/2025 HELD SIMOPS RISK MANAGEMENT MEETING WITH SAGWCOD & SITE-25 FOREMAN AND HSE ADVISORS, RIG SND-2001 SAUDI ARAMCO FOREMAN, NGGDD HSE ADVISOR, SND-2001 SAUDI ARAMCO DRILLING ENGINEER, FCT AND RIG SND-2001 RIG MANAGER, RSTC & KEY PERSONNEL & DISCUSSED SIMOPS OPERATIONS, RISK ASSESSMENT, SPECIFIC ERP, SITE-25 OPERATION'S DURATION TIME, H2S DETECTORS, DAILY COMMUNICATION PROTOCOL, COMBINED H2S DRILL &  EVACUATION DRILL AND SGA.\\n\\n>> ON 07/07/2025 HELD MEETING IN HALLIBURTON UN-MANNED EQUIPMENT YARD-4 AND DISCUSSED COMMUNICATION PROTOCOL, RESTRICTED AREA, 24 HRS IN CHARGES PERSONS CONTACTS AND ERP.\\n\\n===============================================================================\\n* NEXT WELL: UTMN-3028\",\"spuddays\":0,\"bopdate\":null,\"footage\":279,\"targetDepth\":null,\"wFmanNid\":\"ABDUAS1C\",\"wFmanNid2\":\"ABOUELMM\",\"wFmanNid3\":null,\"wFmanNid4\":null,\"wFmanNid5\":null,\"wDrlgEngNid\":\"ABDUSM0K\",\"wDrlgEngNid2\":null,\"wDrlgEngNid3\":null,\"wDrlgEngNid4\":null,\"wDrlgEngNid5\":null}], \"DRLG_FM_TOPS\":[{\"epANum\":80665,\"wActDt\":\"2025-07-18T00:00:00\",\"stLongCd\":\"ADR5\",\"wStDmrkDpth\":1500,\"wStDmrkRmk\":\"TEST\",\"epLtDataModDt\":\"2025-07-20T12:00:57\",\"epLtDmoCd\":\"PLACIDAI\",\"ltrlName\":\"0\",\"epCrDataCd\":\"PLACIDAI\",\"epCrDataDt\":\"2025-07-20T12:00:57\",\"racNum\":155817,\"dftNum\":4719131},{\"epANum\":80665,\"wActDt\":\"2025-07-18T00:00:00\",\"stLongCd\":\"2AQ2\",\"wStDmrkDpth\":14900,\"wStDmrkRmk\":\"TEST\",\"epLtDataModDt\":\"2025-07-20T12:00:57\",\"epLtDmoCd\":\"PLACIDAI\",\"ltrlName\":\"0\",\"epCrDataCd\":\"PLACIDAI\",\"epCrDataDt\":\"2025-07-20T12:00:57\",\"racNum\":155817,\"dftNum\":4719132}], \"DRLG_FD_TDAY\":[{\"footage\":0}], \"ROP_DATA\":[{\"rop\":0}], \"NEXT_2_WELL_ACTIVITY\":[{\"racNum\":155817,\"wGnrName\":\"MNIF-195\",\"nextWellActivity\":\"MNIF-199\",\"rigShrtName\":\"SINO-25\",\"wDrlgStaDt\":\"2025/06/03\",\"wDrlgEndDt\":\"2025/07/22\",\"today\":0,\"wBatchNum\":4064137,\"canMove\":0,\"biNum\":\"60\",\"epANum\":80665,\"nextLocation\":81322,\"nextBiNum\":\"60\"}], \"NEW_TARGET_DAYS\":[{\"targetDays\":49}], \"DRLG_OP_SMRY\":[{\"toTm2\":\"0700\",\"epANum\":80665,\"wActDt\":\"2025-07-18T00:00:00\",\"wOpCd\":\"HT\",\"wEvntTime\":\"0500\",\"wOpTimeCd\":\"N\",\"wOpObjCd\":\"BHA\",\"wHolSz\":\"6 1/8\",\"wOpDur\":2,\"epLtDataModDt\":\"2025-07-20T12:04:55\",\"epLtDmoCd\":\"PLACIDAI\",\"ltrlName\":\"0\",\"wDrlgOpDt\":\"2025-07-17T00:00:00\",\"wOpRmk\":\"POOH 22\\\" ROTARY BHA AND L/DN, 9 X 6-5/8\\\" HWDP, 6 X 8-1/2\\\" DC, 13 X 9-1/2\\\" DC, 3 X REMERS, SS, BIT\",\"wOpRmkPdf\":\"POOH 22\\\" ROTARY BHA AND L/DN, 9 X 6-5/8\\\" HWDP, 6 X 8-1/2\\\" DC, 13 X 9-1/2\\\" DC, 3 X REMERS, SS, BIT\",\"racNum\":155817,\"epCrDataCd\":\"PLACIDAI\",\"epCrDataDt\":\"2025-07-20T12:04:55\",\"holSecTypCd\":\"6 1/8\",\"stNmCd\":null,\"wEvntStaDpth\":null,\"wEvntEndDpth\":null,\"svcoCd\":\"RIG\",\"wActvDrlgFlg\":\"N\",\"dopNum\":20803992,\"wMajOpCd\":\"DRLG\",\"lostTmFlg\":\"N\",\"lgcyWOpCd\":null,\"lgcyWOpTimeCd\":null,\"lgcyWOpObjCd\":null,\"lgcyWHolSz\":null,\"lgcyHolSecTypCd\":null,\"wHoleStaDpth\":16555,\"wHoleEndDpth\":16555,\"wDrlgOpDttm\":\"2025-07-17T05:00:00\",\"dffsNum\":null,\"doosNum\":null,\"dltsNum\":null,\"toTm\":\"0700\",\"dltsDffsNum\":\" \",\"ltDffType\":\" \",\"ltType\":\" \"},{\"toTm2\":\"1030\",\"epANum\":80665,\"wActDt\":\"2025-07-18T00:00:00\",\"wOpCd\":\"HT\",\"wEvntTime\":\"0700\",\"wOpTimeCd\":\"N\",\"wOpObjCd\":\"PEL\",\"wHolSz\":\"6 1/8\",\"wOpDur\":3.5,\"epLtDataModDt\":\"2025-07-20T12:04:55\",\"epLtDmoCd\":\"PLACIDAI\",\"ltrlName\":\"0\",\"wDrlgOpDt\":\"2025-07-17T00:00:00\",\"wOpRmk\":\"PJSM: WITH NABORS & RIG UP 18 5/8' CASING RUN TOOLS POWER TONG, HYD CRT, SPIDER SLIP, SIDE DOOR ELEVATOR, PICK-UP MECHINE. INSPECT ALL EQUIPMENT AND COMPLETE INSPECTION SHEET, ALL CERTIFICATIONS CHECKED AND VERIFIED.\",\"wOpRmkPdf\":\"PJSM: WITH NABORS & RIG UP 18 5/8' CASING RUN TOOLS POWER TONG, HYD CRT, SPIDER SLIP, SIDE DOOR ELEVATOR, PICK-UP MECHINE. INSPECT ALL EQUIPMENT AND COMPLETE INSPECTION SHEET, ALL CERTIFICATIONS CHECKED AND VERIFIED.\",\"racNum\":155817,\"epCrDataCd\":\"PLACIDAI\",\"epCrDataDt\":\"2025-07-20T12:04:55\",\"holSecTypCd\":\"6 1/8\",\"stNmCd\":null,\"wEvntStaDpth\":null,\"wEvntEndDpth\":null,\"svcoCd\":\"RIG\",\"wActvDrlgFlg\":\"N\",\"dopNum\":20803993,\"wMajOpCd\":\"DRLG\",\"lostTmFlg\":\"N\",\"lgcyWOpCd\":null,\"lgcyWOpTimeCd\":null,\"lgcyWOpObjCd\":null,\"lgcyWHolSz\":null,\"lgcyHolSecTypCd\":null,\"wHoleStaDpth\":16555,\"wHoleEndDpth\":16555,\"wDrlgOpDttm\":\"2025-07-17T07:00:00\",\"dffsNum\":null,\"doosNum\":null,\"dltsNum\":null,\"toTm\":\"1030\",\"dltsDffsNum\":\" \",\"ltDffType\":\" \",\"ltType\":\" \"},{\"toTm2\":\"1300\",\"epANum\":80665,\"wActDt\":\"2025-07-18T00:00:00\",\"wOpCd\":\"LDP\",\"wEvntTime\":\"1030\",\"wOpTimeCd\":\"N\",\"wOpObjCd\":\"BHA\",\"wHolSz\":\"6 1/8\",\"wOpDur\":2.5,\"epLtDataModDt\":\"2025-07-20T12:04:55\",\"epLtDmoCd\":\"PLACIDAI\",\"ltrlName\":\"0\",\"wDrlgOpDt\":\"2025-07-17T00:00:00\",\"wOpRmk\":\"HPJSM FOR RUNNING 18-5/8\\\" CASING W/ NABORS, RIG CREW AND CRANE OPERATOR DISCUSSED HAZARD IDENTIFICATION -PINCH POINTS, LINE OF FIRE, HOLD BACK ROPE, TAG LINE USAGE, GOOD COMMUNICATION SIGNALS WITH CRANE OPERATOR. SWA AND 360 DRGREE MEETINGS WHICH EVERY CREW MEMBER EXPLAIN HIS ROLE.\",\"wOpRmkPdf\":\"HPJSM FOR RUNNING 18-5/8\\\" CASING W/ NABORS, RIG CREW AND CRANE OPERATOR DISCUSSED HAZARD IDENTIFICATION -PINCH POINTS, LINE OF FIRE, HOLD BACK ROPE, TAG LINE USAGE, GOOD COMMUNICATION SIGNALS WITH CRANE OPERATOR. SWA AND 360 DRGREE MEETINGS WHICH EVERY CREW MEMBER EXPLAIN HIS ROLE.\",\"racNum\":155817,\"epCrDataCd\":\"PLACIDAI\",\"epCrDataDt\":\"2025-07-20T12:04:55\",\"holSecTypCd\":\"6 1/8\",\"stNmCd\":null,\"wEvntStaDpth\":1,\"wEvntEndDpth\":1,\"svcoCd\":\"RIG\",\"wActvDrlgFlg\":\"N\",\"dopNum\":20803994,\"wMajOpCd\":\"DRLG\",\"lostTmFlg\":\"N\",\"lgcyWOpCd\":null,\"lgcyWOpTimeCd\":null,\"lgcyWOpObjCd\":null,\"lgcyWHolSz\":null,\"lgcyHolSecTypCd\":null,\"wHoleStaDpth\":16555,\"wHoleEndDpth\":16555,\"wDrlgOpDttm\":\"2025-07-17T10:30:00\",\"dffsNum\":null,\"doosNum\":null,\"dltsNum\":null,\"toTm\":\"1300\",\"dltsDffsNum\":\" \",\"ltDffType\":\" \",\"ltType\":\" \"},{\"toTm2\":\"0000\",\"epANum\":80665,\"wActDt\":\"2025-07-18T00:00:00\",\"wOpCd\":\"LOG\",\"wEvntTime\":\"1300\",\"wOpTimeCd\":\"N\",\"wOpObjCd\":\"CBL\",\"wHolSz\":\"6 1/8\",\"wOpDur\":11,\"epLtDataModDt\":\"2025-07-20T12:04:55\",\"epLtDmoCd\":\"PLACIDAI\",\"ltrlName\":\"0\",\"wDrlgOpDt\":\"2025-07-17T00:00:00\",\"wOpRmk\":\"P/U & M/U 18-5/8\\\" SHOE TRACK, CHECKED FLOAT SHOE AND FLOAT COLLAR ON V-DOOR SHOE TRACK, FILL AND CHECK SHOE TRACK ( OK )BAKER LOCK THE FIRST 5 JOINTS RIH.\",\"wOpRmkPdf\":\"P/U & M/U 18-5/8\\\" SHOE TRACK, CHECKED FLOAT SHOE AND FLOAT COLLAR ON V-DOOR SHOE TRACK, FILL AND CHECK SHOE TRACK ( OK )BAKER LOCK THE FIRST 5 JOINTS RIH.\",\"racNum\":155817,\"epCrDataCd\":\"PLACIDAI\",\"epCrDataDt\":\"2025-07-20T12:04:55\",\"holSecTypCd\":\"6 1/8\",\"stNmCd\":null,\"wEvntStaDpth\":0,\"wEvntEndDpth\":0,\"svcoCd\":\"AP5\",\"wActvDrlgFlg\":\"N\",\"dopNum\":20803995,\"wMajOpCd\":\"DRLG\",\"lostTmFlg\":\"N\",\"lgcyWOpCd\":null,\"lgcyWOpTimeCd\":null,\"lgcyWOpObjCd\":null,\"lgcyWHolSz\":null,\"lgcyHolSecTypCd\":null,\"wHoleStaDpth\":16555,\"wHoleEndDpth\":16555,\"wDrlgOpDttm\":\"2025-07-17T13:00:00\",\"dffsNum\":null,\"doosNum\":null,\"dltsNum\":null,\"toTm\":\"0000\",\"dltsDffsNum\":\" \",\"ltDffType\":\" \",\"ltType\":\" \"},{\"toTm2\":\"0459\",\"epANum\":80665,\"wActDt\":\"2025-07-18T00:00:00\",\"wOpCd\":\"PTST\",\"wEvntTime\":\"0000\",\"wOpTimeCd\":\"N\",\"wOpObjCd\":\"MPMP\",\"wHolSz\":\"6 1/8\",\"wOpDur\":5,\"epLtDataModDt\":\"2025-07-20T12:04:55\",\"epLtDmoCd\":\"PLACIDAI\",\"ltrlName\":\"0\",\"wDrlgOpDt\":\"2025-07-18T00:00:00\",\"wOpRmk\":\"WASH DOWN LAST JOINT, CONFIRM TAG BTM.\\n- 70/70 JOINTS.\",\"wOpRmkPdf\":\"WASH DOWN LAST JOINT, CONFIRM TAG BTM.\\n- 70/70 JOINTS.\",\"racNum\":155817,\"epCrDataCd\":\"PLACIDAI\",\"epCrDataDt\":\"2025-07-20T12:04:55\",\"holSecTypCd\":\"6 1/8\",\"stNmCd\":null,\"wEvntStaDpth\":0,\"wEvntEndDpth\":0,\"svcoCd\":\"RIG\",\"wActvDrlgFlg\":\"N\",\"dopNum\":20803996,\"wMajOpCd\":\"DRLG\",\"lostTmFlg\":\"N\",\"lgcyWOpCd\":null,\"lgcyWOpTimeCd\":null,\"lgcyWOpObjCd\":null,\"lgcyWHolSz\":null,\"lgcyHolSecTypCd\":null,\"wHoleStaDpth\":16555,\"wHoleEndDpth\":16555,\"wDrlgOpDttm\":\"2025-07-18T00:00:00\",\"dffsNum\":null,\"doosNum\":null,\"dltsNum\":null,\"toTm\":\"0500\",\"dltsDffsNum\":\" \",\"ltDffType\":\" \",\"ltType\":\" \"}], \"BITINFO\":[] } ]"
+import { Component, computed, inject, effect } from '@angular/core';
+import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-misc-pres-well-data',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './misc-pres-well-data.component.html',
+  styleUrl: './misc-pres-well-data.component.scss'
+})
+export class MiscPresWellDataComponent {
+  private readonly reportStore = inject(MorningReportStore);
+  private readonly wellStore = inject(wellDataStore);
+
+  readonly selectedWellData = computed(() => {
+    const activeId = this.reportStore.selectedWellId();
+    const responseData = this.wellStore.response()?.data;
+
+    if (!responseData || !activeId) return null;
+
+    return responseData.find(item =>
+      String(item.DRLG_OP_STATUS?.[0]?.epANum) === String(activeId)
+    ) ?? null;
+  });
+
+  constructor() {
+
+    effect(() => {
+      const id = this.reportStore.selectedWellId();
+      if (id) {
+        console.log('Flow Step 2: Selection change detected. Fetching data for:', id);
+        console.log("selectedWellData " + this.selectedWellData);
+        this.wellStore.loadWellData(id);
+      }
+    });
+  }
+}
+====
+import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
+import { inject } from '@angular/core';
+import { ApiResponse } from '../../models/api-response.model';
+import { IWellData } from '../../../models/well-design/wwell-data.model';
+import { WwellDataService } from '../../../services/wwell-data.service';
+import { LoadingService } from '../../services/loading.service';
+
+interface WellDataState {
+
+    response: ApiResponse<IWellData> | null;
 }
 
-above is the result I am getting from prc, in this service
-package com.aramco.easd.dailyoperations.services;
+export const wellDataStore = signalStore(
+    { providedIn: 'root' },
+    withState<WellDataState>({ response: null }),
+    withMethods(
+        (
+            store,
+            service = inject(WwellDataService),
+            loading = inject(LoadingService)
+        ) => ({
+            // Updated to accept the parameter
+            loadWellData: (epNum: string) => {
+                loading.show();
+                patchState(store, { response: null });
 
-import com.aramco.easd.dailyoperations.dto.ApiResponse;
-import com.aramco.easd.dailyoperations.mappers.DrillingEyeMapper;
-import com.aramco.easd.dailyoperations.models.DrillingEyeRequestModel;
-import com.aramco.easd.dailyoperations.util.JsonUtil;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.core.Response;
+                service.getWellDataByEPANum(epNum).subscribe({
+                    next: (res) => {
+                        console.log("Well data loaded:", res);
+                        patchState(store, { response: res });
+                    },
+                    error: (err) => {
+                        patchState(store, {
+                            response: {
+                                statusCode: err.status || 500,
+                                error: true,
+                                message: err.message,
+                                data: null as any, // Adjusted to match your IWellData type
+                            },
+                        });
+                    },
+                    complete: () => loading.hide()
+                });
+            },
 
+            // If refresh needs the same epNum, you might want to store epNum in state 
+            // or pass it here as well.
+            refresh: (epNum: string) => {
+                loading.show();
+                service.getWellDataByEPANum(epNum).subscribe({
+                    next: (res) => patchState(store, { response: res }),
+                    error: (err) => patchState(store, { /* handle error */ }),
+                    complete: () => loading.hide(),
+                });
+            },
+        })
+    )
+);
+===
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+<div class="grid grid-cols-3 gap-3">
+  <!--  Well title card -->
+  <div
+    class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm overflow-hidden hover:shadow-xl transition-shadow duration-300 animate-pulse-shadow"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Well Name</div>
+    <div class="font-bold text-sm leading-tight">THURAYYA - Lg3 / THRY-845</div>
+    <div class="text-[10px] opacity-80">SP-276 Drilling Water Supply</div>
+  </div>
 
-@ApplicationScoped
-public class DrillingEyeService {
+  <!--  Targeted Aquifer -->
+  <div
+    class="col-span-1 bg-white bg-gradient-cyan-blue p-3 rounded-2xl shadow-sm flex flex-col justify-center border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] text-slate-500 mb-1">Targeted Aquifer</div>
+    <div class="font-bold text-blue-800 flex items-center gap-1">
+      <i class="fa-solid fa-droplet text-blue-500"></i> Jafurah
+    </div>
+  </div>
 
-    private static final Logger LOGGER = Logger.getLogger(DrillingEyeService.class.getName());
+  <!--  Current status -->
+  <div
+    class="col-span-2 bg-white p-3 rounded-2xl shadow-sm flex items-center justify-between border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div>
+      <div class="text-[10px] text-slate-500 mb-1">Current Status</div>
+      <div class="font-bold text-blue-800">On Target</div>
+    </div>
+    <div
+      class="bg-gradient-cyan-blue p-2 rounded-full text-white shadow-sm animate-pulse"
+    >
+      <i class="fa-solid fa-gear animate-spin-slow"></i>
+    </div>
+  </div>
 
-    @Inject
-    DrillingEyeMapper drillingEyeMapper;
+  <!--  Days indicator -->
+  <div
+    class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="flex items-center gap-2 mb-1">
+      <i class="fa-regular fa-calendar text-cyan-300"></i>
+      <div class="text-[10px] opacity-80">Days</div>
+    </div>
+    <div class="font-bold text-sm">29.34/49</div>
+  </div>
 
-    @Inject
-    JsonUtil jsonUtil;
+  <!--  Days‑since & Target‑days circles -->
+  <div
+    class="col-span-2 grid grid-cols-2 gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-center">
+      <div class="text-[10px] text-slate-500 mb-1">Days since Sup</div>
+      <div
+        class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-cyan-500 border-r-blue-500 mx-auto flex items-center justify-center shadow-sm bg-white animate-pulse"
+      >
+        <span class="text-base font-extrabold text-blue-900">42</span>
+      </div>
+    </div>
 
-    public ApiResponse<String> loadDrillingEyeData(DrillingEyeRequestModel drillingEyeRequestModel) {
-        try {
-            if (drillingEyeRequestModel == null) {
-                LOGGER.warning("Null request model received.");
-                return new ApiResponse.ApiResponseBuilder<String>()
-                        .withStatusCode(Response.Status.BAD_REQUEST.getStatusCode())
-                        .withError(true)
-                        .withMessage("Request model cannot be null.")
-                        .withData(null)
-                        .build();
+    <div class="text-center">
+      <div class="text-[10px] text-slate-500 mb-1">Target Days</div>
+      <div
+        class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-300 mx-auto flex items-center justify-center shadow-sm bg-white animate-pulse"
+      >
+        <span class="text-base font-extrabold text-blue-900">60</span>
+      </div>
+    </div>
+  </div>
+
+  <!--  Supporting BI -->
+  <div
+    class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="font-bold text-lg leading-none mb-1">BI34</div>
+    <div class="text-[10px] opacity-80">Supporting</div>
+    <div class="font-bold text-xs">Well THRY-5</div>
+  </div>
+
+  <!--  Total footage -->
+  <div
+    class="col-span-2 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex items-center justify-between relative overflow-hidden hover:shadow-xl transition-shadow duration-300"
+  >
+    <div>
+      <div class="font-extrabold text-2xl">9,890</div>
+      <div class="text-[10px] opacity-80">Feet</div>
+    </div>
+    <div class="text-cyan-300 opacity-50 absolute right-2 bottom-0 text-4xl">
+      <i class="fa-solid fa-water"></i>
+    </div>
+    <div class="text-white absolute top-2 right-1/3">
+      <i class="fa-solid fa-arrow-down"></i>
+    </div>
+  </div>
+
+  <!--  Previous well -->
+  <div
+    class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Previous Well</div>
+    <div class="font-bold text-sm">THRY-845</div>
+  </div>
+
+  <!--  Current depth -->
+  <div
+    class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex items-center justify-between hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 font-medium">Current Depth (FT.DF)</div>
+    <div class="font-extrabold text-2xl">3591</div>
+  </div>
+
+  <!-- Next well -->
+  <div
+    class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Next Well</div>
+    <div class="font-bold text-sm">THRY-841</div>
+  </div>
+</div>
+
+response
+[
+    {
+        "RIG_ACTIVITY": [
+            {
+                "biNum": "60",
+                "biNumDesc": "DEVELOPMENT DRILLING AND WORKOVERS",
+                "wellName": "ANDR-978",
+                "spuddate": "12/19/2025@1700",
+                "wRigCd": "JAC202",
+                "wDrlgLocDesc": "ANDR-978",
+                "welltype": "WATER WELL SUPPLY",
+                "waterWell": "ANDR-834, SDGM-983",
+                "wDrlgEndDt": "01/14/2026"
             }
-            String inputJson = jsonUtil.toJson(drillingEyeRequestModel);
-            LOGGER.info("Processing request with input JSON: " + inputJson);
-
-            Map<String, Object> params = new HashMap<>();
-            params.put("jsonIn", inputJson);
-
-            drillingEyeMapper.fetchDrillingEyeData(params);
-
-            Object result = params.get("jsonOut");
-            LOGGER.info("Result from stored procedure: " + result);
-
-            if (result == null || result.toString().isEmpty()) {
-                LOGGER.info("No data found for the given request.");
-                return new ApiResponse.ApiResponseBuilder<String>()
-                        .withStatusCode(Response.Status.NOT_FOUND.getStatusCode())
-                        .withError(true)
-                        .withMessage("No data found for the given request.")
-                        .withData(null)
-                        .build();
+        ],
+        "WELL_MASTER": [
+            {
+                "well": "ANDR-978",
+                "utmNorth": 2833303,
+                "utmEast": 326093,
+                "lon": 49.2682454,
+                "lat": 25.6066899
             }
-
-            LOGGER.info("Data retrieved successfully.");
-            return new ApiResponse.ApiResponseBuilder<String>()
-                    .withStatusCode(Response.Status.OK.getStatusCode())
-                    .withError(false)
-                    .withMessage("Data retrieved successfully.")
-                    .withData(result.toString())
-                    .build();
-
-        } catch (Exception e) {
-            LOGGER.log(Level.INFO, "An error occurred while processing the request", e);
-            return new ApiResponse.ApiResponseBuilder<String>()
-                    .withStatusCode(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode())
-                    .withError(true)
-                    .withMessage("An error occurred while processing your request: " + e.getMessage())
-                    .withData(null)
-                    .build();
+        ],
+        "RIG_IDENTIFICATION": [
+            {
+                "rigname": "JACK-202"
+            }
+        ],
+        "CONTACT": [
+            {
+                "rigContNum": "+8821677713737",
+                "description": "THURAYA",
+                "rigContNumPdf": "+882167771\n3737",
+                "rigDescriptionPdf": "THURAYA"
+            },
+            {
+                "rigContNum": "0133786378",
+                "description": "RIG FORMAN VSAT",
+                "rigContNumPdf": "0133786378\n",
+                "rigDescriptionPdf": "RIG FORMAN\n VSAT"
+            },
+            {
+                "rigContNum": "0133786376",
+                "description": "OTHER VSAT",
+                "rigContNumPdf": "0133786376\n",
+                "rigDescriptionPdf": "OTHER VSAT\n"
+            }
+        ],
+        "DRLG_OP_STATUS": [
+            {
+                "epANum": 99327,
+                "wPrsntDpth": 845,
+                "wCsgBotDpth": 845,
+                "wCsgOdSz": "18 5/8",
+                "wDpthChgDis": 0,
+                "wMudCircPc": "0",
+                "wPrevDpth": 845,
+                "wSpudOprDay": 10.5,
+                "wOpRmk": "WIPER TRIP, CHC, POOH, RUN & CMT 18 5/8\" CSG, WOC.",
+                "nxt24HrPlanRmk": "PERFORM 2ND TOP JOB, WOC, N/D 30\" BOP, WH WORK, N/U 21 1/4\" BOP, RIH W/ 17\" DRLG BHA. COC.",
+                "spuddays": 10.5,
+                "footage": 0,
+                "targetDepth": 3828
+            }
+        ],
+        "DRLG_FM_TOPS": [
+            {
+                "epANum": 98730,
+                "stLongCd": "RUS",
+                "wStDmrkDpth": 825,
+                "wStDmrkRmk": "3FT SHALLOWER"
+            }
+        ],
+        "DRLG_FD_TDAY": [
+            {
+                "footage": 0
+            }
+        ],
+        "actualRm": 3,
+        "kpiRm": 4.89,
+        "rigMoveDays": -1.89,
+        "ROP_DATA": [
+            {
+                "rop": 0
+            }
+        ],
+        "NEXT_2_WELL_ACTIVITY": [
+            {
+                "nextWellActivity": "UTMN-3565"
+            }
+        ],
+        "NEW_TARGET_DAYS": [
+            {
+                "targetDays": 32
+            }
+        ],
+        "DRLG_OP_SMRY": [
+            {
+                "epANum": 98730,
+                "wEvntTime": "0500",
+                "wHolSz": "22",
+                "wOpRmk": "HPJSM, FLOW CHECK- STATIC, POOH W/ 22\" REAMING BHA WIPER TRIP TO 24\" SHOE, RIH FREE TO BTM.\n* PUMPING 75 PCF MUD CAP INSIDE ANNULUS.\n* HOLE IN GOOD CONDITION.",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 845,
+                "wHoleEndDpth": 845,
+                "toTm": "0830"
+            },
+            {
+                "epANum": 98730,
+                "wEvntTime": "0830",
+                "wHolSz": "22",
+                "wOpRmk": "SWEEP HOLE W/ 2X50 BBLS HVP, CHC W/ NO RETURN, SPOT 150 BBLS WEIGHTED CSG GO PILL ON BTM.\n* PUMPING 75 PCF MUD CAP INSIDE ANNULUS.",
+                
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 845,
+                "wHoleEndDpth": 845,
+                "toTm": "0930"
+            },
+            {
+                "epANum": 98730,
+                "wEvntTime": "0930",
+                "wHolSz": "22",
+                "wOpRmk": "HPJSM, FLOW CHECK- STATIC, POOH W/ 22\" REAMING BHA TO SURFACE.\n* HOLE IN GOOD CONDITION.\n* PUMPING 75 PCF MUD CAP INSIDE ANNULUS",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 845,
+                "wHoleEndDpth": 845,
+                "toTm": "1400"
+            },
+            {
+                "epANum": 98730,
+                "wEvntTime": "0300",
+                "wHolSz": "22",
+                "wOpRmk": "WAIT ON CMT HARDNESS.",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "CSG",
+                "wHoleStaDpth": 845,
+                "wHoleEndDpth": 845,
+                "toTm": "0500"
+            }
+        ],
+        "BITINFO": [
+            {
+                "bitSz": 22
+            }
+        ],
+        "EXAD_GWD_IR_HEADER":[{
+            "dtRemarks": "Provide AramcoLink on-site to pick casing points and formation tops remotely.",
+            "mudRemarks": "Customize Mud Logging Services is required in this well from surface to TD.",
+            "loggingRemarks": "Run ZDL/CN/GR logs from total depth to 100 ft above the 9-5/8\" casing shoe. Continue CN/GR to surface."
+        }],
+        "EXAD_GWD_IR_TOPS":[
+            {
+                "stLongCd": "AHMD",
+                "planTvdDepth": 2760,
+                "planSsDepth": -1815
+            },
+            {
+                "stLongCd": "ARUM",
+                "planTvdDepth": 1960,
+                "planSsDepth": -1015
+            },
+            {
+                "stLongCd": "LAMS",
+                "planTvdDepth": 2450,
+                "planSsDepth": -1505
+            },
+            {
+                "stLongCd": "RUS",
+                "planTvdDepth": 800,
+                "planSsDepth": 145
+            },
+            {
+                "stLongCd": "SFNY",
+                "planTvdDepth": 3055,
+                "planSsDepth": -2110
+            },
+            {
+                "stLongCd": "SHUB",
+                "planTvdDepth": 3825,
+                "planSsDepth": -2880
+            },
+            {
+                "stLongCd": "UMER",
+                "planTvdDepth": 880,
+                "planSsDepth": 65
+            }
+        ],
+        "EXAD_GWD_IR_CASING":[{
+            "csgSize": "13 3/8",
+            "csgType": "Casing",
+            "csgDepth": 1980,
+            "csgRemarks": "+/- 20 ft into ARUM"
+        },
+    {
+            "csgSize": "18 5/8",
+            "csgType": "Casing",
+            "csgDepth": 820,
+            "csgRemarks": "+/- 20 into RUS"
+        },{
+            "csgSize": "24",
+            "csgType": "Conductor",
+            "csgDepth": 100,
+            "csgRemarks": ""
+        },{
+            "csgSize": "9 5/8",
+            "csgType": "Liner",
+            "csgDepth": 3075,
+            "csgRemarks": "+/- 20 ft into SFNY"
+        }],
+        "EXAD_GWD_IR_HYDROGEOLOGY":[{
+            "flowType": "N",
+            "estTargetAquifier": "WASI",
+            "estStaticWaterLevel": 110,
+            "estWaterQuality": 2800,
+            "estProductivity": 500,
+            "estH2s": 0
+        }],
+        "EXAD_GWD_IR_WATER":[{
+            "offsetWaterWell": "ANDR_963",
+            "distance": 6.4,
+            "direction": "SW",
+            "aquifer": "WASI",
+            "td": 3600,
+            "flowRate": 770,
+            "rpm": 1500,
+            "staticWaterLevel": 108.4,
+            "specificCapacity": 5.64,
+            "drawDown": 136.58,
+            "fieldTds": 2030,
+            "h2s": 0,
+            "testDuration": 180
+        }],
+        "EXAD_RCD_PREWAP": [{
+            "surfaceElevation": 945,
+            "estTargetDepth": 3800,
+            "targetFormation": "WSIA",
+            "supportedBusiness": "ANDR-814 REPLACEMENT"
+        }],
+        "WATER_WELL_TEST_OUTCOME": [{
+            "wellName": "ANDR-978",
+            "testType": "flow",
+            "aquifer": "UMER",
+            "rpm": 1700,
+            "flowRate":1000,
+            "temperature": 61,
+            "tds": 2900,
+            "producitivty": 4.37,
+            "h2s": 0
+        }]
+    },
+    {
+        "RIG_ACTIVITY": [
+            {
+                "biNum": "58",
+                "biNumDesc": "UTILITY AND SUPPORT WELLS",
+                "drlgPlanWellDesc": "WATER SUPPLU",
+                "wellName": "ANDR-983",
+                "spuddate": "12/18/2025@1700",
+                "wRigCd": "JAC203",
+                "welltype": "WATER SUPPLU",
+                "waterWell": "ANDR-981",
+                "wDrlgEndDt": "01/15/2026"
+            }
+        ],
+        "WELL_MASTER": [
+            {
+                "well": "ANDR-983",
+                "utmNorth": 2834474,
+                "utmEast": 285987,
+                "lon": 48.8688838,
+                "lat": 25.6119823
+            }
+        ],
+        "RIG_IDENTIFICATION": [
+            {
+                "rigname": "JACK-203"
+            }
+        ],
+        "CONTACT": [
+            {
+                "rigContNum": "+8821677713735",
+                "description": "THURAYA",
+                "rigContNumPdf": "+882167771\n3735",
+                "rigDescriptionPdf": "THURAYA"
+            },
+            {
+                "rigContNum": "0135788566",
+                "description": "RIG FORMAN VSAT",
+                "rigContNumPdf": "0135788566\n",
+                "rigDescriptionPdf": "RIG FORMAN\n VSAT"
+            },
+            {
+                "rigContNum": "0135788567",
+                "description": "OTHER VSAT",
+                "rigContNumPdf": "0135788567\n",
+                "rigDescriptionPdf": "OTHER VSAT\n"
+            }
+        ],
+        "DRLG_OP_STATUS": [
+            {
+                "epANum": 99479,
+                "wPrsntDpth": 960,
+                "wCsgBotDpth": 650,
+                "wCsgOdSz": "18 5/8",
+                "wDpthChgDis": 260,
+                "wPrevDpth": 700,
+                "wSpudOprDay": 11.5,
+                "wMudCircPc": "100",
+                "wOpRmk": "DRLG 17\" HOLE SECTION ",
+                "nxt24HrPlanRmk": "DRLG 17\" HOLE SECTION TO CP @ 2195 FT",
+                "spuddays": 11.5,
+                "footage": 260,
+                "targetDepth": 5228
+            }
+        ],
+        "DRLG_FM_TOPS": [
+            {
+                "epANum": 99479,
+                "stLongCd": "PNGU",
+                "wStDmrkDpth": 271,
+                "wStDmrkRmk": "66 FT DEEPER"
+            },
+            {
+                "epANum": 99479,
+                "stLongCd": "KHBR",
+                "wStDmrkDpth": 360,
+                "wStDmrkRmk": null
+            },
+            {
+                "epANum": 99479,
+                "stLongCd": "RUS",
+                "wStDmrkDpth": 620,
+                "wStDmrkRmk": "75 FT DEEPER"
+            },
+            {
+                "epANum": 99479,
+                "stLongCd": "UMER",
+                "wStDmrkDpth": 920,
+                "wStDmrkRmk": "95 FT DEEPER"
+            }
+        ],
+        "DRLG_FD_TDAY": [
+            {
+                "footage": 260
+            }
+        ],
+        "actualRm": 9.083,
+        "kpiRm": 1.75,
+        "rigMoveDays": 7.333,
+        "ROP_DATA": [
+            {
+                "rop": 10.83
+            }
+        ],
+        "NEXT_2_WELL_ACTIVITY": [
+            {
+                "nextWellActivity": "BARH-803"
+            }
+        ],
+        "NEW_TARGET_DAYS": [
+            {
+                "targetDays": 38
+            }
+        ],
+        "DRLG_OP_SMRY": [
+            {
+                "epANum": 99479,
+                "wEvntTime": "0500",
+                "wHolSz": "17",
+                "wOpRmk": "DRILL 17\" HOLE W/ 65 PCF INHIBITED PHPA MUD W/ 100% RETURN.\n- WASH & REAM EVERY JOINT DRILLED TWO TIMES.\n- SWEEP HOLE W/ 2 X 25 BBLS HVP EVERY CONNECTION.",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 700,
+                "wHoleEndDpth": 960,
+                "toTm": "0500"
+            }
+        ],
+        "BITINFO": [
+            {
+                "bitSz": null
+            }
+        ],
+        "EXAD_GWD_IR_HEADER":[{
+            "dtRemarks": "Provide AramcoLink on-site to pick casing points and formation tops remotely.",
+            "mudRemarks": "Customize Mudlogging Services are required in this well from surface to TD.",
+            "loggingRemarks": "Not required."
+        }],
+        "EXAD_GWD_IR_TOPS":[
+            {
+                "stLongCd": "AHMD",
+                "planTvdDepth": 4510,
+                "planSsDepth": -3765
+            },
+            {
+                "stLongCd": "ARUM",
+                "planTvdDepth": 2505,
+                "planSsDepth": -1760
+            },
+            {
+                "stLongCd": "DMMM",
+                "planTvdDepth": 455,
+                "planSsDepth": 290
+            },
+            {
+                "stLongCd": "RUS",
+                "planTvdDepth": 785,
+                "planSsDepth": -40
+            },
+            {
+                "stLongCd": "SFNY",
+                "planTvdDepth": 4845,
+                "planSsDepth": -4100
+            },
+            {
+                "stLongCd": "SHUB",
+                "planTvdDepth": 5720,
+                "planSsDepth": -4975
+            },
+            {
+                "stLongCd": "UMER",
+                "planTvdDepth": 1005,
+                "planSsDepth": -260
+            },
+            {
+                "stLongCd": "WASI",
+                "planTvdDepth": 4010,
+                "planSsDepth": -3265
+            }
+        ],
+        "EXAD_GWD_IR_CASING":[
+            {
+            "csgSize": "24",
+            "csgType": "Conductor",
+            "csgDepth": 100,
+            "csgRemarks": null
+        },
+    {
+            "csgSize": "18 5/8",
+            "csgType": "Casing",
+            "csgDepth": 815,
+            "csgRemarks": "+/- 30 into RUS"
+        },{
+            "csgSize": "13 3/8",
+            "csgType": "Casing",
+            "csgDepth": 2535,
+            "csgRemarks": "+/-30 ft into ARUM"
+        },{
+            "csgSize": "9 5/8",
+            "csgType": "Liner",
+            "csgDepth": 4865,
+            "csgRemarks": "+/- 20 ft into SFNY"
+        }],
+        "EXAD_GWD_IR_HYDROGEOLOGY":[{
+            "flowType": "Y",
+            "estTargetAquifier": "WASI",
+            "estStaticWaterLevel": 26,
+            "estWaterQuality": 2300,
+            "estProductivity": 500,
+            "estH2s": 0
+        }],
+        "EXAD_GWD_IR_WATER":[
+        {
+            "offsetWaterWell": "ANDR-963",
+            "distance": 35,
+            "direction": "E",
+            "aquifer": "WASI",
+            "td": 0,
+            "flowRate": 770,
+            "rpm": 0,
+            "staticWaterLevel": 108,
+            "specificCapacity": 5.6,
+            "drawDown": 137,
+            "fieldTds": 2030,
+            "h2s": 0,
+            "testDuration": 0
+        },
+        {
+            "offsetWaterWell": "FRUQ-805",
+            "distance": 59,
+            "direction": "N",
+            "aquifer": "WASI",
+            "td": 0,
+            "flowRate": 0,
+            "rpm": 0,
+            "staticWaterLevel": null,
+            "specificCapacity": null,
+            "drawDown": null,
+            "fieldTds": 2700,
+            "h2s": 0,
+            "testDuration": 0
         }
+    ],
+        "EXAD_RCD_PREWAP": [{
+            "surfaceElevation": 745,
+            "estTargetDepth": 5620,
+            "targetFormation": "WASI",
+            "supportedBusiness": "Booster Gas Compression Station (BGCS-1)."
+        }],
+        "WATER_WELL_TEST_OUTCOME": [{
+            "wellName": "ANDR-983",
+            "testType": null,
+            "aquifer": null,
+            "rpm": null,
+            "flowRate":null,
+            "temperature": null,
+            "tds": null,
+            "producitivty": null,
+            "h2s": null
+        }]
     }
+]
 
-    public ApiResponse<String> loadDrillingDataBtEpANum(String epAnum) {
-        try {
-            if (epAnum == null) {
-                LOGGER.warning("Null request model received.");
-                return new ApiResponse.ApiResponseBuilder<String>()
-                        .withStatusCode(Response.Status.BAD_REQUEST.getStatusCode())
-                        .withError(true)
-                        .withMessage("Request model cannot be null.")
-                        .withData(null)
-                        .build();
-            }
-            LOGGER.info("Processing request with input JSON: " + epAnum);
-
-            Map<String, Object> params = new HashMap<>();
-            params.put("jsonIn", epAnum);
-
-            drillingEyeMapper.fetchDrillingEyeData(params);
-
-            Object result = params.get("jsonOut");
-            LOGGER.info("Result from stored procedure: " + result);
-
-            if (result == null || result.toString().isEmpty()) {
-                LOGGER.info("No data found for the given request.");
-                return new ApiResponse.ApiResponseBuilder<String>()
-                        .withStatusCode(Response.Status.NOT_FOUND.getStatusCode())
-                        .withError(true)
-                        .withMessage("No data found for the given request.")
-                        .withData(null)
-                        .build();
-            }
-
-            LOGGER.info("Data retrieved successfully.");
-            return new ApiResponse.ApiResponseBuilder<String>()
-                    .withStatusCode(Response.Status.OK.getStatusCode())
-                    .withError(false)
-                    .withMessage("Data retrieved successfully.")
-                    .withData(result.toString())
-                    .build();
-
-        } catch (Exception e) {
-            LOGGER.log(Level.INFO, "An error occurred while processing the request", e);
-            return new ApiResponse.ApiResponseBuilder<String>()
-                    .withStatusCode(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode())
-                    .withError(true)
-                    .withMessage("An error occurred while processing your request: " + e.getMessage())
-                    .withData(null)
-                    .build();
-        }
-    }
-}
-HERE Object result = params.get("jsonOut");
-IT LOOK LIKE sTRING , SO LET ME KNOW TO HAVE IT IN PROPER json WITH BEST PRACTICES
+1. I can see computed is null need to look to implement the correctly
+2. I can see activeId and epANum calculated by this diffrenet item.DRLG_OP_STATUS?.[0]?.epANum it may be comparing current with prev ones in active Id I am not sure
+3. on the basis of response map the fileld in misc template
