@@ -1,266 +1,108 @@
-import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
-import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { inject } from '@angular/core';
-import { pipe, switchMap, tap, catchError, of, filter } from 'rxjs';
-import { WwellDataService } from '../../../services/wwell-data.service';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { AgGridAngular } from 'ag-grid-angular';
+import { ColDef } from 'ag-grid-community';
+import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
 
-// ==========================================
-// 1. STRICT API INTERFACES (Matching your JSON)
-// ==========================================
-export interface IWellDataResponse {
-  RIG_ACTIVITY?: Array<{ wellName?: string; welltype?: string; biNum?: string; waterWell?: string; }>;
-  EXAD_GWD_IR_HYDROGEOLOGY?: Array<{ estTargetAquifier?: string; }>;
-  EXAD_RCD_PREWAP?: Array<{ targetFormation?: string; }>;
-  DRLG_OP_STATUS?: Array<{ nxt24HrPlanRmk?: string; spuddays?: number; footage?: number; wPrsntDpth?: number; }>;
-  NEW_TARGET_DAYS?: Array<{ targetDays?: number; }>;
-  EXAD_GWD_IR_WATER?: Array<{ offsetWaterWell?: string; }>;
-  NEXT_2_WELL_ACTIVITY?: Array<{ nextWellActivity?: string; }>;
-}
+@Component({
+  selector: 'app-picked-formation-tops',
+  standalone: true,
+  // Make sure to import AgGridAngular here
+  imports: [CommonModule, AgGridAngular], 
+  templateUrl: './picked-formation-tops.component.html',
+  styleUrl: './picked-formation-tops.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class PickedFormationTopsComponent {
+  public readonly store = inject(wellDataStore);
 
-export interface ApiResponse<T> {
-  statusCode: number;
-  error: boolean;
-  message: string;
-  data: T[];
-}
+  // Define AG Grid Columns to match your image exactly
+  public colDefs: ColDef[] = [
+    { 
+      headerName: 'Formation', 
+      field: 'formation', 
+      flex: 1,
+      // Cyan background with white text for the first column
+      cellStyle: { backgroundColor: '#48b5d3', color: 'white', fontWeight: '600', borderRight: '1px solid rgba(255,255,255,0.2)' }
+    },
+    { 
+      headerName: 'Depth', 
+      field: 'depth', 
+      flex: 1,
+      // Format number with commas
+      valueFormatter: (params) => params.value ? Number(params.value).toLocaleString() : '',
+      // Blue text
+      cellStyle: { color: '#1e40af', fontWeight: '500', borderRight: '1px solid #e2e8f0' } 
+    },
+    { 
+      headerName: 'Remarks', 
+      field: 'remarks', 
+      flex: 2,
+      // Blue text, uppercase, slightly smaller font
+      cellStyle: { color: '#1e40af', textTransform: 'uppercase', fontSize: '12px' } 
+    }
+  ];
 
-// ==========================================
-// 2. VIEW MODEL FOR THE UI
-// ==========================================
-export interface WellDataViewModel {
-  wellName: string;
-  wellType: string;
-  targetedAquifer: string;
-  currentStatus: string;
-  daysSinceSpud: number;
-  targetDays: number;
-  biNum: string;
-  waterWell: string;
-  footage: number;
-  previousWell: string;
-  currentDepth: number;
-  nextWell: string;
-}
-
-// ==========================================
-// 3. BLINK-PROOF FALLBACK STATE
-// ==========================================
-const DEFAULT_VM: Readonly<WellDataViewModel> = {
-  wellName: '--', wellType: '--', targetedAquifer: '--',
-  currentStatus: 'Awaiting Selection...', daysSinceSpud: 0, targetDays: 0,
-  biNum: '--', waterWell: '--', footage: 0, previousWell: '--',
-  currentDepth: 0, nextWell: '--'
-};
-
-interface WellDataState {
-  viewModel: WellDataViewModel;
-  isLoading: boolean;
-  error: string | null;
-}
-
-// ==========================================
-// 4. PURE MAPPING FUNCTION
-// ==========================================
-function mapToViewModel(raw?: IWellDataResponse): WellDataViewModel {
-  if (!raw) return { ...DEFAULT_VM };
-
-  return {
-    wellName: raw.RIG_ACTIVITY?.[0]?.wellName || 'N/A',
-    wellType: raw.RIG_ACTIVITY?.[0]?.welltype || 'N/A',
-    targetedAquifer: raw.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier || raw.EXAD_RCD_PREWAP?.[0]?.targetFormation || 'N/A',
-    currentStatus: raw.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk || 'Active',
-    daysSinceSpud: raw.DRLG_OP_STATUS?.[0]?.spuddays ?? 0,
-    targetDays: raw.NEW_TARGET_DAYS?.[0]?.targetDays ?? 0,
-    biNum: raw.RIG_ACTIVITY?.[0]?.biNum || 'N/A',
-    waterWell: raw.RIG_ACTIVITY?.[0]?.waterWell || 'N/A',
-    footage: raw.DRLG_OP_STATUS?.[0]?.footage ?? 0,
-    previousWell: raw.EXAD_GWD_IR_WATER?.[0]?.offsetWaterWell || 'N/A',
-    currentDepth: raw.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
-    nextWell: raw.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity || 'N/A',
+  // Optional: Default column definitions for clean layout
+  public defaultColDef: ColDef = {
+    resizable: false,
+    sortable: false,
+    filter: false,
+    // Centers the text in the cells
+    cellClass: 'text-center flex justify-center items-center' 
   };
 }
 
-// ==========================================
-// 5. THE SIGNAL STORE
-// ==========================================
-export const wellDataStore = signalStore(
-  { providedIn: 'root' },
-  withState<WellDataState>({
-    viewModel: { ...DEFAULT_VM },
-    isLoading: false,
-    error: null
-  }),
-  withMethods((store, service = inject(WwellDataService)) => ({
-    
-    loadWellData: rxMethod<string | null | undefined>(
-      pipe(
-        // Guard: Only proceed if we have a valid ID string
-        filter((id): id is string => !!id && id.trim() !== ''), 
-        
-        tap(() => {
-          // CRITICAL FIX: Turn on loading, but DO NOT touch the viewModel. 
-          // This keeps the DOM stable and prevents the blink.
-          patchState(store, { isLoading: true, error: null });
-        }),
-        
-        // switchMap automatically cancels old requests if the user clicks chips rapidly
-        switchMap((id) => 
-          service.getWellDataByEPANum(id).pipe(
-            tap((res: ApiResponse<IWellDataResponse>) => {
-              const rawData = res.data?.[0];
-              // Atomic update: swap data and turn off spinner instantly
-              patchState(store, { 
-                viewModel: mapToViewModel(rawData), 
-                isLoading: false 
-              });
-            }),
-            catchError((err: Error) => {
-              console.error("[WellDataStore] Fetch Error:", err);
-              // Handle error gracefully without breaking the UI
-              patchState(store, { 
-                isLoading: false, 
-                error: err.message || 'Data fetch failed' 
-              });
-              return of(null);
-            })
-          )
-        )
-      )
-    )
-    
-  }))
-);
-===
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
-import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
-
-@Component({
-  selector: 'app-misc-pres-well-data',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './misc-pres-well-data.component.html',
-  styleUrl: './misc-pres-well-data.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush // Optimized performance
-})
-export class MiscPresWellDataComponent {
-  private readonly reportStore = inject(MorningReportStore);
-  
-  // Public so the HTML template can read store.viewModel() and store.isLoading()
-  public readonly store = inject(wellDataStore);
-
-  constructor() {
-    // Automatically trigger the RxMethod whenever the selectedWellId changes.
-    // Memory leaks are automatically handled by RxMethod tying to component lifecycle.
-    this.store.loadWellData(this.reportStore.selectedWellId);
-  }
-}
-===
-<div class="relative transition-all duration-300 min-h-[350px]" 
+====
+<div class="relative transition-all duration-300 w-full rounded-xl overflow-hidden shadow-md border border-blue-100 flex flex-col"
      [class.opacity-40]="store.isLoading()" 
      [class.pointer-events-none]="store.isLoading()">
-  
+
   @if (store.isLoading()) {
-    <div class="absolute inset-0 z-10 flex items-center justify-center">
-      <div class="bg-white/90 p-3 rounded-full shadow-lg">
-        <i class="fa-solid fa-circle-notch fa-spin text-3xl text-blue-600"></i>
+    <div class="absolute inset-0 z-20 flex items-center justify-center bg-white/30 backdrop-blur-[1px]">
+      <div class="bg-white/90 p-2 rounded-full shadow-lg">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600"></i>
       </div>
     </div>
   }
 
-  <div class="grid grid-cols-3 gap-3">
-    
-    <div class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm overflow-hidden">
-      <div class="text-[10px] opacity-80 mb-1">Well Name</div>
-      <div class="font-bold text-sm leading-tight">{{ store.viewModel().wellName }}</div>
-      <div class="text-[10px] opacity-80">{{ store.viewModel().wellType }}</div>
-    </div>
-
-    <div class="col-span-1 bg-white p-3 rounded-2xl shadow-sm flex flex-col justify-center border border-slate-100">
-      <div class="text-[10px] text-slate-500 mb-1">Targeted Aquifer</div>
-      <div class="font-bold text-blue-800 flex items-center gap-1">
-        <i class="fa-solid fa-droplet text-blue-500"></i> 
-        {{ store.viewModel().targetedAquifer }}
-      </div>
-    </div>
-
-    <div class="col-span-2 bg-white p-3 rounded-2xl shadow-sm flex items-center justify-between border border-slate-100">
-      <div class="flex-1 min-w-0 pr-2">
-        <div class="text-[10px] text-slate-500 mb-1">Current Status</div>
-        <div class="font-bold text-blue-800 text-xs truncate" [title]="store.viewModel().currentStatus">
-          {{ store.viewModel().currentStatus }}
-        </div>
-      </div>
-      <div class="bg-gradient-cyan-blue p-2 rounded-full text-white shadow-sm animate-pulse flex-shrink-0">
-        <i class="fa-solid fa-gear animate-spin-slow"></i>
-      </div>
-    </div>
-
-    <div class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center">
-      <div class="flex items-center gap-2 mb-1">
-        <i class="fa-regular fa-calendar text-cyan-300"></i>
-        <div class="text-[10px] opacity-80">Days</div>
-      </div>
-      <div class="font-bold text-sm">
-        {{ store.viewModel().daysSinceSpud }} / {{ store.viewModel().targetDays }}
-      </div>
-    </div>
-
-    <div class="col-span-2 grid grid-cols-2 gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
-      <div class="text-center">
-        <div class="text-[10px] text-slate-500 mb-1">Days since Spud</div>
-        <div class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-cyan-500 border-r-blue-500 mx-auto flex items-center justify-center shadow-sm bg-white">
-          <span class="text-base font-extrabold text-blue-900">{{ store.viewModel().daysSinceSpud }}</span>
-        </div>
-      </div>
-      <div class="text-center">
-        <div class="text-[10px] text-slate-500 mb-1">Target Days</div>
-        <div class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-300 mx-auto flex items-center justify-center shadow-sm bg-white">
-          <span class="text-base font-extrabold text-blue-900">{{ store.viewModel().targetDays }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center">
-      <div class="font-bold text-lg leading-none mb-1">BI-{{ store.viewModel().biNum }}</div>
-      <div class="text-[10px] opacity-80">Supporting</div>
-      <div class="font-bold text-xs truncate" [title]="store.viewModel().waterWell">
-        {{ store.viewModel().waterWell }}
-      </div>
-    </div>
-
-    <div class="col-span-2 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex items-center justify-between relative overflow-hidden">
-      <div>
-        <div class="font-extrabold text-2xl">{{ store.viewModel().footage | number }}</div>
-        <div class="text-[10px] opacity-80">Feet Drilled Today</div>
-      </div>
-      <div class="text-cyan-300 opacity-50 absolute right-2 bottom-0 text-4xl">
-        <i class="fa-solid fa-water"></i>
-      </div>
-      <div class="text-white absolute top-2 right-1/3">
-        <i class="fa-solid fa-arrow-down"></i>
-      </div>
-    </div>
-
-    <div class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center">
-      <div class="text-[10px] opacity-80 mb-1">Previous Well</div>
-      <div class="font-bold text-sm truncate" [title]="store.viewModel().previousWell">
-        {{ store.viewModel().previousWell }}
-      </div>
-    </div>
-
-    <div class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex items-center justify-between">
-      <div class="text-[10px] opacity-80 font-medium">Current Depth (FT.DF)</div>
-      <div class="font-extrabold text-2xl">{{ store.viewModel().currentDepth | number }}</div>
-    </div>
-
-    <div class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center">
-      <div class="text-[10px] opacity-80 mb-1">Next Well</div>
-      <div class="font-bold text-sm truncate" [title]="store.viewModel().nextWell">
-        {{ store.viewModel().nextWell }}
-      </div>
-    </div>
-
+  <div class="bg-gradient-to-r from-blue-700 via-blue-500 to-blue-400 p-3 text-center border-b-2 border-cyan-400 z-10">
+    <h2 class="text-white text-xl font-light tracking-wide">Picked Formation</h2>
   </div>
+
+  <ag-grid-angular
+    class="ag-theme-alpine w-full"
+    style="width: 100%;"
+    [rowData]="store.viewModel().pickedFormations"
+    [columnDefs]="colDefs"
+    [defaultColDef]="defaultColDef"
+    [domLayout]="'autoHeight'"
+    [headerHeight]="40"
+    [rowHeight]="40">
+  </ag-grid-angular>
+
 </div>
+===
+/* Target AG Grid headers to match the design */
+:host ::ng-deep .ag-theme-alpine {
+  // Override AG Grid CSS variables for a seamless look
+  --ag-header-background-color: #2563eb; /* blue-600 */
+  --ag-header-foreground-color: #ffffff;
+  --ag-border-color: #e2e8f0;
+  --ag-row-border-color: #bfdbfe; /* blue-200 */
+
+  .ag-header-cell {
+    font-weight: 500;
+    letter-spacing: 0.025em;
+  }
+  
+  // Center the header text
+  .ag-header-cell-label {
+    justify-content: center;
+  }
+  
+  // Remove the border around the entire grid since our wrapper handles it
+  .ag-root-wrapper {
+    border: none !important;
+  }
+}
