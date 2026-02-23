@@ -1,4 +1,359 @@
-Here is the response {
+<div class="main-container">
+  <app-well-chip-list
+    [mode]="horizontal"
+    [pageSize]="5"
+    [showAll]="true"
+    (selectedChange)="onWellSelect('')"
+  ></app-well-chip-list>
+
+ 
+
+  <app-wellbore-view></app-wellbore-view>
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { SHARED_MODULES } from '../../shared/shared.module';
+import { WellboreViewComponent } from "./wellbore-view/wellbore-view.component";
+import { WellChipListComponent } from "./well-chip-list/well-chip-list.component";
+import { MorningReportStore } from '../../core/stores/moringreport/morning-report.store';
+
+
+@Component({
+  selector: 'app-persentation',
+  imports: [...SHARED_MODULES, WellboreViewComponent, WellChipListComponent],
+  templateUrl: './persentation.component.html',
+  styleUrl: './persentation.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class PersentationComponent {
+
+  horizontal: "horizontal" | "vertical" = "horizontal";
+  morningReportStore = inject(MorningReportStore);
+
+  onWellSelect(id: string) {
+    console.log("executing " + id)
+    this.morningReportStore.selectWell(id);
+  }
+
+}
+
+
+<div class="container p-0">
+  <div class="mt-1 flex justify-start">
+    <div class="w-1/3">
+      <app-misc-pres-well-data></app-misc-pres-well-data>
+      <app-well-status-grid></app-well-status-grid>
+    </div>
+    <div class="w-2/3 ml-4 well-svg-div">
+      <svg #wellboreSvg viewBox="10 -20 1100 950">
+        <defs>
+          <marker
+            id="arrow"
+            viewBox="0 -5 10 10"
+            refX="5"
+            refY="0"
+            markerWidth="4"
+            markerHeight="4"
+            orient="auto"
+          >
+            <path d="M0,-5L10,0L0,5" style="fill: black"></path>
+          </marker>
+          <marker
+            id="arrowblue"
+            viewBox="0 -5 10 10"
+            refX="5"
+            refY="0"
+            markerWidth="4"
+            markerHeight="4"
+            orient="auto"
+          >
+            <path d="M0,-5L10,0L0,5" style="fill: rgb(60, 195, 255)"></path>
+          </marker>
+          <linearGradient id="mainGradient">
+            <stop offset="0" stop-color="#5d6264"></stop>
+            <stop offset="0.5" stop-color="#fff"></stop>
+            <stop offset="1" stop-color="#5d6264"></stop>
+          </linearGradient>
+          <linearGradient id="complCasingGradient">
+            <stop offset="0" stop-color="#4ca746"></stop>
+            <stop offset="0.5" stop-color="#4ca746"></stop>
+            <stop offset="1" stop-color="#4ca746"></stop>
+          </linearGradient>
+          <linearGradient id="deepCasingGradient">
+            <stop offset="0" stop-color="#ff1905"></stop>
+            <stop offset="0.5" stop-color="#ff1905"></stop>
+            <stop offset="1" stop-color="#ff1905"></stop>
+          </linearGradient>
+          <pattern
+            id="gridpattern"
+            patternUnits="userSpaceOnUse"
+            width="6"
+            height="6"
+          >
+            <path
+              d="M6,-4 L6,6 L-4,6"
+              stroke="#333"
+              stroke-width="2"
+              style="fill: none"
+            ></path>
+          </pattern>
+          <pattern
+            id="dashed"
+            patternUnits="userSpaceOnUse"
+            width="5"
+            height="5"
+          >
+            <image
+              xlink:href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMCcgaGVpZ2h0PScxMCc+CiAgPHJlY3Qgd2lkdGg9JzEwJyBoZWlnaHQ9JzEwJyBmaWxsPSd3aGl0ZScgLz4KICA8Y2lyY2xlIGN4PScyLjUnIGN5PScyLjUnIHI9JzIuNScgZmlsbD0nYmxhY2snLz4KPC9zdmc+"
+            ></image>
+          </pattern>
+          <pattern
+            id="gravelpattern"
+            patternUnits="userSpaceOnUse"
+            width="8"
+            height="4"
+          >
+            <rect x="0" y="0" width="4" height="2"></rect>
+            <rect x="4" y="2" width="4" height="2"></rect>
+          </pattern>
+        </defs>
+
+        <app-well-casing-visualization
+          [wellData]="wellData"
+          [yScale]="yScale"
+          [sizeScale]="sizeScale"
+          [centerX]="centerX"
+          [config]="config"
+          [svg]="svg"
+        ></app-well-casing-visualization>
+
+        <app-depth-scale
+          [yScale]="yScale"
+          [plannedDepth]="plannedDepth"
+          [config]="config"
+          [geoLogicalLayers]="geoLogicalLayers"
+          [wellData]="wellData"
+          [svg]="svg"
+        ></app-depth-scale>
+      </svg>
+    </div>
+  </div>
+</div>
+import { AfterViewInit, Component, ElementRef, inject, OnInit, ViewChild, viewChild } from '@angular/core';
+import { WellboreService } from '../wellbore.service';
+import * as d3 from 'd3';
+import { DepthScaleComponent } from '../depth-scale/depth-scale.component';
+import { WellCasingVisualizationComponent } from '../well-casing-visualization/well-casing-visualization.component';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { WellStatusGridComponent } from "../well-status-grid/well-status-grid.component";
+import { MiscPresWellDataComponent } from "../misc-pres-well-data/misc-pres-well-data.component";
+
+@Component({
+  selector: 'app-wellbore-view',
+  imports: [...SHARED_MODULES, DepthScaleComponent, WellCasingVisualizationComponent, WellStatusGridComponent, MiscPresWellDataComponent],
+  templateUrl: './wellbore-view.component.html',
+  styleUrl: './wellbore-view.component.scss'
+})
+export class WellboreViewComponent implements OnInit {
+
+
+  @ViewChild("wellboreSvg", { static: true })
+  svgElement!: ElementRef<SVGSVGElement>;
+
+  wellBoreService = inject(WellboreService);
+
+  yScale!: d3.ScaleLinear<number, number>;
+  centerX!: number;
+  svg!: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+
+  config = this.wellBoreService.configSignal();
+  wellData = this.wellBoreService.wellDataSignal();
+  geoLogicalLayers = this.wellBoreService.geoLogicalLayerSignal();
+  plannedDepth = this.wellBoreService.plannedDepth();
+  sizeScale = this.wellBoreService.sizeScale()
+
+  ngOnInit(): void {
+    this.initWellBoreView();
+  }
+
+  private initWellBoreView() {
+    this.svg = d3.select(this.svgElement.nativeElement);
+    this.svg.selectAll("*").remove();
+
+    // Intialize the scales
+    this.yScale = d3.scaleLinear()
+      .domain([0, this.plannedDepth])
+      .range([this.config.margin.top, this.config.wellboreHeight - this.config.margin.bottom]);
+
+    this.centerX = this.config.wellboreWidth / 2;
+
+    // Add the definitions
+    const defs = this.svg.append("defs")
+
+
+    this.svg.append("text")
+
+    const defsSelection = this.svg.select("defs")
+      .attr("id", "")
+  }
+}
+<div class="grid grid-cols-3 gap-3">
+  <!--  Well title card -->
+  <div
+    class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm overflow-hidden hover:shadow-xl transition-shadow duration-300 animate-pulse-shadow"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Well Name</div>
+    <div class="font-bold text-sm leading-tight">THURAYYA - Lg3 / THRY-845</div>
+    <div class="text-[10px] opacity-80">SP-276 Drilling Water Supply</div>
+  </div>
+
+  <!--  Targeted Aquifer -->
+  <div
+    class="col-span-1 bg-white p-3 rounded-2xl shadow-sm flex flex-col justify-center border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] text-slate-500 mb-1">Targeted Aquifer</div>
+    <div class="font-bold text-blue-800 flex items-center gap-1">
+      <i class="fa-solid fa-droplet text-blue-500"></i> Jafurah
+    </div>
+  </div>
+
+  <!--  Current status -->
+  <div
+    class="col-span-2 bg-white p-3 rounded-2xl shadow-sm flex items-center justify-between border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div>
+      <div class="text-[10px] text-slate-500 mb-1">Current Status</div>
+      <div class="font-bold text-blue-800">On Target</div>
+    </div>
+    <div
+      class="bg-gradient-cyan-blue p-2 rounded-full text-white shadow-sm animate-pulse"
+    >
+      <i class="fa-solid fa-gear animate-spin-slow"></i>
+    </div>
+  </div>
+
+  <!--  Days indicator -->
+  <div
+    class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="flex items-center gap-2 mb-1">
+      <i class="fa-regular fa-calendar text-cyan-300"></i>
+      <div class="text-[10px] opacity-80">Days</div>
+    </div>
+    <div class="font-bold text-sm">29.34/49</div>
+  </div>
+
+  <!--  Days‑since & Target‑days circles -->
+  <div
+    class="col-span-2 grid grid-cols-2 gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-center">
+      <div class="text-[10px] text-slate-500 mb-1">Days since Sup</div>
+      <div
+        class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-cyan-500 border-r-blue-500 mx-auto flex items-center justify-center shadow-sm bg-white animate-pulse"
+      >
+        <span class="text-base font-extrabold text-blue-900">42</span>
+      </div>
+    </div>
+
+    <div class="text-center">
+      <div class="text-[10px] text-slate-500 mb-1">Target Days</div>
+      <div
+        class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-300 mx-auto flex items-center justify-center shadow-sm bg-white animate-pulse"
+      >
+        <span class="text-base font-extrabold text-blue-900">60</span>
+      </div>
+    </div>
+  </div>
+
+  <!--  Supporting BI -->
+  <div
+    class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="font-bold text-lg leading-none mb-1">BI34</div>
+    <div class="text-[10px] opacity-80">Supporting</div>
+    <div class="font-bold text-xs">Well THRY-5</div>
+  </div>
+
+  <!--  Total footage -->
+  <div
+    class="col-span-2 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex items-center justify-between relative overflow-hidden hover:shadow-xl transition-shadow duration-300"
+  >
+    <div>
+      <div class="font-extrabold text-2xl">9,890</div>
+      <div class="text-[10px] opacity-80">Feet</div>
+    </div>
+    <div class="text-cyan-300 opacity-50 absolute right-2 bottom-0 text-4xl">
+      <i class="fa-solid fa-water"></i>
+    </div>
+    <div class="text-white absolute top-2 right-1/3">
+      <i class="fa-solid fa-arrow-down"></i>
+    </div>
+  </div>
+
+  <!--  Previous well -->
+  <div
+    class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Previous Well</div>
+    <div class="font-bold text-sm">THRY-845</div>
+  </div>
+
+  <!--  Current depth -->
+  <div
+    class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex items-center justify-between hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 font-medium">Current Depth (FT.DF)</div>
+    <div class="font-extrabold text-2xl">3591</div>
+  </div>
+
+  <!-- Next well -->
+  <div
+    class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300"
+  >
+    <div class="text-[10px] opacity-80 mb-1">Next Well</div>
+    <div class="font-bold text-sm">THRY-841</div>
+  </div>
+</div>
+import { Component, computed, inject, effect } from '@angular/core';
+import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-misc-pres-well-data',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './misc-pres-well-data.component.html',
+  styleUrl: './misc-pres-well-data.component.scss'
+})
+export class MiscPresWellDataComponent {
+  private readonly reportStore = inject(MorningReportStore);
+  private readonly wellStore = inject(wellDataStore);
+
+  readonly selectedWellData = computed(() => {
+    const activeId = this.reportStore.selectedWellId();
+    const responseData = this.wellStore.response()?.data;
+
+    if (!responseData || !activeId) return null;
+
+    return responseData.find(item =>
+      String(item.DRLG_OP_STATUS?.[0]?.epANum) === String(activeId)
+    ) ?? null;
+  });
+
+  constructor() {
+
+    effect(() => {
+      const id = this.reportStore.selectedWellId();
+      if (id) {
+        console.log('Flow Step 2: Selection change detected. Fetching data for:', id);
+        this.wellStore.loadWellData(id);
+      }
+    });
+  }
+}
+
+API Response:
+{
     "statusCode": 200,
     "error": false,
     "message": "Success",
@@ -403,515 +758,5 @@ Here is the response {
         }
     ]
 }
-fix the below error
-ERROR TypeError: Cannot read properties of undefined (reading '0')
-    at MiscPresWellDataComponent_Conditional_0_Template (misc-pres-well-data.component.html:21:9)
-
-and below warnings as well
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:8:37:
-      8 │         {{ wellData.RIG_ACTIVITY[0]?.wellName || "N/A" }}
-        ╵                                      ~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:11:37:
-      11 │         {{ wellData.RIG_ACTIVITY[0]?.welltype || "N/A" }}
-         ╵                                      ~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:22:48:
-      22 │           wellData.EXAD_GWD_IR_HYDROGEOLOGY[0]?.estTargetAquifier ||
-         ╵                                                 ~~~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:23:41:
-      23 │             wellData.EXAD_RCD_PREWAP[0]?.targetFormation ||
-         ╵                                          ~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:36:47:
-      36 │           [title]="wellData.DRLG_OP_STATUS[0]?.nxt24HrPlanRmk || ''"
-         ╵                                                ~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:38:41:
-      38 │ ...      {{ wellData.DRLG_OP_STATUS[0]?.nxt24HrPlanRmk || "Active" }}
-         ╵                                         ~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:56:39:
-      56 │         {{ wellData.DRLG_OP_STATUS[0]?.spuddays ?? 0 }} /
-         ╵                                        ~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:57:40:
-      57 │         {{ wellData.NEW_TARGET_DAYS[0]?.targetDays ?? 0 }}
-         ╵                                         ~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:70:40:
-      70 │             wellData.DRLG_OP_STATUS[0]?.spuddays ?? 0
-         ╵                                         ~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:81:41:
-      81 │             wellData.NEW_TARGET_DAYS[0]?.targetDays ?? 0
-         ╵                                          ~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:91:40:
-      91 │         BI-{{ wellData.RIG_ACTIVITY[0]?.biNum || "N/A" }}
-         ╵                                         ~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:96:43:
-      96 │         [title]="wellData.RIG_ACTIVITY[0]?.waterWell || ''"
-         ╵                                            ~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:98:37:
-      98 │         {{ wellData.RIG_ACTIVITY[0]?.waterWell || "N/A" }}
-         ╵                                      ~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:107:41:
-      107 │           {{ wellData.DRLG_OP_STATUS[0]?.footage | number }}
-          ╵                                          ~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:125:48:
-      125 │ ...   [title]="wellData.EXAD_GWD_IR_WATER[0]?.offsetWaterWell || ''"
-          ╵                                               ~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:127:42:
-      127 │ ...    {{ wellData.EXAD_GWD_IR_WATER[0]?.offsetWaterWell || "N/A" }}
-          ╵                                          ~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:138:39:
-      138 │         {{ wellData.DRLG_OP_STATUS[0]?.wPrsntDpth | number }}
-          ╵                                        ~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:148:51:
-      148 │ ...title]="wellData.NEXT_2_WELL_ACTIVITY[0]?.nextWellActivity || ''"
-          ╵                                              ~~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:150:45:
-      150 │ ...{{ wellData.NEXT_2_WELL_ACTIVITY[0]?.nextWellActivity || "N/A" }}
-          ╵                                         ~~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-Watch mode enabled. Watching for file changes...
-NOTE: Raw file sizes do not reflect development server per-request transformations.
-  ➜  Local:   http://localhost:4200/
-  ➜  press h + enter to show help
-Initial chunk files | Names         |  Raw size
-main.js             | main          | 378.09 kB | 
-styles.css          | styles        | 344.39 kB | 
-polyfills.js        | polyfills     |  89.77 kB | 
-
-                    | Initial total | 812.26 kB
-
-Application bundle generation complete. [2.584 seconds]
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:8:37:
-      8 │         {{ wellData.RIG_ACTIVITY[0]?.wellName || "N/A" }}
-        ╵                                      ~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:11:37:
-      11 │         {{ wellData.RIG_ACTIVITY[0]?.welltype || "N/A" }}
-         ╵                                      ~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:22:48:
-      22 │           wellData.EXAD_GWD_IR_HYDROGEOLOGY[0]?.estTargetAquifier ||
-         ╵                                                 ~~~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:23:41:
-      23 │             wellData.EXAD_RCD_PREWAP[0]?.targetFormation ||
-         ╵                                          ~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:36:47:
-      36 │           [title]="wellData.DRLG_OP_STATUS[0]?.nxt24HrPlanRmk || ''"
-         ╵                                                ~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:38:41:
-      38 │ ...      {{ wellData.DRLG_OP_STATUS[0]?.nxt24HrPlanRmk || "Active" }}
-         ╵                                         ~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:56:39:
-      56 │         {{ wellData.DRLG_OP_STATUS[0]?.spuddays ?? 0 }} /
-         ╵                                        ~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:57:40:
-      57 │         {{ wellData.NEW_TARGET_DAYS[0]?.targetDays ?? 0 }}
-         ╵                                         ~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:70:40:
-      70 │             wellData.DRLG_OP_STATUS[0]?.spuddays ?? 0
-         ╵                                         ~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:81:41:
-      81 │             wellData.NEW_TARGET_DAYS[0]?.targetDays ?? 0
-         ╵                                          ~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:91:40:
-      91 │         BI-{{ wellData.RIG_ACTIVITY[0]?.biNum || "N/A" }}
-         ╵                                         ~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:96:43:
-      96 │         [title]="wellData.RIG_ACTIVITY[0]?.waterWell || ''"
-         ╵                                            ~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:98:37:
-      98 │         {{ wellData.RIG_ACTIVITY[0]?.waterWell || "N/A" }}
-         ╵                                      ~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:107:41:
-      107 │           {{ wellData.DRLG_OP_STATUS[0]?.footage | number }}
-          ╵                                          ~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:125:48:
-      125 │ ...   [title]="wellData.EXAD_GWD_IR_WATER[0]?.offsetWaterWell || ''"
-          ╵                                               ~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:127:42:
-      127 │ ...    {{ wellData.EXAD_GWD_IR_WATER[0]?.offsetWaterWell || "N/A" }}
-          ╵                                          ~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:138:39:
-      138 │         {{ wellData.DRLG_OP_STATUS[0]?.wPrsntDpth | number }}
-          ╵                                        ~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:148:51:
-      148 │ ...title]="wellData.NEXT_2_WELL_ACTIVITY[0]?.nextWellActivity || ''"
-          ╵                                              ~~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:150:45:
-      150 │ ...{{ wellData.NEXT_2_WELL_ACTIVITY[0]?.nextWellActivity || "N/A" }}
-          ╵                                         ~~~~~~~~~~~~~~~~
-
-  Error occurs in the template of component MiscPresWellDataComponent.
-
-    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
-      10 │   templateUrl: './misc-pres-well-data.component.html',
-         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
