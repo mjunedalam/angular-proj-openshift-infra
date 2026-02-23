@@ -1,108 +1,124 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { AgGridAngular } from 'ag-grid-angular';
-import { ColDef } from 'ag-grid-community';
-import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { inject } from '@angular/core';
+import { pipe, switchMap, tap, catchError, of, filter } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { WwellDataService } from '../../../services/wwell-data.service';
 
-@Component({
-  selector: 'app-picked-formation-tops',
-  standalone: true,
-  // Make sure to import AgGridAngular here
-  imports: [CommonModule, AgGridAngular], 
-  templateUrl: './picked-formation-tops.component.html',
-  styleUrl: './picked-formation-tops.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
-})
-export class PickedFormationTopsComponent {
-  public readonly store = inject(wellDataStore);
+// 1. IMPORT YOUR EXISTING INTERFACES
+import { IWellData } from '../../../models/well-design/wwell-data.model';
+import { ApiResponse } from '../../models/api-response.model';
 
-  // Define AG Grid Columns to match your image exactly
-  public colDefs: ColDef[] = [
-    { 
-      headerName: 'Formation', 
-      field: 'formation', 
-      flex: 1,
-      // Cyan background with white text for the first column
-      cellStyle: { backgroundColor: '#48b5d3', color: 'white', fontWeight: '600', borderRight: '1px solid rgba(255,255,255,0.2)' }
-    },
-    { 
-      headerName: 'Depth', 
-      field: 'depth', 
-      flex: 1,
-      // Format number with commas
-      valueFormatter: (params) => params.value ? Number(params.value).toLocaleString() : '',
-      // Blue text
-      cellStyle: { color: '#1e40af', fontWeight: '500', borderRight: '1px solid #e2e8f0' } 
-    },
-    { 
-      headerName: 'Remarks', 
-      field: 'remarks', 
-      flex: 2,
-      // Blue text, uppercase, slightly smaller font
-      cellStyle: { color: '#1e40af', textTransform: 'uppercase', fontSize: '12px' } 
-    }
-  ];
+// ==========================================
+// 2. VIEW MODEL FOR THE UI
+// ==========================================
+export interface PickedFormation {
+  formation: string;
+  depth: number;
+  remarks: string;
+}
 
-  // Optional: Default column definitions for clean layout
-  public defaultColDef: ColDef = {
-    resizable: false,
-    sortable: false,
-    filter: false,
-    // Centers the text in the cells
-    cellClass: 'text-center flex justify-center items-center' 
+export interface WellDataViewModel {
+  wellName: string;
+  wellType: string;
+  targetedAquifer: string;
+  currentStatus: string;
+  daysSinceSpud: number;
+  targetDays: number;
+  biNum: string;
+  waterWell: string;
+  footage: number;
+  previousWell: string;
+  currentDepth: number;
+  nextWell: string;
+  pickedFormations: PickedFormation[];
+}
+
+// ==========================================
+// 3. BLINK-PROOF FALLBACK STATE
+// ==========================================
+const DEFAULT_VM: Readonly<WellDataViewModel> = {
+  wellName: '--', wellType: '--', targetedAquifer: '--',
+  currentStatus: 'Awaiting Selection...', daysSinceSpud: 0, targetDays: 0,
+  biNum: '--', waterWell: '--', footage: 0, previousWell: '--',
+  currentDepth: 0, nextWell: '--', pickedFormations: []
+};
+
+interface WellDataState {
+  viewModel: WellDataViewModel;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// ==========================================
+// 4. PURE MAPPING FUNCTION (Now uses YOUR IWellData)
+// ==========================================
+function mapToViewModel(raw?: IWellData): WellDataViewModel {
+  if (!raw) return { ...DEFAULT_VM };
+
+  return {
+    wellName: raw.RIG_ACTIVITY?.[0]?.wellName || 'N/A',
+    wellType: raw.RIG_ACTIVITY?.[0]?.welltype || 'N/A',
+    targetedAquifer: raw.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier || raw.EXAD_RCD_PREWAP?.[0]?.targetFormation || 'N/A',
+    currentStatus: raw.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk || 'Active',
+    daysSinceSpud: raw.DRLG_OP_STATUS?.[0]?.spuddays ?? 0,
+    targetDays: raw.NEW_TARGET_DAYS?.[0]?.targetDays ?? 0,
+    biNum: raw.RIG_ACTIVITY?.[0]?.biNum || 'N/A',
+    waterWell: raw.RIG_ACTIVITY?.[0]?.waterWell || 'N/A',
+    footage: raw.DRLG_OP_STATUS?.[0]?.footage ?? 0,
+    previousWell: raw.EXAD_GWD_IR_WATER?.[0]?.offsetWaterWell || 'N/A',
+    currentDepth: raw.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
+    nextWell: raw.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity || 'N/A',
+    
+    // Map your IFormationTops gracefully, handling the 'null' possibility 
+    pickedFormations: raw.DRLG_FM_TOPS?.map(top => ({
+      formation: top.stLongCd || 'N/A',
+      depth: top.wStDmrkDpth || 0,
+      remarks: top.wStDmrkRmk || '' // || '' converts null to an empty string safely
+    })) || []
   };
 }
 
-====
-<div class="relative transition-all duration-300 w-full rounded-xl overflow-hidden shadow-md border border-blue-100 flex flex-col"
-     [class.opacity-40]="store.isLoading()" 
-     [class.pointer-events-none]="store.isLoading()">
-
-  @if (store.isLoading()) {
-    <div class="absolute inset-0 z-20 flex items-center justify-center bg-white/30 backdrop-blur-[1px]">
-      <div class="bg-white/90 p-2 rounded-full shadow-lg">
-        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600"></i>
-      </div>
-    </div>
-  }
-
-  <div class="bg-gradient-to-r from-blue-700 via-blue-500 to-blue-400 p-3 text-center border-b-2 border-cyan-400 z-10">
-    <h2 class="text-white text-xl font-light tracking-wide">Picked Formation</h2>
-  </div>
-
-  <ag-grid-angular
-    class="ag-theme-alpine w-full"
-    style="width: 100%;"
-    [rowData]="store.viewModel().pickedFormations"
-    [columnDefs]="colDefs"
-    [defaultColDef]="defaultColDef"
-    [domLayout]="'autoHeight'"
-    [headerHeight]="40"
-    [rowHeight]="40">
-  </ag-grid-angular>
-
-</div>
-===
-/* Target AG Grid headers to match the design */
-:host ::ng-deep .ag-theme-alpine {
-  // Override AG Grid CSS variables for a seamless look
-  --ag-header-background-color: #2563eb; /* blue-600 */
-  --ag-header-foreground-color: #ffffff;
-  --ag-border-color: #e2e8f0;
-  --ag-row-border-color: #bfdbfe; /* blue-200 */
-
-  .ag-header-cell {
-    font-weight: 500;
-    letter-spacing: 0.025em;
-  }
-  
-  // Center the header text
-  .ag-header-cell-label {
-    justify-content: center;
-  }
-  
-  // Remove the border around the entire grid since our wrapper handles it
-  .ag-root-wrapper {
-    border: none !important;
-  }
-}
+// ==========================================
+// 5. THE SIGNAL STORE
+// ==========================================
+export const wellDataStore = signalStore(
+  { providedIn: 'root' },
+  withState<WellDataState>({
+    viewModel: { ...DEFAULT_VM },
+    isLoading: false,
+    error: null
+  }),
+  withMethods((store, service = inject(WwellDataService)) => ({
+    
+    loadWellData: rxMethod<string | null | undefined>(
+      pipe(
+        filter((id): id is string => !!id && id.trim() !== ''), 
+        tap(() => {
+          patchState(store, { isLoading: true, error: null });
+        }),
+        switchMap((id) => 
+          service.getWellDataByEPANum(id).pipe(
+            // Let TypeScript automatically infer the response type from your service!
+            tap((res) => {
+              const rawData = res.data?.[0];
+              patchState(store, { 
+                viewModel: mapToViewModel(rawData), 
+                isLoading: false 
+              });
+            }),
+            catchError((err: HttpErrorResponse | Error) => {
+              console.error("[WellDataStore] Fetch Error:", err);
+              patchState(store, { 
+                isLoading: false, 
+                error: err.message || 'Data fetch failed' 
+              });
+              return of(null);
+            })
+          )
+        )
+      )
+    )
+    
+  }))
+);
