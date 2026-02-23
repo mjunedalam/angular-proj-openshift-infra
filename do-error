@@ -1,33 +1,250 @@
-HTTP/1.1 500 Internal Server Error
-Content-Type: application/json;charset=UTF-8
-content-length: 648
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
 
-### Error querying database.  Cause: java.sql.SQLException: ORA-17012: Parameter type conflict (input type=9 output type=112)
-https://docs.oracle.com/error-help/db/ora-17012/
-### The error may exist in C:\Dev\JavaDev\Agwa-Services\dailyoperations\target\classes\mappers\DrillingEyeMapper.xml
-### The error may involve defaultParameterMap
-### The error occurred while setting parameters
-### SQL: {call EXAD.EXAD_AGWA_QUERIES_PKG.drlg_mr(                 ?, ?               )}
-### Cause: java.sql.SQLException: ORA-17012: Parameter type conflict (input type=9 output type=112)
-https: //docs.oracle.com/error-help/db/ora-17012/
-Response file saved.
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:8:11:
+      8 │         {{ wellData.RIG_ACTIVITY?.[0]?.wellName || "N/A" }}
+        ╵            ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-getting above error
-> 2026-02-10T103653.500.json
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.aramco.easd.dailyoperations.mappers.DrillingEyeMapper">
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-    <select id="fetchDrillingEyeData"
-            statementType="CALLABLE">
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:11:11:
+      11 │         {{ wellData.RIG_ACTIVITY?.[0]?.welltype || "N/A" }}
+         ╵            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-        {call EXAD.EXAD_AGWA_QUERIES_PKG.drlg_mr(
-                #{jsonIn,  jdbcType=CLOB, mode=INOUT},
-                #{jsonOut, jdbcType=CLOB, mode=OUT}
-              )}
-    </select>
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
 
-</mapper>
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:22:10:
+      22 │           wellData.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifie...
+         ╵           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:23:12:
+      23 │             wellData.EXAD_RCD_PREWAP?.[0]?.targetFormation ||
+         ╵             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:36:19:
+      36 │           [title]="wellData.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk ||...
+         ╵                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:38:13:
+      38 │           {{ wellData.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk || "Acti...
+         ╵              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:56:11:
+      56 │         {{ wellData.DRLG_OP_STATUS?.[0]?.spuddays ?? 0 }} /
+         ╵            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:57:11:
+      57 │         {{ wellData.NEW_TARGET_DAYS?.[0]?.targetDays ?? 0 }}
+         ╵            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:70:12:
+      70 │             wellData.DRLG_OP_STATUS?.[0]?.spuddays ?? 0
+         ╵             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:81:12:
+      81 │             wellData.NEW_TARGET_DAYS?.[0]?.targetDays ?? 0
+         ╵             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:91:14:
+      91 │         BI-{{ wellData.RIG_ACTIVITY?.[0]?.biNum || "N/A" }}
+         ╵               ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:96:17:
+      96 │         [title]="wellData.RIG_ACTIVITY?.[0]?.waterWell || ''"
+         ╵                  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:98:11:
+      98 │         {{ wellData.RIG_ACTIVITY?.[0]?.waterWell || "N/A" }}
+         ╵            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:107:13:
+      107 │           {{ wellData.DRLG_OP_STATUS?.[0]?.footage | number }}
+          ╵              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:125:17:
+      125 │         [title]="wellData.EXAD_GWD_IR_WATER?.[0]?.offsetWaterWell...
+          ╵                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:127:11:
+      127 │         {{ wellData.EXAD_GWD_IR_WATER?.[0]?.offsetWaterWell || "N...
+          ╵            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:138:11:
+      138 │         {{ wellData.DRLG_OP_STATUS?.[0]?.wPrsntDpth | number }}
+          ╵            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:148:17:
+      148 │         [title]="wellData.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActi...
+          ╵                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be safely removed. [plugin angular-compiler]
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.html:150:11:
+      150 │         {{ wellData.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity |...
+          ╵            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component MiscPresWellDataComponent.
+
+    src/app/features/persentation/misc-pres-well-data/misc-pres-well-data.component.ts:10:15:
+      10 │   templateUrl: './misc-pres-well-data.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+fix all above warnings as well as below 10:55:30 AM [vite] (client) error while updating dependencies:
+Error: EPERM: operation not permitted, rename 'C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\.angular\cache\19.2.17\agwa\vite\deps_temp_7dad86f2' -> 'C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\.angular\cache\19.2.17\agwa\vite\deps'
+fix permanantly
