@@ -1,119 +1,199 @@
-package com.aramco.easd.dailyoperations.models.drilling;
+@if (selectedWellData(); as wellData) {
+<div class="grid grid-cols-3 gap-3">
+  
+  <div class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm overflow-hidden hover:shadow-xl transition-shadow duration-300 animate-pulse-shadow">
+    <div class="text-[10px] opacity-80 mb-1">Well Name</div>
+    <div class="font-bold text-sm leading-tight">{{ wellData.RIG_ACTIVITY?.[0]?.wellName || 'N/A' }}</div>
+    <div class="text-[10px] opacity-80">{{ wellData.RIG_ACTIVITY?.[0]?.welltype || 'N/A' }}</div>
+  </div>
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
+  <div class="col-span-1 bg-white bg-gradient-cyan-blue p-3 rounded-2xl shadow-sm flex flex-col justify-center border border-slate-100 hover:shadow-xl transition-shadow duration-300">
+    <div class="text-[10px] text-slate-500 mb-1">Targeted Aquifer</div>
+    <div class="font-bold text-blue-800 flex items-center gap-1">
+      <i class="fa-solid fa-droplet text-blue-500"></i> 
+      {{ wellData.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier || wellData.EXAD_RCD_PREWAP?.[0]?.targetFormation || 'N/A' }}
+    </div>
+  </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL) // Best practice: Removes nulls from API output
-public record DrillingEyeResponse(
-    @JsonProperty("RIG_ACTIVITY") List<RigActivity> rigActivity,
-    @JsonProperty("WELL_MASTER") List<WellMaster> wellMaster,
-    @JsonProperty("RIG_IDENTIFICATION") List<RigIdentification> rigIdentification,
-    @JsonProperty("CONTACT") List<Contact> contact,
-    @JsonProperty("DRLG_OP_STATUS") List<DrlgOpStatus> drlgOpStatus,
-    @JsonProperty("DRLG_FM_TOPS") List<DrlgFmTops> drlgFmTops,
-    @JsonProperty("DRLG_FD_TDAY") List<DrlgFootage> drlgFdTday,
-    @JsonProperty("ROP_DATA") List<RopData> ropData,
-    @JsonProperty("NEXT_2_WELL_ACTIVITY") List<NextWellActivity> next2WellActivity,
-    @JsonProperty("NEW_TARGET_DAYS") List<TargetDays> newTargetDays,
-    @JsonProperty("DRLG_OP_SMRY") List<DrlgOpSummary> drlgOpSmry,
-    @JsonProperty("BITINFO") List<Object> bitInfo
-) {}
+  <div class="col-span-2 bg-white p-3 rounded-2xl shadow-sm flex items-center justify-between border border-slate-100 hover:shadow-xl transition-shadow duration-300">
+    <div class="flex-1 min-w-0 pr-2">
+      <div class="text-[10px] text-slate-500 mb-1">Current Status</div>
+      <div class="font-bold text-blue-800 text-xs truncate" [title]="wellData.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk || ''">
+        {{ wellData.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk || 'Active' }}
+      </div>
+    </div>
+    <div class="bg-gradient-cyan-blue p-2 rounded-full text-white shadow-sm animate-pulse flex-shrink-0">
+      <i class="fa-solid fa-gear animate-spin-slow"></i>
+    </div>
+  </div>
 
-// Jackson maps these automatically because the Java variable names match the JSON keys exactly.
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record RigActivity(
-    Integer racMovTruckloadTot, Integer racMovPreRelsTruckloads, String racMovLegalRoadFlg,
-    Integer racMovWinchTruckCnt, Integer racMovFlatbedTruckCnt, Integer racMovCranesCnt,
-    Integer racMovForkliftsCnt, Double racMovAsphaltRoadDis, Double racMovSkidRoadDis,
-    Double wRigMoveDis, String drlgOpTypCd, String wDrlgTypeDesc, String wWellTypeDesc,
-    String biNum, String biNumDesc, String drlgPlanWellDesc, String wellName2, String wellName,
-    String spuddate, String wRigCd, String wDrlgLocDesc, String welltype, Integer wDrlgTrgtDay,
-    String waterWell, String wDrlgClsfCd, String wDrlgClsfLabl, String wDrlgSftCntgcyFlg,
-    String wDrlgEndDt, String closeLpDrlgFg, String rigMainCampMvFlg, 
-    Double racCrewCampDdLatCord, Double racCrewCampDdLonCord
-) {}
+  <div class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300">
+    <div class="flex items-center gap-2 mb-1">
+      <i class="fa-regular fa-calendar text-cyan-300"></i>
+      <div class="text-[10px] opacity-80">Days</div>
+    </div>
+    <div class="font-bold text-sm">
+      {{ wellData.DRLG_OP_STATUS?.[0]?.spuddays ?? 0 }} / {{ wellData.NEW_TARGET_DAYS?.[0]?.targetDays ?? 0 }}
+    </div>
+  </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record WellMaster(
-    String well, String offshore, Double utmNorth, Double utmEast, Double lon, Double lat
-) {}
+  <div class="col-span-2 grid grid-cols-2 gap-3 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl transition-shadow duration-300">
+    <div class="text-center">
+      <div class="text-[10px] text-slate-500 mb-1">Days since Spud</div>
+      <div class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-cyan-500 border-r-blue-500 mx-auto flex items-center justify-center shadow-sm bg-white animate-pulse">
+        <span class="text-base font-extrabold text-blue-900">{{ wellData.DRLG_OP_STATUS?.[0]?.spuddays ?? 0 }}</span>
+      </div>
+    </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record RigIdentification(
-    String rigname, Integer rigStatus, String code, String description, String rigShrtName,
-    String rigLocCd, String cstCtrCd, String opOrgnCd, String rigTypCd, String rigCntrctName,
-    String rigCntrctNum, String rigCntrctPlStaDt, String rigCntrctActlStaDt, 
-    String rigCntrctExpirDt, String rigEndSrvcDt, Double rigHeight, Integer rigHp, 
-    Integer rigMaxDpthCap, String drlgUnitTypCd, Double rigEstMoveRate, String svcoCd, 
-    Long sapVndrId, String opPlanFlg, String wRigActStsCd, String drlgIncentPgmFlg, 
-    String wRigAutoAdjFlg, String racExecBusRuleFlg, String rigRmk, String epCrDataCd, 
-    String epCrDataDt, String epLtDmoCd, String epLtDataModDt, String epTrigModCd, 
-    String epTrigModDt, String drlgUnitDescription
-) {}
+    <div class="text-center">
+      <div class="text-[10px] text-slate-500 mb-1">Target Days</div>
+      <div class="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-300 mx-auto flex items-center justify-center shadow-sm bg-white animate-pulse">
+        <span class="text-base font-extrabold text-blue-900">{{ wellData.NEW_TARGET_DAYS?.[0]?.targetDays ?? 0 }}</span>
+      </div>
+    </div>
+  </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record Contact(
-    String rigContNum, String description, String rigContNumPdf, String rigDescriptionPdf
-) {}
+  <div class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300">
+    <div class="font-bold text-lg leading-none mb-1">BI-{{ wellData.RIG_ACTIVITY?.[0]?.biNum || 'N/A' }}</div>
+    <div class="text-[10px] opacity-80">Supporting</div>
+    <div class="font-bold text-xs truncate" [title]="wellData.RIG_ACTIVITY?.[0]?.waterWell || ''">
+      {{ wellData.RIG_ACTIVITY?.[0]?.waterWell || 'N/A' }}
+    </div>
+  </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record DrlgOpStatus(
-    Double wDrlgDlyCst2, Double wMudDlyCst2, Long epANum, String wActDt, String wRigCd,
-    Double wPrsntDpth, String epLtDataModDt, String epLtDmoCd, Double wDpthChgDis,
-    String wDrlgEngName, String wFmanName, String wMudCircPc, Double wPrevDpth, 
-    Integer wSpudOprDay, String wOpRmk, Long racNum, String wDrlgSuptName, String foremanRmk, 
-    String epCrDataCd, String epCrDataDt, String wDrlgSuptLid, Long wFmanEmpnum, 
-    Long wFmanEmpnum2, String wFmanName2, String wFmanSvcoCd, String wFmanSvcoCd2, 
-    Integer wRer100ppm, Integer wRer30ppm, String nxt24HrPlanRmk, Long wDrlgEngEmpnum, 
-    String drlgEngDivOrgnCd, String drlgOpDivOrgnCd, Double fuelEngConsVol, 
-    String foremanRmkPdf, Integer spuddays, Integer footage, String wFmanNid, 
-    String wFmanNid2, String wDrlgEngNid
-) {}
+  <div class="col-span-2 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex items-center justify-between relative overflow-hidden hover:shadow-xl transition-shadow duration-300">
+    <div>
+      <div class="font-extrabold text-2xl">{{ wellData.DRLG_OP_STATUS?.[0]?.footage | number }}</div>
+      <div class="text-[10px] opacity-80">Feet Drilled Today</div>
+    </div>
+    <div class="text-cyan-300 opacity-50 absolute right-2 bottom-0 text-4xl">
+      <i class="fa-solid fa-water"></i>
+    </div>
+    <div class="text-white absolute top-2 right-1/3">
+      <i class="fa-solid fa-arrow-down"></i>
+    </div>
+  </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record DrlgFmTops(
-    Long epANum, String wActDt, String stLongCd, Double wStDmrkDpth, String wStDmrkRmk,
-    String epLtDataModDt, String epLtDmoCd, String ltrlName, String epCrDataCd, 
-    String epCrDataDt, Long racNum, Long dftNum
-) {}
+  <div class="col-span-1 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300">
+    <div class="text-[10px] opacity-80 mb-1">Previous Well</div>
+    <div class="font-bold text-sm truncate" [title]="wellData.EXAD_GWD_IR_WATER?.[0]?.offsetWaterWell || ''">
+      {{ wellData.EXAD_GWD_IR_WATER?.[0]?.offsetWaterWell || 'N/A' }}
+    </div>
+  </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record DrlgFootage(Integer footage) {}
+  <div class="col-span-2 bg-gradient-cyan-blue p-3 rounded-2xl text-white shadow-sm flex items-center justify-between hover:shadow-xl transition-shadow duration-300">
+    <div class="text-[10px] opacity-80 font-medium">Current Depth (FT.DF)</div>
+    <div class="font-extrabold text-2xl">{{ wellData.DRLG_OP_STATUS?.[0]?.wPrsntDpth | number }}</div>
+  </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record RopData(Double rop) {}
+  <div class="col-span-1 bg-gradient-blue-dark p-3 rounded-2xl text-white shadow-sm flex flex-col justify-center hover:shadow-xl transition-shadow duration-300">
+    <div class="text-[10px] opacity-80 mb-1">Next Well</div>
+    <div class="font-bold text-sm truncate" [title]="wellData.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity || ''">
+      {{ wellData.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity || 'N/A' }}
+    </div>
+  </div>
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record TargetDays(Integer targetDays) {}
+</div>
+} @else {
+  <div class="flex items-center justify-center p-12 text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
+    <i class="fa-solid fa-circle-notch fa-spin text-2xl mr-3 text-blue-500"></i> 
+    <span class="text-sm font-medium">Loading Well Data...</span>
+  </div>
+}
+=====
+import { Component, computed, inject } from '@angular/core';
+import { wellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+import { CommonModule } from '@angular/common';
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record NextWellActivity(
-    Long racNum, String wGnrName, String nextWellActivity, String rigShrtName,
-    String wDrlgStaDt, String wDrlgEndDt, Integer today, Long wBatchNum, 
-    Integer canMove, String biNum, Long epANum, Long nextLocation, String nextBiNum
-) {}
+@Component({
+  selector: 'app-misc-pres-well-data',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './misc-pres-well-data.component.html',
+  styleUrl: './misc-pres-well-data.component.scss'
+})
+export class MiscPresWellDataComponent {
+  private readonly reportStore = inject(MorningReportStore);
+  private readonly wellStore = inject(wellDataStore);
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-record DrlgOpSummary(
-    String toTm2, Long epANum, String wActDt, String wOpCd, String wEvntTime, 
-    String wOpTimeCd, String wOpObjCd, String wHolSz, Double wOpDur, String epLtDataModDt, 
-    String epLtDmoCd, String ltrlName, String wDrlgOpDt, String wOpRmk, String wOpRmkPdf, 
-    Long racNum, String epCrDataCd, String epCrDataDt, String holSecTypCd, Double wEvntStaDpth, 
-    Double wEvntEndDpth, String svcoCd, String wActvDrlgFlg, Long dopNum, String wMajOpCd, 
-    String lostTmFlg, Double wHoleStaDpth, Double wHoleEndDpth, String wDrlgOpDttm, 
-    String toTm, String dltsDffsNum, String ltDffType, String ltType
-) {}
+  // We just grab the first item from the array response
+  readonly selectedWellData = computed(() => {
+    const responseData = this.wellStore.response()?.data;
+    if (!responseData) return null;
+    return Array.isArray(responseData) ? responseData[0] : responseData;
+  });
+
+  constructor() {
+    // Magic happens here:
+    // Pass the Signal itself (not its value). 
+    // rxMethod will auto-subscribe, track changes, and prevent race conditions!
+    this.wellStore.loadWellData(this.reportStore.selectedWellId);
+  }
+}
+=====
+import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { inject } from '@angular/core';
+import { pipe, switchMap, tap, catchError, of, filter, finalize } from 'rxjs';
+import { ApiResponse } from '../../models/api-response.model';
+import { IWellData } from '../../../models/well-design/wwell-data.model';
+import { WwellDataService } from '../../../services/wwell-data.service';
+import { LoadingService } from '../../services/loading.service';
+
+interface WellDataState {
+    response: ApiResponse<IWellData> | null;
+}
+
+export const wellDataStore = signalStore(
+    { providedIn: 'root' },
+    withState<WellDataState>({ response: null }),
+    withMethods(
+        (
+            store,
+            service = inject(WwellDataService),
+            loading = inject(LoadingService)
+        ) => ({
+            // rxMethod can accept a raw value, an Observable, or a Signal!
+            loadWellData: rxMethod<string | null | undefined>(
+                pipe(
+                    // 1. Only proceed if we actually have an ID
+                    filter((epNum): epNum is string => !!epNum), 
+                    
+                    // 2. Show loading and clear old data immediately
+                    tap(() => {
+                        loading.show();
+                        patchState(store, { response: null });
+                    }),
+
+                    // 3. switchMap cancels the previous request if a new epNum comes in
+                    switchMap((epNum) => {
+                        return service.getWellDataByEPANum(epNum).pipe(
+                            tap((res) => {
+                                console.log("Well data loaded:", res);
+                                patchState(store, { response: res });
+                            }),
+                            catchError((err) => {
+                                patchState(store, {
+                                    response: {
+                                        statusCode: err.status || 500,
+                                        error: true,
+                                        message: err.message,
+                                        data: null as any,
+                                    },
+                                });
+                                // Return safe value so the outer stream doesn't die on error
+                                return of(null); 
+                            }),
+                            // Hide loading spinner whether it succeeds or fails
+                            finalize(() => loading.hide())
+                        );
+                    })
+                )
+            ),
+            
+            // Note: If refresh needs to do the exact same thing, it can just call loadWellData again 
+            // from the component, or you can keep a separate method if the logic diverges later.
+        })
+    )
+);
