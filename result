@@ -1,87 +1,20 @@
-$chip-bg:            #ffffff; /* White by default */
-$chip-border:        #cbd5e1;
-$chip-text:          #334155; /* Dark text */
-$chip-active-bg:     #87ceeb; /* Sky blue when selected */
-$chip-active-border: #38bdf8;
-$strip-bg:           #ffffff; /* Removed black background */
-$accent:             #0ea5e9;
-
-.chip-strip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 20px;
-  background: $strip-bg;
-  border-bottom: 1px solid #e2e8f0;
-
-  &__label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: #64748b;
-    margin-right: 4px;
-    flex-shrink: 0;
-  }
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 14px 5px 10px;
-  border-radius: 20px;
-  border: 1.5px solid $chip-border;
-  background: $chip-bg;
-  color: $chip-text;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  cursor: pointer;
-  outline: none;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.12s ease;
-
-  &:hover {
-    background: #f8fafc;
-    border-color: $accent;
-    color: #0f172a;
-    transform: translateY(-1px);
-  }
-
-  &:focus-visible {
-    box-shadow: 0 0 0 3px rgba($accent, 0.4);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &--active {
-    background: $chip-active-bg;
-    border-color: $chip-active-border;
-    color: #0f172a; /* Dark text for contrast against sky blue */
-    box-shadow: 0 2px 10px rgba(135, 206, 235, 0.55);
-
-    .chip__dot {
-      background: #ffffff;
-      box-shadow: 0 0 5px #ffffff;
-    }
-  }
-
-  &__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #94a3b8;
-    flex-shrink: 0;
-    transition: background 0.2s, box-shadow 0.2s;
-  }
-}
+// --- NEW COMPUTED SIGNALS FOR SIDEBAR ---
+    miscWellData: computed((): MiscWellData | null => {
+      const d = wellDetails();
+      if (!d) return null;
+      return {
+        wellName: d.RIG_ACTIVITY?.[0]?.wellName ?? d.WELL_MASTER?.[0]?.well ?? 'N/A',
+        targetDesc: d.RIG_ACTIVITY?.[0]?.welltype ?? d.RIG_ACTIVITY?.[0]?.drlgPlanWellDesc ?? 'N/A',
+        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier ?? 'N/A',
+        currentStatus: d.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk ?? d.DRLG_OP_STATUS?.[0]?.wOpRmk ?? 'N/A',
+        daysSinceSpud: d.DRLG_OP_STATUS?.[0]?.spuddays ?? 0,
+        targetDays: d.NEW_TARGET_DAYS?.[0]?.targetDays ?? d.RIG_ACTIVITY?.[0]?.wDrlgTrgtDay ?? 0,
+        biNum: d.RIG_ACTIVITY?.[0]?.biNum ?? 'N/A',
+        supportingWell: d.RIG_ACTIVITY?.[0]?.waterWell ?? 'N/A',
+        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? d.DRLG_OP_STATUS?.[0]?.footage ?? 0,
+        previousWell: 'N/A', // Not provided in current JSON
+        currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
+        nextWell: d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity ?? 'N/A',
+      };
+    }),
+===
