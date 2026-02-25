@@ -1,108 +1,33 @@
-import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
-import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { inject } from '@angular/core';
-import { pipe, switchMap, tap, catchError, of, filter } from 'rxjs';
-import { HttpErrorResponse } from '@angular/common/http';
-import { WwellDataService } from '../../../services/wwell-data.service';
-
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-export interface PickedFormation {
-    formation: string;
-    depth: number;
-    remarks: string;
-}
-
-export interface WellDataViewModel {
-    wellName: string;
-    wellType: string;
-    targetedAquifer: string;
-    currentStatus: string;
-    daysSinceSpud: number;
-    targetDays: number;
+in well-name-chip component we can utilize this service method
+  getMorningReport(): Observable<MorningReport[]> {
+    return this.http.get<MorningReport[]>(`${this.apiUrl}/morning-report`).pipe(
+      map(reports => reports.map(report => ({
+        ...report,
+        plLtrlEndDpth: report.plLtrlEndDpth ? Number(report.plLtrlEndDpth) : null,
+        wDpthChgDis: report.wDpthChgDis ? Number(report.wDpthChgDis) : null,
+        wPrsntDpth: report.wPrsntDpth ? Number(report.wPrsntDpth) : null
+      })))
+    );
+  }
+export interface MorningReport {
+    epANum: string;
+    wGnrName: string;
+    wRigCd: string;
+    racEstDdLatCord: string;
+    racEstDdLonCord: string;
     biNum: string;
-    waterWell: string;
-    footage: number;
-    previousWell: string;
-    currentDepth: number;
-    nextWell: string;
-    pickedFormations: PickedFormation[];
+    trgtRsvrCd: string;
+    stLongCd: string;
+    wStDmrkDpth: string;
+    wPrsntDpth: number | null;
+    wDpthChgDis: number | null;
+    wOpRmk: string;
+    foremanRmk: string;
+    plLtrlEndDpth: number | null;
+    wEvntTime: string;
+    rigStatus: string;
 }
 
-const DEFAULT_VM: Readonly<WellDataViewModel> = {
-    wellName: '--', wellType: '--', targetedAquifer: '--',
-    currentStatus: 'Awaiting Selection...', daysSinceSpud: 0, targetDays: 0,
-    biNum: '--', waterWell: '--', footage: 0, previousWell: '--',
-    currentDepth: 0, nextWell: '--', pickedFormations: []
-};
+where wGnrName is wellname
 
-interface WellDataState {
-    viewModel: WellDataViewModel;
-    isLoading: boolean;
-    error: string | null;
-}
-
-function mapToViewModel(raw?: IWellData): WellDataViewModel {
-    if (!raw) return { ...DEFAULT_VM };
-
-    return {
-        wellName: raw.RIG_ACTIVITY?.[0]?.wellName || 'N/A',
-        wellType: raw.RIG_ACTIVITY?.[0]?.welltype || 'N/A',
-        targetedAquifer: raw.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier || raw.EXAD_RCD_PREWAP?.[0]?.targetFormation || 'N/A',
-        currentStatus: raw.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk || 'Active',
-        daysSinceSpud: raw.DRLG_OP_STATUS?.[0]?.spuddays ?? 0,
-        targetDays: raw.NEW_TARGET_DAYS?.[0]?.targetDays ?? 0,
-        biNum: raw.RIG_ACTIVITY?.[0]?.biNum || 'N/A',
-        waterWell: raw.RIG_ACTIVITY?.[0]?.waterWell || 'N/A',
-        footage: raw.DRLG_OP_STATUS?.[0]?.footage ?? 0,
-        previousWell: raw.EXAD_GWD_IR_WATER?.[0]?.offsetWaterWell || 'N/A',
-        currentDepth: raw.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
-        nextWell: raw.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity || 'N/A',
-
-        pickedFormations: raw.DRLG_FM_TOPS?.map(top => ({
-            formation: top.stLongCd || 'N/A',
-            depth: top.wStDmrkDpth || 0,
-            remarks: top.wStDmrkRmk || '' // || '' converts null to an empty string safely
-        })) || []
-    };
-}
-
-export const wellDataStore = signalStore(
-    { providedIn: 'root' },
-    withState<WellDataState>({
-        viewModel: { ...DEFAULT_VM },
-        isLoading: false,
-        error: null
-    }),
-    withMethods((store, service = inject(WwellDataService)) => ({
-
-        loadWellData: rxMethod<string | null | undefined>(
-            pipe(
-                filter((id): id is string => !!id && id.trim() !== ''),
-                tap(() => {
-                    patchState(store, { isLoading: true, error: null });
-                }),
-                switchMap((id) =>
-                    service.getWellDataByEPANum(id).pipe(
-                        // Let TypeScript automatically infer the response type from your service!
-                        tap((res) => {
-                            const rawData = res.data?.[0];
-                            patchState(store, {
-                                viewModel: mapToViewModel(rawData),
-                                isLoading: false
-                            });
-                        }),
-                        catchError((err: HttpErrorResponse | Error) => {
-                            console.error("[WellDataStore] Fetch Error:", err);
-                            patchState(store, {
-                                isLoading: false,
-                                error: err.message || 'Data retrieval failed'
-                            });
-                            return of(null);
-                        })
-                    )
-                )
-            )
-        )
-
-    }))
-);
+so update the code accrdingly well-name-chip and store if required others also
