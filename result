@@ -1,20 +1,7 @@
-// --- NEW COMPUTED SIGNALS FOR SIDEBAR ---
-    miscWellData: computed((): MiscWellData | null => {
-      const d = wellDetails();
-      if (!d) return null;
-      return {
-        wellName: d.RIG_ACTIVITY?.[0]?.wellName ?? d.WELL_MASTER?.[0]?.well ?? 'N/A',
-        targetDesc: d.RIG_ACTIVITY?.[0]?.welltype ?? d.RIG_ACTIVITY?.[0]?.drlgPlanWellDesc ?? 'N/A',
-        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier ?? 'N/A',
-        currentStatus: d.DRLG_OP_STATUS?.[0]?.nxt24HrPlanRmk ?? d.DRLG_OP_STATUS?.[0]?.wOpRmk ?? 'N/A',
-        daysSinceSpud: d.DRLG_OP_STATUS?.[0]?.spuddays ?? 0,
-        targetDays: d.NEW_TARGET_DAYS?.[0]?.targetDays ?? d.RIG_ACTIVITY?.[0]?.wDrlgTrgtDay ?? 0,
-        biNum: d.RIG_ACTIVITY?.[0]?.biNum ?? 'N/A',
-        supportingWell: d.RIG_ACTIVITY?.[0]?.waterWell ?? 'N/A',
-        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? d.DRLG_OP_STATUS?.[0]?.footage ?? 0,
-        previousWell: 'N/A', // Not provided in current JSON
-        currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
-        nextWell: d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity ?? 'N/A',
-      };
+pickedFormations: computed((): PickedFormationData[] => {
+      return (wellDetails()?.DRLG_FM_TOPS ?? []).map((t) => ({
+        formation: t.stLongCd,
+        depth: t.wStDmrkDpth,
+        remarks: t.wStDmrkRmk,
+      }));
     }),
-===
