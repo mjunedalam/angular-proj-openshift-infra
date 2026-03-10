@@ -1,141 +1,57 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-
-@Component({
-  selector: 'app-quick-items-list',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './quick-items-list.component.html',
-  styleUrl: './quick-items-list.component.scss'
-})
-export class QuickItemsListComponent {
-  // You can add click handlers here to emit events when a user clicks a specific item
-  onItemClick(item: string): void {
-    console.log(`Navigating to: ${item}`);
-  }
-}
-====
-<div class="quick-list-card">
-  <div class="quick-list-card__header">Quick List</div>
-  
-  <div class="quick-list-card__items">
-    
-    <!-- Item: Reports -->
-    <button class="quick-item" (click)="onItemClick('Reports')">
-      <div class="icon-circle">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10 9 9 9 8 9"></polyline>
-        </svg>
-      </div>
-      <span class="label">Reports</span>
-    </button>
-    
-    <!-- Item: Maps -->
-    <button class="quick-item" (click)="onItemClick('Maps')">
-      <div class="icon-circle">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
-          <line x1="8" y1="2" x2="8" y2="18"></line>
-          <line x1="16" y1="6" x2="16" y2="22"></line>
-        </svg>
-      </div>
-      <span class="label">Maps</span>
-    </button>
-    
-    <!-- Item: Operations -->
-    <button class="quick-item" (click)="onItemClick('Operations')">
-      <div class="icon-circle">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
-        </svg>
-      </div>
-      <span class="label">Operations</span>
-    </button>
-    
-  </div>
-</div>
-====
-.quick-list-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 24px 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  
-  /* Use a max-width to keep the card compact if placed in a large container */
-  max-width: 260px; 
-  margin: 0 auto;
-
-  &__header {
-    font-size: 16px;
-    font-weight: 500;
-    color: #94a3b8; /* Light slate gray matching the screenshot */
-    margin-bottom: 24px;
-    text-align: center;
-    letter-spacing: 0.3px;
-  }
-
-  &__items {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 100%;
-  }
+export function buildRectPath(
+  centerX: number,
+  halfWidth: number,
+  topPx: number,
+  bottomPx: number
+): string {
+  const l = centerX - halfWidth;
+  const r = centerX + halfWidth;
+  return `M${l},${topPx} L${r},${topPx} L${r},${bottomPx} L${l},${bottomPx} Z`;
 }
 
-.quick-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: transparent;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-  width: 100%;
-  text-align: left;
-  outline: none;
+/** Builds the two outward-pointing black triangles representing a packer or hanger */
+export function buildPackerTriangles(
+  centerX: number,
+  halfWidth: number,
+  yPx: number,
+  packerWidth = 16,
+  packerHeight = 10
+): string {
+  const lInner = centerX - halfWidth;
+  const rInner = centerX + halfWidth;
+  
+  const leftTriangle = `M${lInner},${yPx} L${lInner - packerWidth},${yPx} L${lInner},${yPx + packerHeight} Z`;
+  const rightTriangle = `M${rInner},${yPx} L${rInner + packerWidth},${yPx} L${rInner},${yPx + packerHeight} Z`;
+  
+  return `${leftTriangle} ${rightTriangle}`;
+}
 
-  &:hover, &:focus-visible {
-    background: #f8fafc;
-    transform: translateX(4px);
-    
-    .label {
-      color: #64748b; /* Darken text slightly on hover */
-    }
-    
-    .icon-circle {
-      box-shadow: 0 6px 14px rgba(14, 165, 233, 0.4);
-    }
-  }
+/** Builds a small standalone downward-pointing blue triangle/arrow */
+export function buildSmallDownArrow(
+  centerX: number,
+  yPx: number,
+  arrowWidth = 12,
+  arrowHeight = 10
+): string {
+  const hw = arrowWidth / 2;
+  return `M${centerX - hw},${yPx} L${centerX + hw},${yPx} L${centerX},${yPx + arrowHeight} Z`;
+}
 
-  .icon-circle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    
-    /* A bright cyan-to-deep-blue radial gradient matching the provided image */
-    background: radial-gradient(circle at 30% 30%, #38bdf8 0%, #1d4ed8 80%, #1e3a8a 100%);
-    flex-shrink: 0;
-    box-shadow: 0 4px 10px rgba(14, 165, 233, 0.25);
-    transition: box-shadow 0.2s ease;
-  }
+/** Builds a path for the annular space (e.g., Gravel Pack) between an inner and outer radius */
+export function buildGravelPackPath(
+  centerX: number,
+  innerHalfWidth: number,
+  outerHalfWidth: number,
+  topPx: number,
+  bottomPx: number
+): string {
+  const leftOuter = centerX - outerHalfWidth;
+  const leftInner = centerX - innerHalfWidth;
+  const rightInner = centerX + innerHalfWidth;
+  const rightOuter = centerX + outerHalfWidth;
 
-  .label {
-    font-size: 15px;
-    font-weight: 500;
-    color: #94a3b8; /* Light slate gray */
-    transition: color 0.2s ease;
-  }
+  const leftSide = `M${leftOuter},${topPx} L${leftInner},${topPx} L${leftInner},${bottomPx} L${leftOuter},${bottomPx} Z`;
+  const rightSide = `M${rightInner},${topPx} L${rightOuter},${topPx} L${rightOuter},${bottomPx} L${rightInner},${bottomPx} Z`;
+
+  return `${leftSide} ${rightSide}`;
 }
