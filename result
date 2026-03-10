@@ -1,32 +1,300 @@
-/**
- * Builds a "U-shaped" path representing the gravel pack outline.
- * The path traces down the left side, across the bottom, and up the right side.
- */
-export function buildGravelPackUPath(
-  centerX: number,
-  halfWidth: number,
-  topPx: number,
-  bottomPx: number
-): string {
-  const left = centerX - halfWidth;
-  const right = centerX + halfWidth;
-  
-  // Draws a path down the left side, across the bottom shoe, and back up the right side
-  return `M${left},${topPx} L${left},${bottomPx} L${right},${bottomPx} L${right},${topPx}`;
-}
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  effect,
+  input,
+} from '@angular/core';
+import { select, Selection } from 'd3-selection';
+import { easeCubicInOut } from 'd3-ease';
+import 'd3-transition';
 
-====
-     // Render Gravel Pack utilizing exactly your requested structure
+import { ANIM, DIAGRAM_LAYOUT, WellboreDiagramData  } from 'src/app/core/models/wellbore-diagram.model';
+import { ICasingIR } from '../../../shared/models/wwell/casing-ir.model';
+import { ITopsIR } from 'src/app/shared/models/wwell/top-sir.model';
+import {
+  buildArrowHeadRight,
+  buildCasingPath,
+  buildDepthArrow,
+  buildOpenHolePath,
+  casingGradientId,
+  computeCasingHalfWidth,
+  createDepthScale,
+  formatDepth,
+  openHoleHalfWidth,
+  buildGravelPackUPath
+} from 'src/app/shared/utils/wellbore-math.util'; 
+
+type SvgSel = Selection<SVGSVGElement, unknown, null, undefined>;
+type GSel = Selection<SVGGElement, unknown, null, undefined>;
+type DefsSel = Selection<SVGDefsElement, unknown, null, undefined>;
+
+@Component({
+  selector: 'app-well-bore-view',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './wellbore-view.component.html',
+  styleUrl: './wellbore-view.component.scss',
+})
+export class WellBoreViewComponent implements OnInit {
+  readonly diagramData = input.required<WellboreDiagramData | null>();
+  readonly animTrigger = input.required<number>();
+
+  @ViewChild('wellboreSvg', { static: true })
+  private readonly svgRef!: ElementRef<SVGSVGElement>;
+
+  private readonly layout = DIAGRAM_LAYOUT;
+  private rootG!: GSel;
+  private defsEl!: DefsSel;
+  private ready = false;
+
+  constructor() {
+    effect(() => {
+      const trigger = this.animTrigger();
+      const data = this.diagramData();
+      if (data && (this.ready || trigger > 0)) {
+        this.redraw(data);
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    this.bootstrapSvg();
+    this.ready = true;
+    const data = this.diagramData();
+    if (data) this.redraw(data);
+  }
+
+  private bootstrapSvg(): void {
+    const { wellboreViewWidth, svgHeight, marginTop } = this.layout;
+    const svg = select(this.svgRef.nativeElement) as SvgSel;
+
+    svg.attr('width', '100%')
+      .attr('height', '100%')
+      .attr('viewBox', `0 0 ${wellboreViewWidth} ${svgHeight}`)
+      .attr('preserveAspectRatio', 'xMidYMin meet');
+
+    this.defsEl = svg.append('defs') as DefsSel;
+    this.addStaticDefs(this.defsEl);
+
+    this.rootG = svg.append('g')
+      .attr('class', 'wellbore-root')
+      .attr('transform', `translate(0,${marginTop})`) as GSel;
+  }
+
+  private redraw(data: WellboreDiagramData): void {
+    this.rootG.selectAll('*').remove();
+    this.defsEl.selectAll('.dyn-clip').remove();
+
+    const { drawingHeight, geoLineX, casingCenterX } = this.layout;
+    const scale = createDepthScale(data.totalDepth, drawingHeight);
+
+    this.drawStaticChrome(geoLineX, casingCenterX);
+    this.drawGeologicTops(data.geologicTops, geoLineX, scale);
+
+    this.drawOpenHoleAndScreen(data, casingCenterX, scale);
+    this.drawCasings(data.casings, casingCenterX, scale);
+
+    this.drawCasingLabels(data.casings, casingCenterX, scale);
+    this.drawWaterLevel(data, casingCenterX, scale);
+    this.drawDrillArrow(data, scale);
+    this.drawTotalDepthLabel(data.totalDepth, casingCenterX, drawingHeight);
+  }
+
+  private addStaticDefs(defs: DefsSel): void {
+    this.addLinearGradient(defs, 'mainGradient', [
+      { offset: '0%', color: '#5d6264' },
+      { offset: '50%', color: '#ffffff' },
+      { offset: '100%', color: '#5d6264' },
+    ]);
+    this.addLinearGradient(defs, 'conductorGradient', [
+      { offset: '0%', color: '#4ca746' },
+      { offset: '100%', color: '#4ca746' },
+    ]);
+    this.addLinearGradient(defs, 'linerGradient', [
+      { offset: '0%', color: '#5d6264' },
+      { offset: '50%', color: '#ffffff' },
+      { offset: '100%', color: '#5d6264' },
+    ]);
+
+    const grid = defs.append('pattern')
+      .attr('id', 'gridPattern')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 6).attr('height', 6);
+    grid.append('path')
+      .attr('d', 'M6,-4 L6,6 L-4,6')
+      .attr('stroke', '#444')
+      .attr('stroke-width', 1.5)
+      .attr('fill', 'none');
+
+    // 🌟 EXACT Gravel Pattern injected per user specifications
+    const gravelPattern = defs.append('pattern')
+      .attr('id', 'gravelpattern')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 8)
+      .attr('height', 4);
+    
+    gravelPattern.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', 4)
+      .attr('height', 2);
+      
+    gravelPattern.append('rect')
+      .attr('x', 4)
+      .attr('y', 2)
+      .attr('width', 4)
+      .attr('height', 2);
+
+    const dashedPattern = defs.append('pattern')
+      .attr('id', 'dashed')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 5)
+      .attr('height', 5);
+      
+    dashedPattern.append('image')
+      .attr('href', "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMCcgaGVpZ2h0PScxMCc+CiAgPHJlY3Qgd2lkdGg9JzEwJyBoZWlnaHQ9JzEwJyBmaWxsPSd3aGl0ZScgLz4KICA8Y2lyY2xlIGN4PScyLjUnIGN5PScyLjUnIHI9JzIuNScgZmlsbD0nYmxhY2snLz4KPC9zdmc+");
+
+    const addMarker = (id: string, fill: string): void => {
+      defs.append('marker')
+        .attr('id', id)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 5).attr('refY', 0)
+        .attr('markerWidth', 4).attr('markerHeight', 4)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', fill);
+    };
+    addMarker('arrowBlack', '#000');
+    addMarker('arrowBlue', '#3CC3FF');
+  }
+
+  private addLinearGradient(
+    defs: DefsSel,
+    id: string,
+    stops: { offset: string; color: string }[],
+  ): void {
+    const g = defs.append('linearGradient').attr('id', id);
+    stops.forEach(({ offset, color }) =>
+      g.append('stop').attr('offset', offset).attr('stop-color', color),
+    );
+  }
+
+  private drawStaticChrome(geoLineX: number, centerX: number): void {
+    this.rootG.append('line')
+      .attr('class', 'ground-line')
+      .attr('x1', centerX - 230).attr('x2', centerX + 320)
+      .attr('y1', -3).attr('y2', -3);
+
+    this.rootG.append('text')
+      .attr('class', 'ground-label')
+      .attr('x', centerX).attr('y', -12)
+      .attr('text-anchor', 'middle')
+      .text('Ground Level');
+
+    this.rootG.append('line')
+      .attr('class', 'geo-axis')
+      .attr('x1', geoLineX).attr('x2', geoLineX)
+      .attr('y1', 0).attr('y2', this.layout.drawingHeight);
+
+    this.rootG.append('text')
+      .attr('class', 'column-label')
+      .attr('x', geoLineX).attr('y', -30)
+      .attr('text-anchor', 'middle')
+      .call((t) => {
+        t.append('tspan').attr('x', geoLineX).attr('dy', 0).text('Geologic');
+        t.append('tspan').attr('x', geoLineX).attr('dy', 12).text('Horizons (ft bgl)');
+      });
+  }
+
+  private drawGeologicTops(
+    tops: ITopsIR[],
+    geoLineX: number,
+    scale: ReturnType<typeof createDepthScale>,
+  ): void {
+    const sorted = [...tops].sort((a, b) => a.planTvdDepth - b.planTvdDepth);
+    sorted.forEach((top, idx) => {
+      const yPx = scale(top.planTvdDepth);
+      const g = this.rootG.append('g')
+        .attr('class', 'geo-top')
+        .attr('transform', `translate(0,${yPx})`)
+        .style('opacity', 0);
+
+      g.append('line')
+        .attr('class', 'geo-tick')
+        .attr('x1', geoLineX - 14).attr('x2', geoLineX + 14)
+        .attr('y1', 0).attr('y2', 0);
+
+      g.append('text')
+        .attr('class', 'geo-depth')
+        .attr('x', geoLineX - 17)
+        .attr('dy', '0.35em')
+        .text(top.planTvdDepth.toLocaleString());
+
+      g.append('text')
+        .attr('class', 'geo-code')
+        .attr('x', geoLineX + 18)
+        .attr('dy', '0.35em')
+        .text(top.stLongCd);
+
+      g.transition()
+        .delay(ANIM.GEO_DELAY + idx * ANIM.GEO_STAGGER)
+        .duration(220)
+        .style('opacity', 1);
+    });
+  }
+
+  private drawCasings(
+    casings: ICasingIR[],
+    centerX: number,
+    scale: ReturnType<typeof createDepthScale>,
+  ): void {
+    const { baseHalfWidth, halfWidthIncrement, shoeCurveOffset } = this.layout;
+
+    casings.forEach((csg, i) => {
+      // PREVENT SOLID DRAWING FOR LINERS
+      if (csg.csgType === 'Liner') {
+        return; 
+      }
+
+      const hw = computeCasingHalfWidth(i, baseHalfWidth, halfWidthIncrement);
+      const bottomPx = scale(csg.csgDepth);
+      const clipId = `dyn-casing-clip-${i}`;
+
+      const animOrder = casings.length - 1 - i;
+      const delay = animOrder * ANIM.CASING_STAGGER;
+
+      // Allow the clip rect to be wide enough for the gravel pack annulus
+      const clipRadius = openHoleHalfWidth(hw) + 20;
+
+      const clipRect = this.defsEl
+        .append('clipPath')
+        .attr('class', 'dyn-clip')
+        .attr('id', clipId)
+        .append('rect')
+        .attr('x', centerX - clipRadius - 15)
+        .attr('y', -5)
+        .attr('width', clipRadius * 2 + 30)
+        .attr('height', 0);
+
+      // Render Gravel Pack utilizing exactly your requested structure
       if (csg.csgType === 'Gravel Pack') {
         const prevSolid = casings.slice(i + 1).find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack');
         const startDepthPx = prevSolid ? scale(prevSolid.csgDepth) : 0;
         
+        // Define a stroke-width based on the width of the annulus
+        const ohRadius = openHoleHalfWidth(hw);
+        const annulusWidth = ohRadius - hw;
+        
         this.rootG.append('path')
           .attr('class', 'gravelHole')
-          .attr('d', buildGravelPackUPath(centerX, hw, startDepthPx, bottomPx))
+          .attr('d', buildGravelPackUPath(centerX, hw + (annulusWidth / 2), startDepthPx, bottomPx))
           .attr('stroke', 'url(#gravelpattern)')
-          .attr('stroke-width', '12') // Exact attribute requested
-          .style('fill', 'none')      // Exact style requested
+          .attr('stroke-width', '12')
+          .style('fill', 'none')
           .attr('clip-path', `url(#${clipId})`);
       } else {
         this.rootG.append('path')
@@ -36,10 +304,246 @@ export function buildGravelPackUPath(
           .attr('fill', `url(#${casingGradientId(csg.csgType)})`)
           .style('opacity', csg.csgType === 'Conductor' ? 0.92 : 0.65);
       }
-===
-{
-          "csgType": "Gravel Pack",
-          "csgSize": 8.5,
-          "csgDepth": 4000,
-          "csgRemarks": "Wirewrap / Mesh"
+
+      clipRect.transition()
+        .delay(delay)
+        .duration(ANIM.CASING_DURATION)
+        .ease(easeCubicInOut)
+        .attr('height', bottomPx + shoeCurveOffset + 20);
+    });
+  }
+
+  private drawCasingLabels(
+    casings: ICasingIR[],
+    centerX: number,
+    scale: ReturnType<typeof createDepthScale>,
+  ): void {
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const allDone = ANIM.CASING_STAGGER * casings.length + ANIM.CASING_DURATION;
+
+    casings.forEach((csg, i) => {
+      // PREVENT GENERIC LABEL DRAWING FOR LINERS ONLY to avoid overlaps
+      if (csg.csgType === 'Liner') {
+        return;
+      }
+
+      const hw = computeCasingHalfWidth(i, baseHalfWidth, halfWidthIncrement);
+      const shoePx = scale(csg.csgDepth);
+      
+      // If it's a gravel pack, push the arrow out to the open hole wall so it doesn't clip through the gravel rendering
+      const rEdge = csg.csgType === 'Gravel Pack' ? centerX + openHoleHalfWidth(hw) : centerX + hw;
+      
+      const lEnd = rEdge + 22;
+      const labelX = lEnd + 8;
+
+      const lg = this.rootG.append('g')
+        .attr('class', 'casing-label')
+        .style('opacity', 0);
+
+      lg.append('line')
+        .attr('class', 'casing-label__line')
+        .attr('x1', rEdge).attr('x2', lEnd)
+        .attr('y1', shoePx).attr('y2', shoePx);
+
+      lg.append('path')
+        .attr('class', 'casing-label__arrow')
+        .attr('d', buildArrowHeadRight(lEnd, shoePx, 6));
+
+      if (csg.csgType === 'Gravel Pack') {
+        // Render exclusively the remarks label for Gravel Packs
+        lg.append('text')
+          .attr('class', 'casing-label__primary')
+          .attr('x', labelX).attr('y', shoePx + 4)
+          .text(csg.csgRemarks || 'Gravel Pack');
+      } else {
+        // Standard Rendering for traditional casings
+        lg.append('text')
+          .attr('class', 'casing-label__primary')
+          .attr('x', labelX).attr('y', shoePx + 4)
+          .text(`${csg.csgSize}" ${csg.csgType} @ ${csg.csgDepth.toLocaleString()}`);
+
+        if (csg.csgRemarks) {
+          lg.append('text')
+            .attr('class', 'casing-label__secondary')
+            .attr('x', labelX).attr('y', shoePx + 17)
+            .text(`(${csg.csgRemarks})`);
         }
+
+        // Add size inside the pipe
+        this.rootG.append('text')
+          .attr('class', 'casing-size-inner')
+          .attr('x', centerX).attr('y', shoePx - 9)
+          .attr('text-anchor', 'middle')
+          .style('opacity', 0)
+          .text(`${csg.csgSize}"`)
+          .transition().delay(allDone).duration(250).style('opacity', 1);
+      }
+
+      lg.transition()
+        .delay(allDone)
+        .duration(300)
+        .ease(easeCubicInOut)
+        .style('opacity', 1);
+    });
+  }
+
+  private drawWaterLevel(
+    data: WellboreDiagramData,
+    centerX: number,
+    scale: ReturnType<typeof createDepthScale>,
+  ): void {
+    if (!data.hydrogeology) return;
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const wPx = scale(data.hydrogeology.estStaticWaterLevel);
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const lR = centerX + innerHW + 10;
+    const lL = centerX - innerHW - 10;
+    const label = data.hydrogeology.flowType === 'Y'
+      ? 'Flowing (SIWHP: 50 PSI)'
+      : `Static WL: ${data.hydrogeology.estStaticWaterLevel.toLocaleString()} ft`;
+
+    const wg = this.rootG.append('g').attr('class', 'water-level').style('opacity', 0);
+
+    wg.append('line')
+      .attr('class', 'water-line')
+      .attr('x1', lL).attr('x2', lR)
+      .attr('y1', wPx).attr('y2', wPx);
+
+    wg.append('path')
+      .attr('class', 'water-arrow')
+      .attr('d', `M${lL} ${wPx - 5} L${lL - 10} ${wPx} L${lL} ${wPx + 5} Z`);
+
+    wg.append('text')
+      .attr('class', 'water-label')
+      .attr('x', lR - 350).attr('y', wPx + 4)
+      .text(label);
+
+    wg.transition().delay(ANIM.OVERLAY_DELAY).duration(400).ease(easeCubicInOut).style('opacity', 1);
+  }
+
+  private drawOpenHoleAndScreen(
+    data: WellboreDiagramData,
+    centerX: number,
+    scale: ReturnType<typeof createDepthScale>,
+  ): void {
+    if (!data.casings.length) return;
+
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    
+    // ENSURE OPEN HOLE STARTS AT THE DEEPEST SOLID CASING, NOT THE LINER BOTTOM
+    const deepestSolid = data.casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
+    const liner = data.casings.find(c => c.csgType === 'Liner');
+    
+    const solidIdx = data.casings.indexOf(deepestSolid);
+    const innerHW = computeCasingHalfWidth(Math.max(0, solidIdx), baseHalfWidth, halfWidthIncrement);
+    
+    const ohHW = openHoleHalfWidth(innerHW);
+    const screenHW = innerHW - 10;
+
+    const shoePx = scale(deepestSolid.csgDepth);
+    const tdPx = scale(data.totalDepth);
+
+    const ratHolePx = 15;
+    // Limit screen to liner depth if present, otherwise down to TD
+    const screenBottomPx = liner ? scale(liner.csgDepth) : (tdPx - ratHolePx);
+
+    const clipId = 'dyn-oh-clip';
+
+    const clipRect = this.defsEl
+      .append('clipPath').attr('class', 'dyn-clip').attr('id', clipId)
+      .append('rect')
+      .attr('x', centerX - ohHW - 15)
+      .attr('y', shoePx - 5)
+      .attr('width', ohHW * 2 + 30)
+      .attr('height', 0);
+
+    // Open hole outline (drills all the way down to TD)
+    this.rootG.append('path')
+      .attr('class', 'open-hole')
+      .attr('d', buildOpenHolePath(centerX, ohHW, shoePx, tdPx))
+      .attr('clip-path', `url(#${clipId})`);
+
+    // Liner screen (Hangs from the deepest solid casing shoe)
+    this.rootG.append('path')
+      .attr('class', 'liner-screen')
+      .attr('d', buildOpenHolePath(centerX, screenHW, shoePx, screenBottomPx))
+      .attr('clip-path', `url(#${clipId})`);
+
+    const sl = centerX - screenHW, sr = centerX + screenHW;
+    const hangerG = this.rootG.append('g').attr('class', 'screen-hangers').style('opacity', 0);
+    hangerG.append('path').attr('d', `M${sl},${shoePx} L${sl},${shoePx + 9} L${sl + 18},${shoePx}`);
+    hangerG.append('path').attr('d', `M${sr},${shoePx} L${sr},${shoePx + 9} L${sr - 18},${shoePx}`);
+
+    const ohLY = shoePx + (tdPx - shoePx) * 0.2;
+    const ohLG = this.rootG.append('g').attr('class', 'open-hole-label').style('opacity', 0);
+    ohLG.append('line').attr('class', 'oh-label-line')
+      .attr('x1', centerX - ohHW).attr('x2', centerX - ohHW - 28)
+      .attr('y1', ohLY).attr('y2', ohLY);
+    ohLG.append('path').attr('class', 'oh-label-arrow')
+      .attr('d', `M${centerX - ohHW - 28} ${ohLY - 5} L${centerX - ohHW - 36} ${ohLY} L${centerX - ohHW - 28} ${ohLY + 5} Z`);
+    ohLG.append('text').attr('class', 'open-hole-text')
+      .attr('x', centerX - ohHW - 40).attr('y', ohLY + 4)
+      .attr('text-anchor', 'end')
+      .text('8 1/2" Open Hole');
+
+    // Display correct length based on the defined liner geometry vs solid casing
+    let screenLabel = '';
+    if (liner && liner.csgRemarks) {
+        screenLabel = liner.csgRemarks;
+    } else {
+        const screenLen = liner ? (liner.csgDepth - deepestSolid.csgDepth) : (data.totalDepth - deepestSolid.csgDepth);
+        screenLabel = `+/- ${screenLen.toLocaleString()} ft of Screen`;
+    }
+    
+    const scrLG = this.rootG.append('g').attr('class', 'screen-label').style('opacity', 0);
+    scrLG.append('line').attr('class', 'screen-label-line')
+      .attr('x1', centerX + screenHW).attr('x2', centerX + screenHW + 28)
+      .attr('y1', screenBottomPx).attr('y2', screenBottomPx);
+    scrLG.append('path')
+      .attr('d', buildArrowHeadRight(centerX + screenHW + 28, screenBottomPx, 6));
+    scrLG.append('text').attr('class', 'screen-label-text')
+      .attr('x', centerX + screenHW + 34).attr('y', screenBottomPx + 4)
+      .text(screenLabel);
+
+    const ohDelay = ANIM.OVERLAY_DELAY;
+
+    clipRect.transition().delay(ohDelay).duration(ANIM.CASING_DURATION).ease(easeCubicInOut)
+      .attr('height', tdPx - shoePx + 20);
+    hangerG.transition().delay(ohDelay).duration(250).style('opacity', 1);
+    ohLG.transition().delay(ohDelay + 300).duration(300).style('opacity', 1);
+    scrLG.transition().delay(ohDelay + 400).duration(300).style('opacity', 1);
+  }
+
+  private drawDrillArrow(
+    data: WellboreDiagramData,
+    scale: ReturnType<typeof createDepthScale>,
+  ): void {
+    const endPx = scale(Math.min(data.currentDepth, data.totalDepth));
+    const arrowCx = 42;
+
+    this.rootG.append('path')
+      .attr('class', 'depth-arrow')
+      .attr('d', buildDepthArrow(0, 0, arrowCx, 10, 12))
+      .transition()
+      .duration(ANIM.SCALE_DURATION)
+      .ease(easeCubicInOut)
+      .attr('d', buildDepthArrow(0, endPx, arrowCx, 10, 12));
+  }
+
+  private drawTotalDepthLabel(
+    totalDepth: number,
+    centerX: number,
+    drawingHeight: number,
+  ): void {
+    this.rootG.append('text')
+      .attr('class', 'total-depth-main')
+      .attr('x', centerX).attr('y', drawingHeight + 26)
+      .attr('text-anchor', 'middle')
+      .style('opacity', 0)
+      .text(`Total Depth : ${formatDepth(totalDepth)}`)
+      .transition()
+      .delay(ANIM.OVERLAY_DELAY + 200)
+      .duration(400)
+      .style('opacity', 1);
+  }
+}
