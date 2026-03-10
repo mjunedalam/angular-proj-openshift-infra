@@ -183,6 +183,17 @@ export class WellBoreViewComponent implements OnInit {
     );
   }
 
+  /**
+   * Helper to determine the structural "width tier" of a casing. 
+   * This prevents non-structural layers like "Gravel Pack" from 
+   * incorrectly forcing the entire diagram to draw wider.
+   */
+  private getCasingTier(csg: ICasingIR, casings: ICasingIR[]): number {
+    const structuralCasings = casings.filter(c => c.csgType !== 'Gravel Pack');
+    const idx = structuralCasings.indexOf(csg);
+    return idx === -1 ? 0 : idx;
+  }
+
   private drawStaticChrome(geoLineX: number, centerX: number): void {
     this.rootG.append('line')
       .attr('class', 'ground-line')
@@ -260,7 +271,10 @@ export class WellBoreViewComponent implements OnInit {
         return; 
       }
 
-      const hw = computeCasingHalfWidth(i, baseHalfWidth, halfWidthIncrement);
+      // Calculate width using the visual tier helper, ensuring widths don't blow out
+      const tier = this.getCasingTier(csg, casings);
+      const hw = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+      
       const bottomPx = scale(csg.csgDepth);
       const clipId = `dyn-casing-clip-${i}`;
 
@@ -285,13 +299,13 @@ export class WellBoreViewComponent implements OnInit {
         const prevSolid = casings.slice(i + 1).find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack');
         const startDepthPx = prevSolid ? scale(prevSolid.csgDepth) : 0;
         
-        // Define a stroke-width based on the width of the annulus
+        // Find the absolute center of the annulus gap to draw the U-path stroke precisely
         const ohRadius = openHoleHalfWidth(hw);
-        const annulusWidth = ohRadius - hw;
+        const annulusCenter = hw + (ohRadius - hw) / 2;
         
         this.rootG.append('path')
           .attr('class', 'gravelHole')
-          .attr('d', buildGravelPackUPath(centerX, hw + (annulusWidth / 2), startDepthPx, bottomPx))
+          .attr('d', buildGravelPackUPath(centerX, annulusCenter, startDepthPx, bottomPx))
           .attr('stroke', 'url(#gravelpattern)')
           .attr('stroke-width', '12')
           .style('fill', 'none')
@@ -327,7 +341,10 @@ export class WellBoreViewComponent implements OnInit {
         return;
       }
 
-      const hw = computeCasingHalfWidth(i, baseHalfWidth, halfWidthIncrement);
+      // Calculate width using the visual tier helper
+      const tier = this.getCasingTier(csg, casings);
+      const hw = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+      
       const shoePx = scale(csg.csgDepth);
       
       // If it's a gravel pack, push the arrow out to the open hole wall so it doesn't clip through the gravel rendering
@@ -395,7 +412,12 @@ export class WellBoreViewComponent implements OnInit {
     if (!data.hydrogeology) return;
     const { baseHalfWidth, halfWidthIncrement } = this.layout;
     const wPx = scale(data.hydrogeology.estStaticWaterLevel);
-    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    
+    // Dynamically adjust for the widest structure using the tier helper
+    const widestCsg = data.casings[data.casings.length - 1];
+    const tier = widestCsg ? this.getCasingTier(widestCsg, data.casings) : 0;
+    const innerHW = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+    
     const lR = centerX + innerHW + 10;
     const lL = centerX - innerHW - 10;
     const label = data.hydrogeology.flowType === 'Y'
@@ -430,15 +452,15 @@ export class WellBoreViewComponent implements OnInit {
 
     const { baseHalfWidth, halfWidthIncrement } = this.layout;
     
-    // ENSURE OPEN HOLE STARTS AT THE DEEPEST SOLID CASING, NOT THE LINER BOTTOM
-    const deepestSolid = data.casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
-    const liner = data.casings.find(c => c.csgType === 'Liner');
-    
-    const solidIdx = data.casings.indexOf(deepestSolid);
-    const innerHW = computeCasingHalfWidth(Math.max(0, solidIdx), baseHalfWidth, halfWidthIncrement);
+    // Tier 0 always represents the innermost width (e.g. the Liner)
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
     
     const ohHW = openHoleHalfWidth(innerHW);
     const screenHW = innerHW - 10;
+
+    // Open hole starts at the deepest SOLID casing, not the liner bottom
+    const deepestSolid = data.casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
+    const liner = data.casings.find(c => c.csgType === 'Liner');
 
     const shoePx = scale(deepestSolid.csgDepth);
     const tdPx = scale(data.totalDepth);
