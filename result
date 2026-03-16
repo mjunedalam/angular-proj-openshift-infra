@@ -1,226 +1,329 @@
-// ─── Wellbore View — Industrial Precision Theme ───────────────────────────
-:host {
-  display: block;
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
+.depth-arrow-group {
+    .mud-circ-seg {
+      cursor: crosshair;
+      rect { transition: filter 0.15s; }
+      &:hover rect:first-child { filter: brightness(1.35) saturate(1.2); }
+    }
+  }
+
+  .depth-arrow-head {
+    fill: var(--accent);
+    filter: drop-shadow(0 0 4px var(--accent));
+  }
+
+  .depth-arrow-head-g circle {
+    filter: blur(2px);
+  }
+
+  .circ-tooltip {
+    pointer-events: none;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  }
+===
+ private drawDrillArrow(
+    data: WellboreDiagramData,
+    scale: ReturnType<typeof createDepthScale>,
+    drillStart: number,
+    t_casingsDone: number,
+  ): void {
+    const arrowCx  = this.layout.depthArrowX;
+    const shaftHW  = 4;    // half-width of shaft
+    const headH    = 14;   // arrowhead triangle height
+    const headHW   = 9;    // arrowhead half-width at base
+    const duration = t_casingsDone - drillStart;
+    const totalPx  = scale(data.totalDepth);
+    const currPx   = scale(data.currentDepth);
+    const points   = data.mudCirculation;
+
+    const circColour = (pct: number): string => {
+      if (pct >= 98) return '#22c55e';  // bright green  — excellent ≥ 98%
+      if (pct >= 92) return '#84cc16';  // lime           — good     92–97%
+      if (pct >= 85) return '#f59e0b';  // amber          — fair     85–91%
+      if (pct >= 70) return '#f97316';  // orange         — poor     70–84%
+      return '#ef4444';                 // red            — critical  < 70%
+    };
+
+    const arrowG = this.rootG.append('g').attr('class', 'depth-arrow-group');
+
+    // ── ClipPath — slides top→bottom to reveal the shaft ────────────────────
+    const clipId = `arrow-clip-${Date.now()}`;
+    this.defsEl.append('clipPath')
+      .attr('class', 'dyn-clip')
+      .attr('id', clipId)
+      .append('rect')
+        .attr('x', arrowCx - headHW - 4).attr('y', -4)
+        .attr('width', (headHW + 4) * 2).attr('height', 0)
+      .transition()
+        .delay(drillStart).duration(duration).ease(easeCubicInOut)
+        .attr('height', totalPx + 4);
+
+    const shaftG = arrowG.append('g').attr('clip-path', `url(#${clipId})`);
+
+    // ── Build a single linearGradient for the drilled section ───────────────
+    // Hard stops (no blending): each boundary gets two stops at the same offset,
+    // one for the colour above and one for the colour below → seamless bands.
+    if (points.length && currPx > 0) {
+      const gradId = `circ-grad-${Date.now()}`;
+      const grad   = this.defsEl.append('linearGradient')
+        .attr('class', 'dyn-clip')        // tagged so redraw() removes it
+        .attr('id', gradId)
+        .attr('gradientUnits', 'userSpaceOnUse')
+        .attr('x1', arrowCx).attr('y1', 0)
+        .attr('x2', arrowCx).attr('y2', currPx);
+
+      // Build segments list (clamped to currentDepth)
+      const segs: { topPx: number; botPx: number; pct: number; topDepth: number; botDepth: number }[] = [];
+      for (let i = 0; i < points.length; i++) {
+        const topDepth = i === 0 ? 0 : points[i - 1].depth;
+        const botDepth = points[i].depth;
+        const top      = Math.min(topDepth, data.currentDepth);
+        const bot      = Math.min(botDepth, data.currentDepth);
+        if (top >= bot) continue;
+        segs.push({ topPx: scale(top), botPx: scale(bot), pct: points[i].pct, topDepth: top, botDepth: bot });
+      }
+
+      // Add hard-stop gradient stops — two stops per boundary (same offset, colour switches)
+      segs.forEach((seg, idx) => {
+        const col     = circColour(seg.pct);
+        const topPct  = (seg.topPx / currPx) * 100;
+        const botPct  = (seg.botPx / currPx) * 100;
+        // Top stop for this segment (may duplicate previous bot stop — that's intentional)
+        grad.append('stop')
+          .attr('offset', `${topPct.toFixed(4)}%`)
+          .attr('stop-color', col);
+        // Bottom stop — hard edge: if next segment exists, next colour starts immediately
+        const nextCol = idx + 1 < segs.length ? circColour(segs[idx + 1].pct) : col;
+        grad.append('stop')
+          .attr('offset', `${botPct.toFixed(4)}%`)
+          .attr('stop-color', col);
+        if (nextCol !== col) {
+          grad.append('stop')
+            .attr('offset', `${botPct.toFixed(4)}%`)
+            .attr('stop-color', nextCol);
+        }
+      });
+
+      // Single rect for the entire drilled section — no gaps, no rounded ends
+      shaftG.append('rect')
+        .attr('x', arrowCx - shaftHW).attr('y', 0)
+        .attr('width', shaftHW * 2).attr('height', currPx)
+        .attr('fill', `url(#${gradId})`);
+
+      // Highlight stripe — left half, semi-transparent white overlay for depth
+      shaftG.append('rect')
+        .attr('x', arrowCx - shaftHW).attr('y', 0)
+        .attr('width', shaftHW).attr('height', currPx)
+        .attr('fill', 'rgba(255,255,255,0.10)')
+        .attr('pointer-events', 'none');
+
+      // ── Invisible hover hit areas for tooltips ────────────────────────────
+      segs.forEach(seg => {
+        const fill  = circColour(seg.pct);
+        const segH  = Math.max(1, seg.botPx - seg.topPx);
+        const midY  = seg.topPx + segH / 2;
+        const ttipX = arrowCx + shaftHW + 8;
+        const line1 = `${seg.topDepth.toLocaleString()} – ${seg.botDepth.toLocaleString()} ft`;
+        const line2 = `Circulation: ${seg.pct}%`;
+        const boxW  = 124;
+        const boxH  = 34;
+
+        const ttipG = arrowG.append('g')
+          .attr('class', 'circ-tooltip')
+          .style('opacity', 0).style('pointer-events', 'none');
+
+        ttipG.append('rect')
+          .attr('x', ttipX).attr('y', midY - boxH / 2)
+          .attr('width', boxW).attr('height', boxH).attr('rx', 5)
+          .attr('fill', '#0f172a').attr('stroke', fill)
+          .attr('stroke-width', 1.5).attr('opacity', 0.95);
+
+        ttipG.append('circle')
+          .attr('cx', ttipX + 10).attr('cy', midY - 4)
+          .attr('r', 3.5).attr('fill', fill);
+
+        ttipG.append('text')
+          .attr('x', ttipX + 19).attr('y', midY - 1)
+          .attr('font-size', '8.5').attr('font-family', 'DM Sans, sans-serif')
+          .attr('font-weight', '600').attr('fill', '#94a3b8').text(line1);
+
+        ttipG.append('text')
+          .attr('x', ttipX + 10).attr('y', midY + 11)
+          .attr('font-size', '9.5').attr('font-family', 'DM Sans, sans-serif')
+          .attr('font-weight', '800').attr('fill', fill).text(line2);
+
+        // Transparent hit rect sitting on top of gradient shaft
+        shaftG.append('rect')
+          .attr('x', arrowCx - shaftHW).attr('y', seg.topPx)
+          .attr('width', shaftHW * 2).attr('height', segH)
+          .attr('fill', 'transparent')
+          .attr('class', 'mud-circ-seg')
+          .on('mouseenter', () => ttipG.transition().duration(100).style('opacity', 1))
+          .on('mouseleave', () => ttipG.transition().duration(100).style('opacity', 0));
+      });
+
+    } else {
+      // No circulation data — plain accent shaft
+      shaftG.append('rect')
+        .attr('x', arrowCx - shaftHW).attr('y', 0)
+        .attr('width', shaftHW * 2).attr('height', currPx)
+        .attr('fill', 'var(--accent)');
+    }
+
+    // ── Undrilled section: dark shaft from currentDepth → totalDepth ─────────
+    if (data.currentDepth < data.totalDepth) {
+      shaftG.append('rect')
+        .attr('x', arrowCx - shaftHW).attr('y', currPx)
+        .attr('width', shaftHW * 2).attr('height', totalPx - currPx)
+        .attr('fill', '#1e293b');
+    }
+
+    // ── Arrowhead — outside clip, animates independently ─────────────────────
+    const headG = arrowG.append('g').attr('class', 'depth-arrow-head-g');
+
+    headG.append('circle')
+      .attr('cx', arrowCx).attr('cy', 0).attr('r', 7)
+      .attr('fill', 'var(--accent)').attr('opacity', 0.22)
+      .transition().delay(drillStart).duration(duration).ease(easeCubicInOut)
+      .attr('cy', totalPx);
+
+    headG.append('path')
+      .attr('class', 'depth-arrow-head')
+      .attr('d', `M${arrowCx - headHW},0 L${arrowCx + headHW},0 L${arrowCx},${headH} Z`)
+      .transition().delay(drillStart).duration(duration).ease(easeCubicInOut)
+      .attr('d', `M${arrowCx - headHW},${totalPx - headH} L${arrowCx + headHW},${totalPx - headH} L${arrowCx},${totalPx} Z`);
+  }
+=======
+import { IWellData } from '../../../models/well-design/wwell-data.model';
+import { IFormationTops } from '../../../shared/models/wwell/formation-tops.model';
+import { IHeaderIR } from '../../../shared/models/wwell/header-ir.model';
+import { WellLogsIndicators } from '../../../models/well-design/well-logs-indicators.model';
+import { WellboreDiagramData, MudCircPoint } from '../../../models/well-design/wellbore-diagram.model';
+import { WellName } from '../../../models/well-design/well-name.model';
+import { sortCasingsByDepthDesc } from '../../../utils/wellbore-math.util';
+
+import { MiscWellData, OffsetWaterWells, PickedFormationTops, WellTestResult } from './well.store';
+
+export { MiscWellData, OffsetWaterWells, PickedFormationTops, WellTestResult };
+
+export const PAGE_SIZE = 5;
+export const FALLBACK_STR = 'N/A';
+
+export function uniqueByWellName(names: WellName[]): WellName[] {
+    const seen = new Set<string>();
+    return names.filter(w => {
+        if (seen.has(w.wellName)) return false;
+        seen.add(w.wellName);
+        return true;
+    });
 }
 
-.wellbore-svg {
-  display: block;
-  background: transparent;
+export function selectTotalPages(unique: WellName[]): number {
+    return Math.ceil(unique.length / PAGE_SIZE);
 }
 
-:host ::ng-deep {
+export function selectPagedWellNames(unique: WellName[], page: number): WellName[] {
+    return unique.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+}
 
-  text {
-    font-family: 'DM Mono', 'Fira Code', 'Consolas', monospace;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-  }
+export function selectHasPrevPage(page: number): boolean {
+    return page > 0;
+}
 
-  .ground-line {
-    stroke: #b94a12;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    opacity: 0.9;
-  }
+export function selectHasNextPage(unique: WellName[], page: number): boolean {
+    return (page + 1) * PAGE_SIZE < unique.length;
+}
 
-  .ground-label {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 10.5px;
-    font-weight: 600;
-    fill: #b94a12;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    opacity: 0.85;
-  }
+// ─── Well data selectors ───────────────────────────────────────────────────────
 
-  .geo-axis {
-    stroke: #3b67d4;
-    stroke-width: 1.5;
-    opacity: 0.3;
-  }
+export function selectTotalDepth(d: IWellData | null): number {
+    return d?.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0;
+}
 
-  .column-label {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 9.5px;
-    fill: #3b67d4;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    opacity: 0.9;
-  }
+export function selectDiagramData(d: IWellData | null): WellboreDiagramData | null {
+    if (!d) return null;
+    return {
+        wellName:     d.WELL_MASTER?.[0]?.well ?? '',
+        totalDepth:   d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0,
+        casings:      sortCasingsByDepthDesc(d.EXAD_GWD_IR_CASING ?? []),
+        geologicTops: [...(d.EXAD_GWD_IR_TOPS ?? [])].sort((a, b) => a.planTvdDepth - b.planTvdDepth),
+        hydrogeology: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0] ?? null,
+        prewap:       d.EXAD_RCD_PREWAP?.[0] ?? null,
+        rigActivity:  d.RIG_ACTIVITY?.[0] ?? null,
+        currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
+        mudCirculation: (d.WWELL_MUD_CIRC ?? []).map(m => ({
+            depth: Number(m.W_PRSNT_DPTH),
+            pct:   Number(m.W_MUD_CIRC_PC),
+        })),
+    };
+}
 
-  .geo-tick {
-    stroke: #1e3a8a;
-    stroke-width: 1.5;
-    opacity: 0.65;
-  }
+export function selectMiscWellData(d: IWellData | null): MiscWellData | null {
+    if (!d) return null;
+    const rig    = d.RIG_ACTIVITY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    return {
+        wellName:        rig?.wellName                                          ?? FALLBACK_STR,
+        targetDesc:      rig?.drlgPlanWellDesc                                  ?? FALLBACK_STR,
+        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier    ?? FALLBACK_STR,
+        currentStatus:   status?.nxt24HrPlanRmk ?? status?.wOpRmk               ?? FALLBACK_STR,
+        daysSinceSpud:   status?.spuddays                                        ?? 0,
+        targetDays:      d.NEW_TARGET_DAYS?.[0]?.targetDays ?? rig?.wDrlgTrgtDay ?? 0,
+        biNum:           rig?.biNum                                              ?? FALLBACK_STR,
+        supportingWell:  rig?.waterWell                                          ?? FALLBACK_STR,
+        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? status?.footage       ?? 0,
+        previousWell:    FALLBACK_STR,
+        currentDepth:    status?.wPrsntDpth                                      ?? 0,
+        nextWell:        d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity           ?? FALLBACK_STR,
+        footage:         status?.wDpthChgDis                                     ?? 0, // ✅ fixed missing fallback
+    };
+}
 
-  .geo-depth {
-    font-size: 10.5px;
-    font-weight: 600;
-    fill: #475569;
-    text-anchor: end;
-    opacity: 0.85;
-  }
+export function selectPickedFormations(d: IWellData | null): PickedFormationTops[] {
+    return (d?.DRLG_FM_TOPS ?? []).map((fm: IFormationTops) => ({
+        formation: fm.stLongCd   ?? '',
+        depth:     fm.wStDmrkDpth ?? 0,
+        remarks:   fm.wStDmrkRmk  ?? '',
+    }));
+}
 
-  .geo-code {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 12.5px;
-    font-weight: 800;
-    fill: #1e293b;
-    letter-spacing: 0.05em;
-  }
+export function selectOffsetWells(d: IWellData | null): OffsetWaterWells[] {
+    if (!d) return [];
+    return (d.EXAD_GWD_IR_WATER ?? []).map(ow => {
+        const test = (d.WATER_WELL_TEST_OUTCOME ?? []).find(t => t.wellName === ow.offsetWaterWell);
+        return {
+            wellName:     ow.offsetWaterWell,
+            aquifer:      ow.aquifer || test?.aquifer || 'WASI',
+            tds:          test?.tds              ?? 0,
+            rpm:          ow.rpm                 ?? 0,
+            h2s:          ow.h2s                 ?? 0, // ✅ fixed missing fallback
+            distance:     ow.distance            ?? 0,
+            productivity: ow.specificCapacity    ?? 0,
+            rate:         test?.flowRate ?? ow.flowRate ?? 0,
+        };
+    });
+}
 
-  .geo-target-band {
-    fill: rgba(251, 191, 36, 0.10);
-    stroke: rgba(245, 158, 11, 0.5);
-    stroke-width: 1;
-  }
-  .geo-tick--target  { stroke: #d97706; stroke-width: 2.5; }
-  .geo-depth--target { font-size: 10.5px; font-weight: 700; fill: #d97706; text-anchor: end; }
-  .geo-code--target  { font-size: 12.5px; font-weight: 900; fill: #d97706; letter-spacing: 0.05em; }
-  .geo-target-label  { font-size: 9px; font-weight: 700; fill: #92400e; letter-spacing: 0.5px; }
+export function selectWellLogsIndicators(d: IWellData | null): WellLogsIndicators | null {
+    if (!d) return null;
+    const h: IHeaderIR | undefined = d.EXAD_GWD_IR_HEADER?.[0];
+    return {
+        rcc:     !!(h?.dtRemarks?.trim()),
+        mudLog:  !!(h?.mudRemarks?.trim()),
+        logging: !!(h?.loggingRemarks?.trim()),
+    };
+}
 
-  .casing {
-    stroke: #1e293b;
-    stroke-width: 5;
-    stroke-linecap: round;
-    filter: drop-shadow(0 1px 4px rgba(0,0,0,0.20));
-  }
-
-  .casing-label__line {
-    stroke: #64748b;
-    stroke-width: 1;
-    opacity: 0.75;
-  }
-
-  .casing-label__arrow {
-    fill: #64748b;
-    opacity: 0.75;
-  }
-
-  .casing-label__primary {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 11.5px;
-    font-weight: 700;
-    fill: #1e293b;
-    letter-spacing: 0.02em;
-  }
-
-  .casing-label__secondary {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 10px;
-    font-weight: 400;
-    fill: #94a3b8;
-    font-style: italic;
-  }
-
-  .casing-size-inner {
-    font-family: 'DM Mono', 'Fira Code', monospace;
-    font-size: 10.5px;
-    font-weight: 600;
-    fill: #64748b;
-    opacity: 0.70;
-  }
-
-  .water-line {
-    stroke: #0ea5e9;
-    stroke-width: 1.8;
-    stroke-dasharray: 7, 4;
-    opacity: 0.8;
-    filter: drop-shadow(0 0 4px rgba(14, 165, 233, 0.30));
-  }
-
-  .water-arrow {
-    fill: #0ea5e9;
-    stroke: #0ea5e9;
-    opacity: 0.8;
-  }
-
-  .water-label {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 11px;
-    fill: #0369a1;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-
-  .open-hole {
-    stroke: #475569;
-    stroke-width: 1.6;
-    fill: none;
-    stroke-dasharray: 5, 3;
-    opacity: 0.55;
-  }
-
-  .oh-label-line {
-    stroke: #64748b;
-    stroke-width: 1;
-    opacity: 0.65;
-  }
-
-  .oh-label-arrow {
-    fill: #64748b;
-    opacity: 0.65;
-  }
-
-  .open-hole-text {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 10.5px;
-    font-weight: 600;
-    fill: #475569;
-    opacity: 0.82;
-  }
-
-  .liner-screen {
-    stroke: #334155;
-    stroke-width: 1.8;
-    fill: url(#gridPattern);
-    opacity: 0.72;
-  }
-
-  .screen-hanger {
-    opacity: 0.78;
-  }
-
-  .screen-label-line {
-    stroke: #64748b;
-    stroke-width: 1;
-    opacity: 0.65;
-  }
-
-  .screen-label-text {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 10px;
-    font-weight: 500;
-    fill: #64748b;
-  }
-
-  .gravelHole {
-    opacity: 0.65;
-  }
-
-  .depth-arrow {
-    fill: #0f172a;
-    stroke: #0f172a;
-    stroke-width: 0.5;
-    filter: drop-shadow(0 2px 8px rgba(15, 23, 42, 0.30));
-  }
-
-  .total-depth-main {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    font-size: 12.5px;
-    font-weight: 800;
-    fill: #1d4ed8;
-    letter-spacing: 0.05em;
-    opacity: 0.9;
-  }
-
-  .not-drilled-label,
-  .not-drilled-footage {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    letter-spacing: 0.03em;
-  }
+export function selectWellTestResults(d: IWellData | null): WellTestResult[] {
+    if (!d) return [];
+    return (d.WATER_WELL_TEST_OUTCOME ?? []).map(t => ({
+        wellName:     t.wellName    ?? '',
+        testType:     t.testType    ?? FALLBACK_STR,
+        aquifer:      t.aquifer     ?? FALLBACK_STR,
+        rpm:          t.rpm         ?? 0,
+        flowRate:     t.flowRate    ?? 0,
+        temperature:  t.temperature ?? 0,
+        tds:          t.tds         ?? 0,
+        productivity: t.producitivty ?? 0, // note: upstream typo preserved intentionally
+        h2s:          t.h2s         ?? 0,
+    }));
 }
