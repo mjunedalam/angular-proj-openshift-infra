@@ -1,32 +1,137 @@
-/**
- * Builds the two hanger bracket paths for a liner screen top.
- *
- * Shape matches the standard wellbore convention:
- *   Left  side: drops `dropPx` down then angles back up-right  (filled triangle)
- *   Right side: drops `dropPx` down then angles back up-left   (filled triangle)
- *
- * Example (dropPx=8, size=20):
- *   Left:  M sl,y  L sl,y+8  L sl+20,y  Z
- *   Right: M sr,y  L sr,y+8  L sr-20,y  Z
- *
- * @param centerX   SVG centre-x of the wellbore
- * @param y         Y pixel position of the hanger (casing shoe px)
- * @param halfWidth Half-width of the liner screen (screenHW)
- * @param dropPx    Vertical drop of the bracket leg  (default 8)
- * @param size      Horizontal span of the bracket    (default 20)
- */
-export function buildScreenHanger(
-  centerX: number,
-  y: number,
-  halfWidth: number,
-  dropPx = 8,
-  size = 20,
-): { left: string; right: string } {
-  const sl = centerX - halfWidth; // left  edge of screen
-  const sr = centerX + halfWidth; // right edge of screen
+Here is an example of one water well mud circulation data:
+[
+      {
+        "W_PRSNT_DPTH": "105",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "105"
+      },
+      {
+        "W_PRSNT_DPTH": "120",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "15"
+      },
+      {
+        "W_PRSNT_DPTH": "210",
+        "W_MUD_CIRC_PC": "80",
+        "W_DPTH_CHG_DIS": "90"
+      },
+      {
+        "W_PRSNT_DPTH": "328",
+        "W_MUD_CIRC_PC": "90",
+        "W_DPTH_CHG_DIS": "118"
+      },
+      {
+        "W_PRSNT_DPTH": "468",
+        "W_MUD_CIRC_PC": "90",
+        "W_DPTH_CHG_DIS": "140"
+      },
+      {
+        "W_PRSNT_DPTH": "619",
+        "W_MUD_CIRC_PC": "95",
+        "W_DPTH_CHG_DIS": "151"
+      },
+      {
+        "W_PRSNT_DPTH": "744",
+        "W_MUD_CIRC_PC": "95",
+        "W_DPTH_CHG_DIS": "125"
+      },
+      {
+        "W_PRSNT_DPTH": "983",
+        "W_MUD_CIRC_PC": "90",
+        "W_DPTH_CHG_DIS": "239"
+      },
+      {
+        "W_PRSNT_DPTH": "1273",
+        "W_MUD_CIRC_PC": "95",
+        "W_DPTH_CHG_DIS": "290"
+      },
+      {
+        "W_PRSNT_DPTH": "1480",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "207"
+      },
+      {
+        "W_PRSNT_DPTH": "1550",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "70"
+      },
+      {
+        "W_PRSNT_DPTH": "1645",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "95"
+      },
+      {
+        "W_PRSNT_DPTH": "1930",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "285"
+      },
+      {
+        "W_PRSNT_DPTH": "2020",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "90"
+      },
+      {
+        "W_PRSNT_DPTH": "2045",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "25"
+      },
+      {
+        "W_PRSNT_DPTH": "2276",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "231"
+      },
+      {
+        "W_PRSNT_DPTH": "2535",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "259"
+      },
+      {
+        "W_PRSNT_DPTH": "2735",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "200"
+      },
+      {
+        "W_PRSNT_DPTH": "2925",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "190"
+      },
+      {
+        "W_PRSNT_DPTH": "3164",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "239"
+      },
+      {
+        "W_PRSNT_DPTH": "3190",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "26"
+      },
+      {
+        "W_PRSNT_DPTH": "3487",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "297"
+      },
+      {
+        "W_PRSNT_DPTH": "3765",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "278"
+      },
+      {
+        "W_PRSNT_DPTH": "4115",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "350"
+      },
+      {
+        "W_PRSNT_DPTH": "4355",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "240"
+      },
+      {
+        "W_PRSNT_DPTH": "4539",
+        "W_MUD_CIRC_PC": "100",
+        "W_DPTH_CHG_DIS": "184"
+      }
+    ]
 
-  const left  = `M${sl},${y} L${sl},${y + dropPx} L${sl + size},${y} Z`;
-  const right = `M${sr},${y} L${sr},${y + dropPx} L${sr - size},${y} Z`;
-
-  return { left, right };
-}
+W_PRSNT_DPTH is for the depth of measurement.
+W_MUD_CIRC_PC is for the mud circulation percentage (%) at that depth.
+W_DPTH_CHG_DIS is the difference between the current depth – the previous (you might not need this value).
