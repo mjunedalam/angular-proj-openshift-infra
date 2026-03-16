@@ -327,3 +327,136 @@ export function selectWellTestResults(d: IWellData | null): WellTestResult[] {
         h2s:          t.h2s         ?? 0,
     }));
 }
+====
+ "WWELL_MUD_CIRC": [
+        {
+          "W_PRSNT_DPTH": "105",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "105"
+        },
+        {
+          "W_PRSNT_DPTH": "120",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "15"
+        },
+        {
+          "W_PRSNT_DPTH": "210",
+          "W_MUD_CIRC_PC": "80",
+          "W_DPTH_CHG_DIS": "90"
+        },
+        {
+          "W_PRSNT_DPTH": "328",
+          "W_MUD_CIRC_PC": "90",
+          "W_DPTH_CHG_DIS": "118"
+        },
+        {
+          "W_PRSNT_DPTH": "468",
+          "W_MUD_CIRC_PC": "90",
+          "W_DPTH_CHG_DIS": "140"
+        },
+        {
+          "W_PRSNT_DPTH": "619",
+          "W_MUD_CIRC_PC": "95",
+          "W_DPTH_CHG_DIS": "151"
+        },
+        {
+          "W_PRSNT_DPTH": "744",
+          "W_MUD_CIRC_PC": "95",
+          "W_DPTH_CHG_DIS": "125"
+        },
+        {
+          "W_PRSNT_DPTH": "983",
+          "W_MUD_CIRC_PC": "90",
+          "W_DPTH_CHG_DIS": "239"
+        },
+        {
+          "W_PRSNT_DPTH": "1273",
+          "W_MUD_CIRC_PC": "95",
+          "W_DPTH_CHG_DIS": "290"
+        },
+        {
+          "W_PRSNT_DPTH": "1480",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "207"
+        },
+        {
+          "W_PRSNT_DPTH": "1550",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "70"
+        },
+        {
+          "W_PRSNT_DPTH": "1645",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "95"
+        },
+        {
+          "W_PRSNT_DPTH": "1930",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "285"
+        },
+        {
+          "W_PRSNT_DPTH": "2020",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "90"
+        },
+        {
+          "W_PRSNT_DPTH": "2045",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "25"
+        },
+        {
+          "W_PRSNT_DPTH": "2276",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "231"
+        },
+        {
+          "W_PRSNT_DPTH": "2535",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "259"
+        },
+        {
+          "W_PRSNT_DPTH": "2735",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "200"
+        },
+        {
+          "W_PRSNT_DPTH": "2925",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "190"
+        },
+        {
+          "W_PRSNT_DPTH": "3164",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "239"
+        },
+        {
+          "W_PRSNT_DPTH": "3190",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "26"
+        },
+        {
+          "W_PRSNT_DPTH": "3487",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "297"
+        },
+        {
+          "W_PRSNT_DPTH": "3765",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "278"
+        },
+        {
+          "W_PRSNT_DPTH": "4115",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "350"
+        },
+        {
+          "W_PRSNT_DPTH": "4355",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "240"
+        },
+        {
+          "W_PRSNT_DPTH": "4539",
+          "W_MUD_CIRC_PC": "100",
+          "W_DPTH_CHG_DIS": "184"
+        }
+      ]
