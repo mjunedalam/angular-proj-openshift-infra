@@ -1,28 +1,30 @@
 module.exports = {
   preset: 'jest-preset-angular',
+  setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],
   testEnvironment: 'jest-environment-jsdom',
   
-  // Kept the src/ path based on your comments
-  setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],
-
-  // Combined all mappings into a single object
   moduleNameMapper: {
     '^@src/(.*)$': '<rootDir>/src/$1',
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@env/(.*)$': '<rootDir>/src/environment/$1',
     '^@arcgis/core/(.*)$': '<rootDir>/node_modules/@arcgis/core/$1',
-    '^d3$': '<rootDir>/node_modules/d3/dist/d3.min.js' 
   },
 
+  // 1. FIXED FATAL ERROR: Added d3, d3-.*, and its dependencies to the exception list
+  // so Jest knows to transform them from ESM to CommonJS.
   transformIgnorePatterns: [
-    'node_modules/(?!(.*\\.mjs$|@arcgis/core|@angular|rxjs))'
+    'node_modules/(?!.*\\.mjs$|@arcgis/core|@angular|rxjs|d3|d3-.*|internmap|delaunator|robust-predicates)'
   ],
 
-  globals: {
-    'ts-jest': {
-      tsconfig: '<rootDir>/tsconfig.spec.json',
-      stringifyContentPathRegex: '\\.(html|svg)$',
-    },
+  // 2. FIXED WARNING: Moved ts-jest config from 'globals' to 'transform'
+  transform: {
+    '^.+\\.(ts|js|mjs|html|svg)$': [
+      'jest-preset-angular',
+      {
+        tsconfig: '<rootDir>/tsconfig.spec.json',
+        stringifyContentPathRegex: '\\.(html|svg)$',
+      },
+    ],
   },
 
   extensionsToTreatAsEsm: ['.ts'],
@@ -34,30 +36,40 @@ module.exports = {
   ]
 };
 ===
-import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
+module.exports = {
+  preset: 'jest-preset-angular',
+  setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],
+  testEnvironment: 'jest-environment-jsdom',
+  
+  moduleNameMapper: {
+    '^@src/(.*)$': '<rootDir>/src/$1',
+    '^@app/(.*)$': '<rootDir>/src/app/$1',
+    '^@env/(.*)$': '<rootDir>/src/environment/$1',
+    '^@arcgis/core/(.*)$': '<rootDir>/node_modules/@arcgis/core/$1',
+  },
 
-class ResizeObserver {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  observe() { }
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  unobserve() { }
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  disconnect() { }
-}
-(window as any).ResizeObserver = ResizeObserver;
+  // 1. FIXED FATAL ERROR: Added d3, d3-.*, and its dependencies to the exception list
+  // so Jest knows to transform them from ESM to CommonJS.
+  transformIgnorePatterns: [
+    'node_modules/(?!.*\\.mjs$|@arcgis/core|@angular|rxjs|d3|d3-.*|internmap|delaunator|robust-predicates)'
+  ],
 
-setupZoneTestEnv();
+  // 2. FIXED WARNING: Moved ts-jest config from 'globals' to 'transform'
+  transform: {
+    '^.+\\.(ts|js|mjs|html|svg)$': [
+      'jest-preset-angular',
+      {
+        tsconfig: '<rootDir>/tsconfig.spec.json',
+        stringifyContentPathRegex: '\\.(html|svg)$',
+      },
+    ],
+  },
 
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleFileExtensions: ['ts', 'js', 'mjs', 'html'],
+  
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/dist/'
+  ]
+};
