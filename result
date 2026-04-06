@@ -1,226 +1,61 @@
-:host {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  background: var(--bg-content);
-  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-}
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentRef } from '@angular/core';
+import { DepthScaleComponent } from './depth-scale.component';
 
-.presentation {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
+describe('DepthScaleComponent', () => {
+  let component: DepthScaleComponent;
+  let fixture: ComponentFixture<DepthScaleComponent>;
+  let componentRef: ComponentRef<DepthScaleComponent>;
 
-// ── Toolbar row ────────────────────────────────────────────────────────────────
-.presentation__toolbar {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  position: relative;  // so the toggle can sit on top of chip strip edge
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [DepthScaleComponent]
+    }).compileComponents();
 
-  .toolbar__chips {
-    flex: 1;
-    min-width: 0;
-  }
-}
+    fixture = TestBed.createComponent(DepthScaleComponent);
+    component = fixture.componentInstance;
+    componentRef = fixture.componentRef;
+    
+    // Set required signal inputs
+    componentRef.setInput('totalDepth', 1000);
+    componentRef.setInput('animTrigger', 1);
+    
+    fixture.detectChanges();
+  });
 
-// ── Layout toggle — icon-only pill, sits at far right ─────────────────────────
-.layout-toggle {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  cursor: pointer;
-  margin-right: 10px;
-  transition: border-color 0.18s, background 0.18s, color 0.18s, box-shadow 0.18s;
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
 
-  svg {
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-  }
+  it('should draw the depth scale SVG elements', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const svg: SVGSVGElement | null = compiled.querySelector('svg');
+    expect(svg).toBeTruthy();
+    
+    if (svg) {
+      const gElements = svg.querySelectorAll('g');
+      expect(gElements.length).toBeGreaterThan(0);
 
-  &:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-muted);
-  }
+      const axisTitle = svg.querySelector('.axis-title');
+      expect(axisTitle).toBeTruthy();
+      expect(axisTitle?.textContent).toContain('Depth');
+      
+      const axisLine = svg.querySelector('.axis-line');
+      expect(axisLine).toBeTruthy();
 
-  // Active / ON state
-  &--on {
-    border-color: var(--accent);
-    background: var(--accent-muted);
-    color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
-  }
-}
-
-// ── Error banner ───────────────────────────────────────────────────────────────
-.error-banner {
-  flex-shrink: 0;
-  margin: 0 12px 4px;
-  padding: 7px 14px;
-  background: rgba(239,68,68,0.1);
-  border: 1px solid rgba(239,68,68,0.3);
-  border-radius: 8px;
-  color: var(--danger);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// MODE A — FIXED three-column layout (default)
-// ══════════════════════════════════════════════════════════════════════════════
-.pres-fixed {
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  overflow: hidden;
-  min-height: 0;
-  gap: 0;
-
-  // Left panel — width driven by signal
-  &__left {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 8px 0 8px 8px;
-    min-width: 0;
-
-    // Make draggable-card children fill available height
-    app-draggable-card {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
+      const totalDepthLabel = svg.querySelector('.total-depth-label');
+      expect(totalDepthLabel).toBeTruthy();
     }
+  });
 
-    &::-webkit-scrollbar { width: 3px; }
-    &::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  }
+  it('should update scale on trigger change', () => {
+    componentRef.setInput('totalDepth', 2000);
+    componentRef.setInput('animTrigger', 2);
+    fixture.detectChanges();
 
-  // Center panel — fills remaining space
-  &__center {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-width: 0;
-    padding: 8px 0;
-    gap: 8px;
-  }
-
-  // Right panel — width driven by signal
-  &__right {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 8px 8px 8px 0;
-    min-width: 0;
-
-    app-draggable-card {
-      flex-shrink: 0;
-    }
-
-    &::-webkit-scrollbar { width: 3px; }
-    &::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  }
-
-  // ── Responsive Mobile/Tablet Breakpoint ────────────────────────────────────
-  @media (max-width: 1200px) {
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0 12px;
-
-    &__left, &__center, &__right {
-      width: 100% !important;
-      flex-shrink: 0;
-      padding: 12px 0;
-      min-height: 500px; // ensure widgets expand tall enough natively
-    }
-
-    &__center {
-      min-height: 800px;
-    }
-
-    // Hide manual resize dividers on stacked layout
-    app-resize-divider {
-      display: none !important;
-    }
-  }
-}
-
-// Wellbore diagram fills center
-.diagram-scroll {
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  background: var(--bg-card);
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-  overflow: hidden;
-  min-height: 0;
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// MODE B — FREE canvas layout
-// ══════════════════════════════════════════════════════════════════════════════
-.pres-canvas {
-  flex: 1;
-  position: relative;
-  overflow: auto;
-  min-height: 0;
-
-  // Subtle dot grid backdrop
-  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: 12px 12px;
-  padding: 8px;
-
-  &::-webkit-scrollbar { width: 6px; height: 6px; }
-  &::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
-}
-
-// Diagram in free mode
-.diagram-inner {
-  display: flex;
-  height: 100%;
-  overflow: hidden;
-}
-
-// ── Shared empty state ─────────────────────────────────────────────────────────
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 14px;
-  color: var(--text-muted);
-  padding: 24px;
-
-  &__icon { font-size: 40px; opacity: 0.22; animation: float 3s ease-in-out infinite; }
-  &__text  { font-size: 12px; font-weight: 500; opacity: 0.6; text-align: center; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-5px); }
-}
+    // Verify updating inputs does not break the component
+    const compiled = fixture.nativeElement as HTMLElement;
+    const labels = compiled.querySelectorAll('.tick-label');
+    expect(labels.length).toBeGreaterThan(0);
+  });
+});
