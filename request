@@ -1,78 +1,194 @@
-// jest.config.js (project root)
-module.exports = {
-  preset: 'jest-preset-angular',
-  setupFilesAfterEnv: ['<rootDir>/setup-jest.ts'],
-  testEnvironment: 'jest-environment-jsdom',
-  moduleNameMapper: {
-   '^@src/(.*)$': '<rootDir>/src/$1',
-   '^@app/(.*)$': '<rootDir>/src/app/$1',
-   '^@env/(.*)$': '<rootDir>/src/environment/$1',
-   '^@arcgis/core/(.*)$': '<rootDir>/node_modules/@arcgis/core/$1',
-  },
-  transformIgnorePatterns: [
-   'node_modules/(?!(.*\\.mjs$|@arcgis/core|@angular|rxjs))'
-  ],
-  
-  // -----------------------------------------------------------------
-  // The path is resolved relative to the directory that contains this file.
-  // If the file lives in src/, use <rootDir>/src/setup-jest.ts
-  // -----------------------------------------------------------------
-  setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],
-
-  moduleNameMapper: {
-    '^d3$': '<rootDir>/node_modules/d3/dist/d3.min.js'   // ←‑‑ map D3 to the UMD bundle
-  },
-  globals: {
-    'ts-jest': {
-      tsconfig: '<rootDir>/tsconfig.spec.json',
-      stringifyContentPathRegex: '\\.(html|svg)$',
-    },
-  },
-  extensionsToTreatAsEsm: ['.ts'],
-  moduleFileExtensions:['ts','js','mjs','html'],
-  testPathIgnorePatterns: [
-    '<rootDir>/node_modules/',
-     '<rootDir>/dist/'
-  ]
-};
-
-import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
-class ResizeObserver {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  observe() { }
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  unobserve() { }
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  disconnect() { }
-}
-(window as any).ResizeObserver = ResizeObserver;
-setupZoneTestEnv();
-
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
-
-error
-PS C:\Users\alammx1o.ARAMCO\AGWA\agwa-frontend> npm test src/app/features/persentation/depth-scale/depth‑scale.component.spec.ts
 
 > agwa@0.0.1 test
-> jest src/app/features/persentation/depth-scale/depth‑scale.component.spec.ts
+> jest src/app/features/persentation/depth-scale/depth-scale.component.spec.ts
 
-No tests found, exiting with code 1
-Run with `--passWithNoTests` to exit with code 0
-In C:\Users\alammx1o.ARAMCO\AGWA\agwa-frontend
-  2645 files checked.
-  testMatch: **/__tests__/**/*.[jt]s?(x), **/?(*.)+(spec|test).[tj]s?(x) - 49 matches
-  testPathIgnorePatterns: C:\\Users\\alammx1o.ARAMCO\\AGWA\\agwa-frontend\\node_modules\\, C:\\Users\\alammx1o.ARAMCO\\AGWA\\agwa-frontend\\dist\\ - 1466 matches
-  testRegex:  - 0 matches
-Pattern: src\\app\\features\\persentation\\depth-scale\\depth‑scale.component.spec.ts - 0 matches
+ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is deprecated. Please do
+transform: {
+    <transform_regex>: ['ts-jest', { /* ts-jest config goes here in Jest */ }],
+},
+See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/presets#advanced
+ FAIL  src/app/features/persentation/depth-scale/depth-scale.component.spec.ts
+  ● Test suite failed to run
+                                                                                                                                                             
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Dev\JavaDev\Agwa-Services\agwa-master\agwa-frontend\node_modules\d3-selection\src\index.js:1
+    ({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){export {default as create} from "./create.js";
+                                                                                      ^^^^^^
+
+    SyntaxError: Unexpected token 'export'
+
+       8 |   input,
+       9 | } from '@angular/core';
+    > 10 | import { select } from 'd3-selection';
+         | ^
+      11 | import { easeLinear } from 'd3-ease';
+      12 | import 'd3-transition';
+      13 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1505:14)
+      at Object.<anonymous> (src/app/features/persentation/depth-scale/depth-scale.component.ts:10:1)
+      at Object.<anonymous> (src/app/features/persentation/depth-scale/depth-scale.component.spec.ts:2:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        3.607 s
+Ran all test suites matching /src\\app\\features\\persentation\\depth-scale\\depth-scale.component.spec.ts/i.
+
+getting above error
+below are the required files
+{
+  "name": "agwa",
+  "version": "0.0.1",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --watch",
+    "lint": "ng lint"
+  },
+  "private": true,
+  "dependencies": {
+    "@ag-grid-community/all-modules": "^27.3.0",
+    "@angular/animations": "^19.0.0",
+    "@angular/cdk": "^19.2.19",
+    "@angular/common": "^19.0.0",
+    "@angular/compiler": "^19.0.0",
+    "@angular/core": "^19.0.0",
+    "@angular/forms": "^19.0.0",
+    "@angular/material": "^19.2.19",
+    "@angular/platform-browser": "^19.0.0",
+    "@angular/platform-browser-dynamic": "^19.0.0",
+    "@angular/router": "^19.0.0",
+    "@arcgis/core": "^4.33.12",
+    "@auth0/angular-jwt": "^5.2.0",
+    "@ngrx/signals": "^19.2.1",
+    "@ngrx/operators": "19.0.1",
+    "@tailwindcss/postcss": "^4.1.11",
+    "ag-grid-angular": "~35.1.0",
+    "ag-grid-community": "~35.1.0",
+    "chart.js": "^4.5.0",
+    "d3": "^7.9.0",
+    "d3-ease": "3.0.1",
+    "d3-scale": "4.0.2",
+    "d3-selection": "3.0.0",
+    "d3-transition": "3.0.1",
+    "juice": "^11.0.1",
+    "material-icons": "^1.13.14",
+    "ng2-charts": "^8.0.0",
+    "postcss": "^8.5.6",
+    "rxjs": "~7.8.0",
+    "tailwindcss": "^4.1.11",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^19.2.15",
+    "@angular/cli": "^19.2.5",
+    "@angular/compiler-cli": "^19.2.0",
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "@types/d3": "^7.4.3",
+    "@types/d3-ease": "3.0.2",
+    "@types/d3-scale": "4.0.9",
+    "@types/d3-selection": "3.0.11",
+    "@types/d3-transition": "3.0.9",
+    "@types/express": "^4.17.4",
+    "@types/jasmine": "~5.1.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^18.8.0",
+    "angular-eslint": "21.0.1",
+    "babel-jest": "30.0.0",
+    "eslint": "^9.39.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "jest-preset-angular": "^14.0.1",
+    "ts-jest": "^29.2.4",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "8.46.4"
+  },
+  "overrides": {
+    "balanced-match": "1.0.2",
+    "@floating-ui/utils": "0.2.9"
+  }
+}
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DecimalPipe } from '@angular/common';
+
+import { MiscPresWellDataComponent } from './misc-pres-well-data.component';
+
+describe('MiscPresWellDataComponent', () => {
+  let component: MiscPresWellDataComponent;
+  let fixture: ComponentFixture<MiscPresWellDataComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [MiscPresWellDataComponent, DecimalPipe]
+    })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(MiscPresWellDataComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+
+import { WellStore } from '../../../core/stores/wwell-data/well.store';
+
+@Component({
+  selector: 'app-misc-pres-well-data',
+  standalone: true,
+  imports: [DecimalPipe],
+  templateUrl: './misc-pres-well-data.component.html',
+  styleUrl: './misc-pres-well-data.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush // Optimized performance
+})
+export class MiscPresWellDataComponent {
+
+  protected readonly store = inject(WellStore);
+
+  // private readonly store = inject(WellStore);
+
+
+  // readonly misc = this.store.miscWellData;
+
+
+  // constructor() {
+
+
+
+  //   this.store.loadWellNames();
+  // }
+
+}
