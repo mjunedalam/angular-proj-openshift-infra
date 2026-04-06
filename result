@@ -1,516 +1,286 @@
+@if (store.miscWellData(); as d) {
+  <div class="misc-grid">
 
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { WellBoreViewComponent } from './well-bore-view.component';
-import { ComponentRef } from '@angular/core';
-import { WellboreDiagramData } from '../../../models/well-design/wellbore-diagram.model';
+    <!-- ROW 1: Well Name | Targeted Aquifer -->
+    <div class="card bg-gradient-cyan">
+      <div class="text-sub opacity-80 mb-1">Well Name</div>
+      <div class="text-xl">{{ d.wellName }}</div>
+      <div class="text-xs mt-1 opacity-90">{{ d.targetDesc }}</div>
+    </div>
 
-describe('WellBoreViewComponent', () => {
-  let component: WellBoreViewComponent;
-  let fixture: ComponentFixture<WellBoreViewComponent>;
-  let componentRef: ComponentRef<WellBoreViewComponent>;
+    <div class="card bg-white center-content">
+      <div class="text-sub dark-text mb-1">Targeted Aquifer</div>
+      <div class="aquifer-icon">
+        <svg viewBox="0 0 24 24" fill="url(#dropGrad)">
+          <defs>
+            <linearGradient id="dropGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#0ea5e9"/>
+              <stop offset="100%" stop-color="#0284c7"/>
+            </linearGradient>
+          </defs>
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+        </svg>
+      </div>
+      <div class="cyan-text text-md">{{ d.targetedAquifer }}</div>
+    </div>
 
-  const mockDiagramData: WellboreDiagramData = {
-    wellName: 'Test Well',
-    totalDepth: 10000,
-    currentDepth: 8000,
-    casings: [
-      { csgSize: 20, csgType: 'Conductor', csgDepth: 500, csgRemarks: 'Cond' } as any,
-      { csgSize: 13.375, csgType: 'Surface', csgDepth: 2500, csgRemarks: 'Surf' } as any,
-    ],
-    geologicTops: [
-      { stLongCd: 'FM1', planTvdDepth: 1000 } as any,
-      { stLongCd: 'FM2', planTvdDepth: 3000 } as any,
-    ],
-    hydrogeology: {
-      estStaticWaterLevel: 1500,
-      estTargetAquifier: 'FM2',
-      flowType: 'N',
-    } as any,
-    prewap: null,
-    rigActivity: null,
-    mudCirculation: [
-      { depth: 1000, pct: 100 },
-      { depth: 5000, pct: 50 },
-    ],
-  };
+    <!-- ROW 2: Current Status | Days counter -->
+    <div class="card bg-white flex-row space-between">
+      <div>
+        <div class="text-sub dark-text">Current Status</div>
+        <div class="text-md cyan-text mt-1">{{ d.currentStatus }}</div>
+      </div>
+      <div class="icon-gear">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06
+                   a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09
+                   A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83
+                   l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09
+                   A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83
+                   l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09
+                   a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83
+                   l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09
+                   a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
+    </div>
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [WellBoreViewComponent],
-    }).compileComponents();
+    <div class="card bg-gradient-dark-blue flex-row">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="mr-2 opacity-80">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8"  y1="2" x2="8"  y2="6"/>
+        <line x1="3"  y1="10" x2="21" y2="10"/>
+        <circle cx="8"  cy="14" r="1" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="14" r="1" fill="currentColor" stroke="none"/>
+        <circle cx="16" cy="14" r="1" fill="currentColor" stroke="none"/>
+        <circle cx="8"  cy="18" r="1" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/>
+        <circle cx="16" cy="18" r="1" fill="currentColor" stroke="none"/>
+      </svg>
+      <div>
+        <div class="text-xs opacity-90">Days</div>
+        <div class="text-md mt-1">{{ d.daysSinceSpud }} / {{ d.targetDays }}</div>
+      </div>
+    </div>
 
-    fixture = TestBed.createComponent(WellBoreViewComponent);
-    component = fixture.componentInstance;
-    componentRef = fixture.componentRef;
-    
-    // Set required inputs
-    componentRef.setInput('diagramData', mockDiagramData);
-    componentRef.setInput('animTrigger', 1);
-    
-    fixture.detectChanges();
-  });
+    <!-- ROW 3: Gauges | BI / Supporting -->
+    <div class="card bg-white flex-row space-around">
+      <div class="gauge-container">
+        <div class="gauge-title">Days since<br>Spud</div>
+        <div class="gauge gauge--blue">{{ d.daysSinceSpud }}</div>
+      </div>
+      <div class="gauge-container">
+        <div class="gauge-title">Target<br>Days</div>
+        <div class="gauge gauge--blue">{{ d.targetDays }}</div>
+      </div>
+    </div>
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
+    <div class="card bg-gradient-cyan">
+      <div class="text-lg">BI{{ d.biNum }}</div>
+      <div class="text-sub opacity-90 mt-1">Supporting</div>
+      <div class="text-md mt-1">Well {{ d.supportingWell }}</div>
+    </div>
 
-  it('should initialize the SVG element', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const svg = compiled.querySelector('svg');
-    expect(svg).toBeTruthy();
-    expect(svg?.getAttribute('viewBox')).toBeDefined();
-  });
+    <!-- ROW 4: Feet Drilled | Previous Well -->
+    <div class="card bg-gradient-cyan flex-row space-between">
+      <div class="flex-baseline">
+        <div class="text-xxl">{{ d.feetDrilledToday | number }}</div>
+        <div class="text-sm ml-2 opacity-90">Feet</div>
+      </div>
+      <div class="icon-waves">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v10M8 8l4 4 4-4"/>
+          <path d="M2 18s2-2 4-2 4 2 4 2 4-2 4 2"/>
+          <path d="M2 22s2-2 4-2 4 2 4 2 4-2 4 2"/>
+        </svg>
+      </div>
+    </div>
 
-  it('should render ground line and static chrome', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.ground-line')).toBeTruthy();
-    expect(compiled.querySelector('.ground-label')?.textContent).toBe('Ground Level');
-  });
+    <div class="card bg-gradient-dark-blue">
+      <div class="text-sub opacity-80">Previous Well</div>
+      <div class="text-md mt-1">{{ d.previousWell }}</div>
+    </div>
 
-  it('should render geologic tops from data', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const tops = compiled.querySelectorAll('.geo-top');
-    // We have 2 mock tops
-    expect(tops.length).toBe(2);
-    expect(tops[0].textContent).toContain('FM1');
-    expect(tops[1].textContent).toContain('FM2');
-  });
+    <!-- ROW 5: Current Depth | Next Well -->
+    <div class="card bg-gradient-cyan flex-row space-between">
+      <div>
+        <div class="text-sm opacity-90">Current</div>
+        <div class="text-sm opacity-90">Depth (FT.DF)</div>
+      </div>
+      <div class="text-xxl">{{ d.currentDepth | number }}</div>
+    </div>
 
-  it('should identify the target aquifer with a special class', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const targetTop = compiled.querySelector('.geo-top--target');
-    expect(targetTop).toBeTruthy();
-    expect(targetTop?.textContent).toContain('FM2');
-    expect(targetTop?.querySelector('.geo-target-band')).toBeTruthy();
-  });
+    <div class="card bg-gradient-dark-blue">
+      <div class="text-sub opacity-80">Next Well</div>
+      <div class="text-md mt-1">{{ d.nextWell }}</div>
+    </div>
 
-  it('should render casings as path elements', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const casings = compiled.querySelectorAll('path.casing');
-    // We have 2 structural casings in mockup
-    expect(casings.length).toBe(2);
-  });
+    <!-- ROW 6: Operation Summary (Full Width) -->
+    <div class="card bg-white full-width flex-row">
+      <div class="icon-summary mr-3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+        </svg>
+      </div>
+      <div class="status-container">
+        <div class="text-sub dark-text">Operation Summary</div>
+        <div class="text-sm cyan-text mt-1 status-text">{{ d.operationSummary }}</div>
+      </div>
+    </div>
 
-  it('should render casing labels correctly', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const labels = compiled.querySelectorAll('.casing-label');
-    expect(labels.length).toBe(2);
-    expect(labels[0].textContent).toContain('20" Conductor @ 500');
-    expect(labels[1].textContent).toContain('13.375" Surface @ 2,500');
-  });
+    <!-- ROW 7: Next 24 Hour Operation (Full Width) -->
+    <div class="card bg-white full-width flex-row">
+      <div class="icon-next-plan mr-3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <div class="status-container">
+        <div class="text-sub dark-text">Next 24 Hour Operation</div>
+        <div class="text-sm cyan-text mt-1 status-text">{{ d.next24HrOperation }}</div>
+      </div>
+    </div>
 
-  it('should render water level line', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const waterLevel = compiled.querySelector('.water-level');
-    expect(waterLevel).toBeTruthy();
-    expect(waterLevel?.textContent).toContain('Static WL: 1,500 ft');
-  });
+  </div>
+}
 
-  it('should render the depth arrow group', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.depth-arrow-group')).toBeTruthy();
-    expect(compiled.querySelector('.depth-arrow-head')).toBeTruthy();
-  });
-
-  it('should update the view when diagramData or animTrigger changes', fakeAsync(() => {
-    // Modify mock data
-    const newData = { ...mockDiagramData, wellName: 'Updated Well', geologicTops: [] };
-    componentRef.setInput('diagramData', newData);
-    componentRef.setInput('animTrigger', 2);
-    
-    fixture.detectChanges();
-    tick(); // allow effect to run
-    
-    const compiled = fixture.nativeElement as HTMLElement;
-    // redrawn view should have 0 tops
-    expect(compiled.querySelectorAll('.geo-top').length).toBe(0);
-  }));
-});
 ===
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { WwellsLogsIndicatorsComponent } from './wwells-logs-indicators.component';
-import { WellStore } from 'src/app/core/store/well.store';
-import { signal } from '@angular/core';
+.misc-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
 
-describe('WwellsLogsIndicatorsComponent', () => {
-  let component: WwellsLogsIndicatorsComponent;
-  let fixture: ComponentFixture<WwellsLogsIndicatorsComponent>;
-  let mockStore: any;
+.card {
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
 
-  beforeEach(async () => {
-    mockStore = {
-      wellsLogsIndicators: signal({
-        rcc: true,
-        mudLog: false,
-        logging: true,
-      }),
-    };
+  &.bg-gradient-cyan {
+    background: linear-gradient(120deg, #00cfe8 0%, #0ea5e9 55%, #0369a1 100%);
+    color: #ffffff;
+    border-color: transparent;
+  }
+  &.bg-gradient-dark-blue {
+    background: linear-gradient(135deg, #1d6fe8 0%, #1a50cc 100%);
+    color: #ffffff;
+    border-color: transparent;
+  }
+  &.bg-white {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+  &.center-content { align-items: center; text-align: center; }
+  &.flex-row       { flex-direction: row; align-items: center; }
+  &.space-between  { justify-content: space-between; }
+  &.space-around   { justify-content: space-around; }
+  &.full-width     { grid-column: 1 / -1; min-height: 80px; align-items: flex-start; }
+}
 
-    await TestBed.configureTestingModule({
-      imports: [WwellsLogsIndicatorsComponent],
-      providers: [
-        { provide: WellStore, useValue: mockStore }
-      ]
-    }).compileComponents();
+.status-container {
+  flex: 1;
+  min-width: 0;
+}
 
-    fixture = TestBed.createComponent(WwellsLogsIndicatorsComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
+.status-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  line-height: 1.4;
+}
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
+.text-xxl { font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
+.text-xl  { font-size: 17px; font-weight: 700; margin-bottom: 2px; line-height: 1.3; }
+.text-lg  { font-size: 16px; font-weight: 700; }
+.text-md  { font-size: 14px; font-weight: 700; }
+.text-sm  { font-size: 12px; font-weight: 600; line-height: 1.3; }
+.text-xs  { font-size: 11px; font-weight: 500; }
+.text-sub { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; }
 
-  it('should set active/inactive classes and disabled status based on store data', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const buttons = compiled.querySelectorAll('button.log-btn');
-    
-    // RTC (true)
-    expect(buttons[0].classList.contains('log-btn--active')).toBe(true);
-    expect((buttons[0] as HTMLButtonElement).disabled).toBe(false);
+.dark-text { color: var(--text-secondary); }
+.cyan-text { color: var(--accent); font-weight: 700; }
 
-    // Mud Log (false)
-    expect(buttons[1].classList.contains('log-btn--inactive')).toBe(true);
-    expect((buttons[1] as HTMLButtonElement).disabled).toBe(true);
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mb-1 { margin-bottom: 4px; }
+.ml-2 { margin-left: 8px; }
+.mr-2 { margin-right: 8px; }
+.mr-3 { margin-right: 14px; }
+.opacity-80 { opacity: 0.8; }
+.opacity-90 { opacity: 0.9; }
 
-    // Logging (true)
-    expect(buttons[2].classList.contains('log-btn--active')).toBe(true);
-    expect((buttons[2] as HTMLButtonElement).disabled).toBe(false);
-  });
+.flex-center   { display: flex; align-items: center; justify-content: center; }
+.flex-baseline { display: flex; align-items: baseline; }
+.icon-text     { gap: 6px; font-size: 15px; font-weight: 700; }
+.drop-shadow-icon { filter: drop-shadow(0 2px 5px rgba(2,132,199,0.4)); }
 
-  it('should update classes when store data changes', () => {
-    mockStore.wellsLogsIndicators.set({
-      rcc: false,
-      mudLog: true,
-      logging: false,
-    });
-    fixture.detectChanges();
+.icon-gear, .icon-summary, .icon-next-plan {
+  background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+  border-radius: 50%;
+  width: 42px; height: 42px; min-width: 42px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(2,132,199,0.35);
+  color: #fff;
+  svg { width: 22px; height: 22px; }
+}
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    const buttons = compiled.querySelectorAll('button.log-btn');
-    
-    expect(buttons[0].classList.contains('log-btn--inactive')).toBe(true);
-    expect(buttons[1].classList.contains('log-btn--active')).toBe(true);
-    expect(buttons[2].classList.contains('log-btn--inactive')).toBe(true);
-  });
-});
+.icon-summary {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b); // Amber for summary
+  box-shadow: 0 4px 12px rgba(245,158,11,0.35);
+}
+
+.icon-next-plan {
+  background: linear-gradient(135deg, #10b981, #059669); // Emerald for next plan
+  box-shadow: 0 4px 12px rgba(5,150,105,0.35);
+}
+
+.gauge-container {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.gauge-title {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted); text-align: center; line-height: 1.2;
+}
+.gauge {
+  width: 58px; height: 58px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800;
+
+  &--blue {
+    border: 3px solid var(--accent);
+    outline: 1.5px solid var(--accent-muted);
+    outline-offset: 2px;
+    color: var(--accent);
+    background: var(--bg-surface);
+    box-shadow: 0 0 0 5px var(--accent-muted);
+  }
+}
+
+.aquifer-icon {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-muted), rgba(14,165,233,0.3));
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 6px;
+  box-shadow: 0 2px 8px rgba(2,132,199,0.2);
+  svg { width: 22px; height: 22px; }
+}
 ===
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MiscPresWellDataComponent } from './misc-pres-well-data.component';
-import { WellStore } from 'src/app/core/store/well.store';
-import { signal } from '@angular/core';
 
-describe('MiscPresWellDataComponent', () => {
-  let component: MiscPresWellDataComponent;
-  let fixture: ComponentFixture<MiscPresWellDataComponent>;
-  let mockStore: any;
-
-  beforeEach(async () => {
-    mockStore = {
-      miscWellData: signal({
-        wellName: 'Test Well',
-        targetDesc: 'Test Description',
-        targetedAquifer: 'Test Aquifer',
-        currentStatus: 'Testing',
-        daysSinceSpud: 10,
-        targetDays: 20,
-        biNum: 'BI-123',
-        supportingWell: 'Well 5',
-        feetDrilledToday: 1500,
-        previousWell: 'Prev Well',
-        currentDepth: 5000,
-        nextWell: 'Next Well',
-      }),
-    };
-
-    await TestBed.configureTestingModule({
-      imports: [MiscPresWellDataComponent],
-      providers: [
-        { provide: WellStore, useValue: mockStore }
-      ]
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(MiscPresWellDataComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should render well information correctly', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    
-    expect(compiled.querySelector('.text-xl')?.textContent).toContain('Test Well');
-    expect(compiled.querySelector('.text-xs')?.textContent).toContain('Test Description');
-    expect(compiled.querySelector('.aquifer-icon + .cyan-text')?.textContent).toContain('Test Aquifer');
-    // The div containing currentStatus is BEFORE .icon-gear in its parent .card
-    const statusCard = compiled.querySelector('.icon-gear')?.parentElement;
-    expect(statusCard?.querySelector('.cyan-text')?.textContent).toContain('Testing');
-  });
-
-  it('should render days counter correctly', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const daysText = compiled.querySelector('.bg-gradient-dark-blue .text-md')?.textContent;
-    expect(daysText).toContain('10 / 20');
-  });
-
-  it('should render BI and supporting well correctly', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.bg-gradient-cyan .text-lg')?.textContent).toContain('BI-123');
-    expect(compiled.querySelector('.bg-gradient-cyan .text-md')?.textContent).toContain('Well 5');
-  });
-
-  it('should render drilled feet and current depth correctly', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    // feet Drilled Today with DecimalPipe (1,500)
-    expect(compiled.querySelector('.text-xxl')?.textContent).toContain('1,500');
-    // current Depth with DecimalPipe (5,000)
-    const depths = compiled.querySelectorAll('.text-xxl');
-    expect(depths[1]?.textContent).toContain('5,000');
-  });
-
-  it('should render previous and next well correctly', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Prev Well');
-    expect(compiled.textContent).toContain('Next Well');
-  });
-
-  it('should render nothing if miscWellData is null', () => {
-    mockStore.miscWellData.set(null);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.misc-grid')).toBeFalsy();
-  });
-});
-====
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { WellNameChipsComponent } from './well-name-chips.component';
-import { WellStore } from 'src/app/core/store/well.store';
-import { signal } from '@angular/core';
-
-describe('WellNameChipsComponent', () => {
-  let component: WellNameChipsComponent;
-  let fixture: ComponentFixture<WellNameChipsComponent>;
-  let mockStore: any;
-
-  beforeEach(async () => {
-    mockStore = {
-      wellNamesPage: signal(0),
-      totalPages: signal(2),
-      hasPrevPage: signal(false),
-      hasNextPage: signal(true),
-      pagedWellNames: signal([
-        { wellName: 'Well 1', epANum: 1 },
-        { wellName: 'Well 2', epANum: 2 }
-      ]),
-      selectedEpANum: signal(1),
-      loading: signal(false),
-      selectWell: jest.fn(),
-      nextPage: jest.fn(),
-      prevPage: jest.fn(),
-    };
-
-    await TestBed.configureTestingModule({
-      imports: [WellNameChipsComponent],
-      providers: [
-        { provide: WellStore, useValue: mockStore }
-      ]
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(WellNameChipsComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should render well name chips', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const chips = compiled.querySelectorAll('.chip:not(.chip--nav)');
-    expect(chips.length).toBe(2);
-    expect(chips[0].textContent).toContain('Well 1');
-    expect(chips[1].textContent).toContain('Well 2');
-  });
-
-  it('should highlight the selected well', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const activeChip = compiled.querySelector('.chip--active');
-    expect(activeChip?.textContent).toContain('Well 1');
-  });
-
-  it('should call selectWell when a chip is clicked', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const chips = compiled.querySelectorAll('.chip:not(.chip--nav)');
-    (chips[1] as HTMLElement).click();
-    expect(mockStore.selectWell).toHaveBeenCalledWith(2);
-  });
-
-  it('should show the next page button and call nextPage when clicked', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const nextBtn = compiled.querySelector('button[aria-label="Next wells"]') as HTMLElement;
-    expect(nextBtn).toBeTruthy();
-    nextBtn.click();
-    expect(mockStore.nextPage).toHaveBeenCalled();
-  });
-
-  it('should show the previous page button when hasPrevPage is true', () => {
-    mockStore.hasPrevPage.set(true);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const prevBtn = compiled.querySelector('button[aria-label="Previous wells"]');
-    expect(prevBtn).toBeTruthy();
-  });
-
-  it('should display the correct page label', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const label = compiled.querySelector('.chip-strip__page-indicator');
-    expect(label?.textContent).toBe('1 / 2');
-  });
-
-  it('should show loading bar when store is loading', () => {
-    mockStore.loading.set(true);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const loadingBar = compiled.querySelector('.well-loading-bar--active');
-    expect(loadingBar).toBeTruthy();
-  });
-});
-===
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { WwellTestResultComponent } from './wwell-test-result.component';
-import { WellStore, WellTestResult } from 'src/app/core/store/well.store';
-import { signal } from '@angular/core';
-
-describe('WwellTestResultComponent', () => {
-  let component: WwellTestResultComponent;
-  let fixture: ComponentFixture<WwellTestResultComponent>;
-  let mockStore: any;
-
-  const mockResults: WellTestResult[] = [
-    {
-      wellName: 'Well 1',
-      aquifer: 'Aquifer A',
-      testType: 'pumping',
-      flowRate: 500,
-      rpm: 1200,
-      tds: 300,
-      temperature: 25.5,
-      productivity: 1.5,
-      h2s: 0,
-    },
-    {
-      wellName: 'Well 2',
-      aquifer: 'Aquifer B',
-      testType: 'recovery',
-      flowRate: 300,
-      rpm: 1000,
-      tds: 450,
-      temperature: 22.1,
-      productivity: 0.8,
-      h2s: 5,
-    },
-  ];
-
-  beforeEach(async () => {
-    mockStore = {
-      wellTestResults: signal(mockResults),
-    };
-
-    await TestBed.configureTestingModule({
-      imports: [WwellTestResultComponent],
-      providers: [
-        { provide: WellStore, useValue: mockStore }
-      ]
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(WwellTestResultComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should render the list of test results', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const tabs = compiled.querySelectorAll('.test-tab');
-    expect(tabs.length).toBe(mockResults.length);
-    expect(tabs[0].textContent).toContain('Well 1');
-    expect(tabs[1].textContent).toContain('Well 2');
-  });
-
-  it('should show empty state if no results', () => {
-    mockStore.wellTestResults.set([]);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.test-results__empty')).toBeTruthy();
-    expect(compiled.querySelector('.test-tab')).toBeFalsy();
-  });
-
-  it('should open the dialog when a result tab is clicked', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const tabs = compiled.querySelectorAll('.test-tab');
-    (tabs[0] as HTMLElement).click();
-    fixture.detectChanges();
-
-    const dialog = compiled.querySelector('.dialog');
-    expect(dialog).toBeTruthy();
-    expect(dialog?.querySelector('.dialog__well-name')?.textContent).toBe('Well 1');
-  });
-
-  it('should render dialog metrics correctly', () => {
-    // Open dialog for Well 2 (H2S > 0)
-    const compiled = fixture.nativeElement as HTMLElement;
-    const tabs = compiled.querySelectorAll('.test-tab');
-    (tabs[1] as HTMLElement).click();
-    fixture.detectChanges();
-
-    const dialog = compiled.querySelector('.dialog');
-    expect(dialog?.querySelector('.metric--highlight .metric__value')?.textContent).toContain('300'); // flowRate
-    expect(dialog?.querySelector('.metric--warn')).toBeTruthy(); // h2s check
-    expect(dialog?.textContent).toContain('Recovery Test');
-    expect(dialog?.textContent).toContain('H₂S Detected');
-  });
-
-  it('should close the dialog when close button is clicked', () => {
-    // Open first
-    const compiled = fixture.nativeElement as HTMLElement;
-    (compiled.querySelector('.test-tab') as HTMLElement).click();
-    fixture.detectChanges();
-    expect(compiled.querySelector('.dialog')).toBeTruthy();
-
-    // Close
-    (compiled.querySelector('.dialog__close') as HTMLElement).click();
-    fixture.detectChanges();
-    expect(compiled.querySelector('.dialog')).toBeFalsy();
-  });
-
-  it('should close the dialog when backdrop is clicked', () => {
-    // Open first
-    (fixture.nativeElement.querySelector('.test-tab') as HTMLElement).click();
-    fixture.detectChanges();
-    
-    // Click backdrop
-    (fixture.nativeElement.querySelector('.dialog-backdrop') as HTMLElement).click();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.dialog')).toBeFalsy();
-  });
-
-  it('should NOT close the dialog when dialog content is clicked (stopPropagation)', () => {
-    (fixture.nativeElement.querySelector('.test-tab') as HTMLElement).click();
-    fixture.detectChanges();
-
-    const dialog = fixture.nativeElement.querySelector('.dialog') as HTMLElement;
-    dialog.click(); // This should trigger stopPropagation
-    fixture.detectChanges();
-    
-    expect(fixture.nativeElement.querySelector('.dialog')).toBeTruthy();
-  });
-});
-===
