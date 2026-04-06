@@ -1,31 +1,39 @@
-import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
+module.exports = {
+  preset: 'jest-preset-angular',
+  testEnvironment: 'jest-environment-jsdom',
+  
+  // Kept the src/ path based on your comments
+  setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],
 
-class ResizeObserver {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  observe() { }
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  unobserve() { }
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  disconnect() { }
-}
-(window as any).ResizeObserver = ResizeObserver;
+  // Combined all mappings into a single object
+  moduleNameMapper: {
+    '^@src/(.*)$': '<rootDir>/src/$1',
+    '^@app/(.*)$': '<rootDir>/src/app/$1',
+    '^@env/(.*)$': '<rootDir>/src/environment/$1',
+    '^@arcgis/core/(.*)$': '<rootDir>/node_modules/@arcgis/core/$1',
+    '^d3$': '<rootDir>/node_modules/d3/dist/d3.min.js' 
+  },
 
-setupZoneTestEnv();
+  transformIgnorePatterns: [
+    'node_modules/(?!(.*\\.mjs$|@arcgis/core|@angular|rxjs))'
+  ],
 
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
-======
+  globals: {
+    'ts-jest': {
+      tsconfig: '<rootDir>/tsconfig.spec.json',
+      stringifyContentPathRegex: '\\.(html|svg)$',
+    },
+  },
+
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleFileExtensions: ['ts', 'js', 'mjs', 'html'],
+  
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/dist/'
+  ]
+};
+===
 import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
 
 class ResizeObserver {
