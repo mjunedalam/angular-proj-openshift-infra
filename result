@@ -131,7 +131,7 @@
       </div>
       <div class="status-container">
         <div class="text-sub dark-text">Operation Summary</div>
-        <div class="text-sm cyan-text mt-1 status-text">{{ d.operationSummary }}</div>
+        <div class="text-md cyan-text mt-1 status-text">{{ d.operationSummary }}</div>
       </div>
     </div>
 
@@ -146,14 +146,14 @@
       </div>
       <div class="status-container">
         <div class="text-sub dark-text">Next 24 Hour Operation</div>
-        <div class="text-sm cyan-text mt-1 status-text">{{ d.next24HrOperation }}</div>
+        <div class="text-md cyan-text mt-1 status-text">{{ d.next24HrOperation }}</div>
       </div>
     </div>
 
   </div>
 }
 
-===
+==
 .misc-grid {
   display: grid;
   grid-template-columns: 1.25fr 1fr;
@@ -199,12 +199,11 @@
 }
 
 .status-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-size: 11px;
   word-break: break-word;
-  line-height: 1.4;
+  line-height: 1.5;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .text-xxl { font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
@@ -282,5 +281,3 @@
   box-shadow: 0 2px 8px rgba(2,132,199,0.2);
   svg { width: 22px; height: 22px; }
 }
-===
-
