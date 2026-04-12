@@ -1,294 +1,130 @@
-import { CanActivateFn, Router } from '@angular/router';
-import { AuthStore } from '../stores/auth/auth.store';
-import { inject } from '@angular/core';
+import { Injectable } from '@angular/core';
+import { JwtHelperService } from '@auth0/angular-jwt'
 
-export const authGuard: CanActivateFn = () => {
-
-  const authStore = inject(AuthStore)
-  const router = inject(Router);
-
-  if (authStore.isAuthenticated() && !authStore.isTokenExpired()) {
-    return true;
+@Injectable({
+  providedIn: 'root'
+})
+export class JwtService {
+  
+  private helper = new JwtHelperService()
+  
+  decode(token: string) {
+    return this.helper.decodeToken(token);
   }
 
-  router.navigate(["/login"])
+  isExpired(token: string) {
+    return this.helper.isTokenExpired(token);
+  }
 
-  return false;
-};
+}
+==
+import { TestBed } from '@angular/core/testing';
+
+import { JwtService } from './jwt.service';
+
+describe('JwtService', () => {
+  let service: JwtService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({});
+    service = TestBed.inject(JwtService);
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+});
+
+=== Email Config ====
+export const EMAIL_FROM = "mohammad.alam.33@aramco.com";
+export const EMAIL_TO: string[] = ["mohammad.alam.33@aramco.com"];
+export const EMAIL_CC: string[] = ["kiran.polisetty@aramco.com"];
+export const EMAIL_SUBJECT = "Summary Of Morning Report";
+export const EMAIL_TEMPLATE_NAME = 'morning-drilling-report';
+
+
 ===
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
-import { authGuard } from './auth.guard';
-import { AuthStore } from '../stores/auth/auth.store';
+
+import { EmailService } from './email.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 
-const authStoreMock = {
-  isAuthenticated: jest.fn(),
-  isTokenExpired: jest.fn(),
-};
-
-const routerMock = {
-  navigate: jest.fn(),
-};
-
-function createRouteSnapshot(): ActivatedRouteSnapshot {
-  // Only the properties accessed by the guard need to exist.
-  return {} as ActivatedRouteSnapshot;
-}
-function createStateSnapshot(): RouterStateSnapshot {
-  return {} as RouterStateSnapshot;
-}
-
-
-describe('authGuard (functional guard)', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],          // only needed if AuthStore uses HttpClient
-      providers: [
-        { provide: AuthStore, useValue: authStoreMock },
-        { provide: Router, useValue: routerMock },
-      ],
-    }).compileComponents();
-  });
+describe('EmailService', () => {
+  let service: EmailService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should allow navigation when authenticated and token not expired', () => {
-    authStoreMock.isAuthenticated.mockReturnValue(true);
-    authStoreMock.isTokenExpired.mockReturnValue(false);
-
-    const result = TestBed.runInInjectionContext(() =>
-      authGuard(createRouteSnapshot(), createStateSnapshot())
-    );
-
-    expect(result).toBeTruthy();
-    expect(routerMock.navigate).not.toHaveBeenCalled();
-  });
-
-  it('should redirect to /login when not authenticated', () => {
-    authStoreMock.isAuthenticated.mockReturnValue(false);
-    authStoreMock.isTokenExpired.mockReturnValue(false);
-
-    const result = TestBed.runInInjectionContext(() => {
-      authGuard(createRouteSnapshot(), createStateSnapshot())
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [EmailService]
     });
-
-    expect(result).toBeFalsy();
-    expect(routerMock.navigate).toHaveBeenCalledTimes(1);
-    expect(routerMock.navigate).toHaveBeenCalledWith(['/login']);
-  })
-
-  it('should redirect to /login when token is expired', () => {
-    authStoreMock.isAuthenticated.mockReturnValue(true);
-    authStoreMock.isTokenExpired.mockReturnValue(true);
-
-    TestBed.runInInjectionContext(() => {
-      authStoreMock.isAuthenticated.mockReturnValue(true);
-      authStoreMock.isTokenExpired.mockReturnValue(true);
-
-      const result = TestBed.runInInjectionContext(() => {
-        authGuard(createRouteSnapshot(), createStateSnapshot())
-      });
-
-      expect(result).toBeFalsy();
-      expect(routerMock.navigate).toHaveBeenCalledTimes(1);
-      expect(routerMock.navigate).toHaveBeenCalledWith(['/login']);
-    });
-  })
-
-});
-===
-import { TestBed } from '@angular/core/testing';
-import { HttpInterceptorFn } from '@angular/common/http';
-
-import { authInterceptor } from './auth.interceptor';
-
-describe('authInterceptor', () => {
-  const interceptor: HttpInterceptorFn = (req, next) => 
-    TestBed.runInInjectionContext(() => authInterceptor(req, next));
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
+    service = TestBed.inject(EmailService);
   });
 
   it('should be created', () => {
-    expect(interceptor).toBeTruthy();
+    expect(service).toBeTruthy();
   });
 });
 ==
-import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { AuthStore } from '../stores/auth/auth.store';
+import { inject, Injectable } from '@angular/core';
+import { EmailRequest } from '../../models/EmailRequest';
+import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { MorningReport } from '../../../models/morining-report.model';
+import { EMAIL_CC, EMAIL_FROM, EMAIL_SUBJECT, EMAIL_TEMPLATE_NAME, EMAIL_TO } from './email.config';
+import { WaterWellTestResult } from '../../../models/water-well-test-result';
+import { ExternalConfigService } from '../../../shared/services/external-config-service';
 
-export const authInterceptor: HttpInterceptorFn = (req, next) => {
+@Injectable({
+  providedIn: 'root'
+})
+export class EmailService {
 
-  const authStore = inject(AuthStore);
-  
-  // skip if no token exists
-  if (!authStore.token()) {
-    return next(req);
+  private extConfigService = inject(ExternalConfigService);
+  private http = inject(HttpClient);
+  private apiUrl = `${this.extConfigService.settings.emailServiceUrl}` + "/send-email";
+
+
+  sendEmail(emailRequest: EmailRequest): Observable<void> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.post<void>(this.apiUrl, emailRequest, { headers });
   }
 
-  // Clone request and add auth header
-  const authReq = req.clone({
-    setHeaders: {
-      Authorization: `Bearer ${authStore.token()}`
-    }
-  })
-
-  return next(authReq);
-};
-==
+  buildEmailRequest(reports: MorningReport[], mapImageData: string, waterWellTestResults?: WaterWellTestResult[]): EmailRequest {
+    return {
+      subject: EMAIL_SUBJECT,
+      from: EMAIL_FROM,
+      to: EMAIL_TO,
+      cc: EMAIL_CC,
+      bcc: [],
+      replyTo: '',
+      templateName: EMAIL_TEMPLATE_NAME,
+      generatePdf: false,
+      templateData: {
+        morningReport: reports,
+        mapImageData: mapImageData,
+        waterWellTestResults
+      }
+    };
+  }
+}
+====
 import { TestBed } from '@angular/core/testing';
-import { HttpInterceptorFn } from '@angular/common/http';
 
-import { errorInterceptor } from './error.interceptor';
+import { EmailService } from './email.service';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
-describe('errorInterceptor', () => {
-  const interceptor: HttpInterceptorFn = (req, next) => 
-    TestBed.runInInjectionContext(() => errorInterceptor(req, next));
+describe('EmailService', () => {
+  let service: EmailService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [EmailService]
+    });
+    service = TestBed.inject(EmailService);
   });
 
   it('should be created', () => {
-    expect(interceptor).toBeTruthy();
+    expect(service).toBeTruthy();
   });
 });
-==
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { AuthStore } from '../stores/auth/auth.store';
-import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
-
-export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-
-
-
-  return next(req).pipe(
-    catchError((error: HttpErrorResponse) => {
-      if (error.status === 401) {
-        //authStore.logout();
-        //router.navigate(['/logout']);
-      }
-      return throwError(() => error);
-    }),
-  );
-
-};
-===
-import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals'
-import { AuthState, initialState } from '../../../shared/models/auth/auth-state.model'
-import { computed, inject } from '@angular/core'
-import { JwtService } from '../../services/jwt.service'
-import { HttpClient } from '@angular/common/http'
-import { Router } from '@angular/router'
-import { LoginRequest } from '../../../shared/models/auth/login-request.model'
-import { LoadingService } from '../../services/loading.service'
-import { ExternalConfigService } from '../../../shared/services/external-config-service'
-
-export const AuthStore = signalStore(
-    { providedIn: 'root' },
-    withState<AuthState>(initialState),
-
-    withComputed(
-        ({ token }) => (
-            {
-                isTokenExpired: computed(() => token() ? inject(JwtService).isExpired(token()!) : true),
-
-            }
-        )
-    ),
-
-
-    withMethods((store, http = inject(HttpClient), router = inject(Router), jwt = inject(JwtService), loading = inject(LoadingService), extAppConfigService = inject(ExternalConfigService)) => (
-        {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            async login(credentials: LoginRequest) {
-                loading.show();
-                patchState(store, { isLoading: true });
-
-                http.get(`${extAppConfigService.settings.tokenUrl}`, { responseType: 'text', withCredentials: true })
-                    .subscribe({
-                        next: (token) => {
-                            const decoded = jwt.decode(token);
-                            patchState(store, {
-                                token,
-                                isAuthenticated: true,
-                                user: decoded,
-                                isLoading: false
-                            });
-                            console.log("fetching token === " + decoded.upn)
-                            localStorage.setItem('agwa_token', token);
-                            router.navigate(['main']);
-                        },
-                        error: () => patchState(store, {
-                            error: 'Login Failed',
-                            isLoading: false
-                        }),
-                    });
-            },
-
-            // logout() {
-            //     patchState(store, initialState);
-            //     localStorage.removeItem('auth_token');
-            //     //router.navigate(["/logout"]);
-            //     router.navigate(['main/dashboard']);
-            // },
-
-            // Token Refresh
-            autoLogin() {
-                const token = localStorage.getItem('agwa_token');
-
-                if (token && !jwt.isExpired(token)) {
-                    patchState(store, {
-                        token,
-                        isAuthenticated: true,
-                        user: jwt.decode(token)
-                    });
-                }
-            }
-        }
-    )),
-);
-===
-import { inject } from '@angular/core';
-import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
-import { EmailRequest } from '../../models/EmailRequest';
-import { EmailService } from '../../services/email/email.service';
-
-interface EmailState {
-  status: 'idle' | 'sending' | 'sent' | 'failed';
-  error: string | null;
-}
-
-const initialState: EmailState = {
-  status: 'idle',
-  error: null
-};
-
-export const EmailStore = signalStore(
-  { providedIn: 'root' },
-  withState(initialState),
-  withMethods((store, emailService = inject(EmailService)) => ({
-    sendEmail(request: EmailRequest) {
-      patchState(store, { status: 'sending', error: null });
-      emailService.sendEmail(request).
-        subscribe({
-          next: () => {
-            patchState(store, { status: 'sent' });
-          },
-          error: () => {
-            patchState(store, { status: 'failed', error: 'Failed to send email' })
-          }
-        });
-    }
-  }))
-);
-
-
-===
