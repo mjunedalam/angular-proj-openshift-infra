@@ -1,130 +1,60 @@
-import { Injectable } from '@angular/core';
-import { JwtHelperService } from '@auth0/angular-jwt'
-
-@Injectable({
-  providedIn: 'root'
-})
-export class JwtService {
-  
-  private helper = new JwtHelperService()
-  
-  decode(token: string) {
-    return this.helper.decodeToken(token);
-  }
-
-  isExpired(token: string) {
-    return this.helper.isTokenExpired(token);
-  }
-
-}
-==
 import { TestBed } from '@angular/core/testing';
 
-import { JwtService } from './jwt.service';
+import { ExternalConfigService } from './external-config-service';
 
-describe('JwtService', () => {
-  let service: JwtService;
+describe('ExternalConfigServiceService', () => {
+  let service: ExternalConfigService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(JwtService);
+    service = TestBed.inject(ExternalConfigService);
   });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
 });
-
-=== Email Config ====
-export const EMAIL_FROM = "mohammad.alam.33@aramco.com";
-export const EMAIL_TO: string[] = ["mohammad.alam.33@aramco.com"];
-export const EMAIL_CC: string[] = ["kiran.polisetty@aramco.com"];
-export const EMAIL_SUBJECT = "Summary Of Morning Report";
-export const EMAIL_TEMPLATE_NAME = 'morning-drilling-report';
-
-
 ===
-import { TestBed } from '@angular/core/testing';
 
-import { EmailService } from './email.service';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-
-describe('EmailService', () => {
-  let service: EmailService;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [EmailService]
-    });
-    service = TestBed.inject(EmailService);
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-});
-==
-import { inject, Injectable } from '@angular/core';
-import { EmailRequest } from '../../models/EmailRequest';
-import { Observable } from 'rxjs';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { MorningReport } from '../../../models/morining-report.model';
-import { EMAIL_CC, EMAIL_FROM, EMAIL_SUBJECT, EMAIL_TEMPLATE_NAME, EMAIL_TO } from './email.config';
-import { WaterWellTestResult } from '../../../models/water-well-test-result';
-import { ExternalConfigService } from '../../../shared/services/external-config-service';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { lastValueFrom } from 'rxjs';
+import { AppConfig } from '../models/app-config';
+import { environment } from '../../../environments/enviroment';
 
 @Injectable({
   providedIn: 'root'
 })
-export class EmailService {
+export class ExternalConfigService {
 
-  private extConfigService = inject(ExternalConfigService);
   private http = inject(HttpClient);
-  private apiUrl = `${this.extConfigService.settings.emailServiceUrl}` + "/send-email";
+  private config: AppConfig | null = null;
 
-
-  sendEmail(emailRequest: EmailRequest): Observable<void> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http.post<void>(this.apiUrl, emailRequest, { headers });
+  async loadConfig(): Promise<void> {
+    const url = `${environment.externalConfigFileUrl}?t=${Date.now()}`;
+    try {
+      this.config = await lastValueFrom(this.http.get<AppConfig>(url));
+    } catch (err) {
+      console.error('Critical Error: Could not load App Config', err);
+      throw err;
+    }
   }
 
-  buildEmailRequest(reports: MorningReport[], mapImageData: string, waterWellTestResults?: WaterWellTestResult[]): EmailRequest {
-    return {
-      subject: EMAIL_SUBJECT,
-      from: EMAIL_FROM,
-      to: EMAIL_TO,
-      cc: EMAIL_CC,
-      bcc: [],
-      replyTo: '',
-      templateName: EMAIL_TEMPLATE_NAME,
-      generatePdf: false,
-      templateData: {
-        morningReport: reports,
-        mapImageData: mapImageData,
-        waterWellTestResults
-      }
-    };
+  get settings(): AppConfig {
+    if (!this.config) {
+      throw new Error('AppConfig not loaded');
+    }
+    return this.config;
   }
 }
-====
-import { TestBed } from '@angular/core/testing';
 
-import { EmailService } from './email.service';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
 
-describe('EmailService', () => {
-  let service: EmailService;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [EmailService]
-    });
-    service = TestBed.inject(EmailService);
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-});
+==
+{
+    "tokenUrl": "https://token-dev.enp.aramco.com.sa/token/apps/AGWA",
+    "dailyOperatioServicenUrl": "http://localhost:8080",
+    "emailServiceUrl": "https://agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa",
+    "esriUrl": "https://eccenterprisegis.enp.aramco.com.sa/arcgis",
+    "mapServerUrl": "https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/EARTH/EARTH_Layers/MapServer",
+    "appId": "M0M4nfZyToqUlgQy"
+}
