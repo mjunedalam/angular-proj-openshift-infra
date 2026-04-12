@@ -1,227 +1,442 @@
-
-
-
- getWaterWellTestResultData(): Observable<ApiResponse<WaterWellTestResult>> {
-    return this.http.get<ApiResponse<WaterWellTestResult>>(this.apiUrl + "/morning-report/waterWellTestResults");
-  }
-
-  /*
-   This method is for testing and validation of map content and will be eliminated after integration testing is done.
-   Reason behind to create a temporary method:-  Test data received from the upstream does not have relavent co-orindates for KSA. 
-   So, we have to manipulate the data to have the co-ordinates confined only to KSA. 
-  */
-
-  getMorningReportForKSA(): Observable<MorningReport[]> {
-    return this.http.get<MorningReport[]>('assets/morning-report-sample2.json').pipe(
-      map(reports => reports.map(report => ({
-        ...report,
-        plLtrlEndDpth: report.plLtrlEndDpth ? Number(report.plLtrlEndDpth) : null,
-        wDpthChgDis: report.wDpthChgDis ? Number(report.wDpthChgDis) : null,
-        wPrsntDpth: report.wPrsntDpth ? Number(report.wPrsntDpth) : null
-      })))
-    );
-
-  }
-====
-
-
-
-
-import { MorningReport } from "../../models/morining-report.model";
-import { WaterWellTestResult } from "../../models/water-well-test-result";
-
-export interface EmailRequest {
-  subject: string;
-  from: string;
-  to: string[];
-  cc?: string[];
-  bcc?: string[];
-  replyTo?: string;
-  templateData: {
-    morningReport: MorningReport[];
-    mapImageData: string;
-    waterWellTestResults?: WaterWellTestResult[];
-  };
-  generatePdf: boolean;
-  templateName: string;
-}
-==
-import { EmailRequest } from '../models/EmailRequest';
-
-export interface EmailState {
-  email: EmailRequest;
-  isSending: boolean;
-  error: string | "";
-}
-==
-export const EMAIL_FROM = "mohammad.alam.33@aramco.com";
-export const EMAIL_TO: string[] = ["mohammad.alam.33@aramco.com"];
-export const EMAIL_CC: string[] = ["kiran.polisetty@aramco.com"];
-export const EMAIL_SUBJECT = "Summary Of Morning Report";
-export const EMAIL_TEMPLATE_NAME = 'morning-drilling-report';
-====
-import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { EmailService } from '../../core/services/email/email.service';
-import { EmailStore } from '../../core/stores/email/email.store';
-import { MorningReport } from '../../models/morining-report.model';
-import { MoriningReportService } from '../../services/morining-report.service';
-import { SHARED_MODULES } from '../../shared/shared.module';
-import { WwellmapComponent } from '../../wwellmap/wwellmap.component';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ApiResponse } from '../../core/models/api-response.model';
-import { WaterWellTestResult } from '../../models/water-well-test-result';
-import { catchError, finalize, of, tap } from 'rxjs';
+/* eslint-disable @angular-eslint/prefer-inject */
+import { isPlatformBrowser } from '@angular/common';
+import { Component, effect, ElementRef, Inject, OnDestroy, OnInit, PLATFORM_ID, signal, ViewChild } from '@angular/core';
+import Graphic from '@arcgis/core/Graphic';
+import { watch as reactiveWatch, watch } from '@arcgis/core/core/reactiveUtils';
+import Point from '@arcgis/core/geometry/Point';
+import Polyline from '@arcgis/core/geometry/Polyline';
+import { default as GraphicLayer, default as GraphicsLayer } from '@arcgis/core/layers/GraphicsLayer';
+import MapImageLayer from '@arcgis/core/layers/MapImageLayer';
+import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
+import TextSymbol from '@arcgis/core/symbols/TextSymbol';
+import { Subject, takeUntil } from 'rxjs';
+import { MorningReport } from '../models/morining-report.model';
+import { EsriMapService } from '../services/esri-map.service';
+import { MoriningReportService } from '../services/morining-report.service';
+import { bottomPolygonTemplate, lineSymbol, locationTextSymbol, MAP_BOUNDS, MAP_CONFIG, MAX_WIDTH, STYLE, tilesMap, topPolygonTemplate, WWell, wwellIdTextSymbol } from '../utils/map.config';
+import { createLegendLayer, findNonOverlappingPosition, translatePolygon } from '../utils/wwell-placement-utils';
+import { ExternalConfigService } from '../shared/services/external-config-service';
 
 @Component({
-  selector: 'app-morningreport',
-  imports: [...SHARED_MODULES, WwellmapComponent, ReactiveFormsModule, FormsModule],
-  providers: [MoriningReportService],
-  templateUrl: './morningreport.component.html',
-  styleUrl: './morningreport.component.scss'
+  selector: 'app-wwellmap',
+  templateUrl: './wwellmap.component.html',
+  styleUrl: './wwellmap.component.scss',
+  standalone: true
 })
-export class MorningreportComponent implements OnInit {
+export class WwellmapComponent implements OnInit, OnDestroy {
 
-  morningReports!: MorningReport[];
-  @ViewChild('wwellMap') wwellMap!: WwellmapComponent;
+  @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
+  private mapView?: __esri.MapView;
+  //signals
+  readonly wwells = signal<WWell[]>([]);
+  readonly errorMessage = signal<string | null>(null);
+  private readonly mapReady = signal<boolean>(false);
+  private readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
 
-  private emailStore = inject(EmailStore);
-  private morningService = inject(MoriningReportService);
-  private snackBar = inject(MatSnackBar);
-  private emailService = inject(EmailService)
+  private placedBubbles: { x: number; y: number; radius: number }[] = [];
+  private morningReports!: MorningReport[];
+  private readonly destroy$ = new Subject<void>();
+  private stationaryWatchHandle?: __esri.WatchHandle;
+  private legendLayer: GraphicsLayer | undefined;
 
-  morningReport = signal<MorningReport[]>([]);
-  private readonly _wellTestResults = signal<ApiResponse<WaterWellTestResult>>({
-    statusCode: 0,
-    error: false,
-    message: "",
-    data: []
-  });
-
-  loading = signal(true);
-  today = signal(new Date())
-  rigStatuses = signal<string[]>([]);
-
-  public readonly hasError = computed(() => this._wellTestResults().error);
-  public readonly errorMessage = computed(() => this._wellTestResults().message);
-  public readonly waterWelltestResult = computed(() => this._wellTestResults().data);
-  public readonly statusCode = computed(() => this._wellTestResults().statusCode);
-  public readonly isLoading = signal<boolean>(false);
-
-  rigStatusCtrl = new FormControl('');
-
-
-  supportingInfo = ["ANDR GOSP-1", "DMDA-2"];
-
-
+  constructor(
+    @Inject(PLATFORM_ID) private readonly platformId: object,
+    private readonly morningService: MoriningReportService,
+    private readonly esriMapService: EsriMapService,
+    private extConfigService: ExternalConfigService
+  ) {
+    effect(() => {
+      this.wwells();          // reactive read
+      if (!this.mapReady()) return;        // map not ready yet
+      const wwellLayer = this.getLayerById('WWell-icons') as GraphicsLayer;
+      if (!wwellLayer) return;
+      this.drawWWellIcons(wwellLayer).catch(e =>
+        console.error('drawWWellIcons failed', e)
+      );
+    });
+    effect(() => {
+      this.wwells();                 // creates a dependency on the data
+      const bubbleLayer = this.bubbleLayerReady(); // creates a dependency on the layer
+      if (!bubbleLayer) return;                    // layer not ready yet
+      // Synchronous layout – no await inside the effect
+      this.layoutBubbles(bubbleLayer);
+    });
+  }
 
   ngOnInit(): void {
-    this.loadMorningReportData();
-    this.loadWaterWellTestResults();
+    if (!isPlatformBrowser(this.platformId)) return;
+    //this.esriMapService.authenticateUserForMapAccess().then(() => {
+    this.fetchMorningReports();
+    //})
+
   }
 
-  private loadWaterWellTestResults(): void {
-    this.loading.set(true);
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.stationaryWatchHandle?.remove();
+  }
 
+  private fetchMorningReports(): void {
+    this.errorMessage.set(null);
     this.morningService
-      .getWaterWellTestResultData()
-      .pipe(
-        tap((apiResp) => this._wellTestResults.set(apiResp)),
-        catchError((err) => {
-          const fallback: ApiResponse<WaterWellTestResult> = {
-            statusCode: err.status,
-            error: true,
-            message: err.message,
-            data: [],
-          };
-          this._wellTestResults.set(fallback);
-          return of(fallback);
-        }),
-        finalize(() => this.isLoading.set(false))
-      )
-      .subscribe();
+      .getMorningReportForKSA()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data: MorningReport[]) => {
+          this.morningReports = data;
+          this.buildWWellSignal(data);
+          this.initMap().catch((e) => console.error('initMap error', e));
+        },
+        error: (err) => {
+          console.error('Failed to fetch morning report', err);
+          this.errorMessage.set('Unable to load well data.');
+        },
+      });
   }
 
+  private buildWWellSignal(data: MorningReport[]): void {
+    const safeNum = (s?: string | null): number => {
+      const n = Number.parseFloat(s ?? '');
+      return Number.isNaN(n) ? 0 : n;
+    };
 
-  loadMorningReportData() {
+    const wells: WWell[] = data
+      .map((r) => ({
+        wwellId: r.wGnrName ?? 'N/A',
+        lat: safeNum(r.racEstDdLatCord),
+        lng: safeNum(r.racEstDdLonCord),
+        location: r.trgtRsvrCd ?? 'N/A',
+        label: r.biNum ?? 'N/A',
+      }))
+      .filter((w) => w.lat !== 0 && w.lng !== 0);
 
-    this.loading.set(true);
-    this.morningService.getMorningReport().subscribe({
-
-      next: reports => {
-        this.loading.set(false);
-        this.morningReport.set(reports);
-      },
-
-      error: (error) => {
-        this.loading.set(false);
-        this.showError("Failed to load Morning Report");
-      }
-    })
+    this.wwells.set(wells);
   }
 
-  onStatusChange(event: Event, index: number) {
-    const inputElement = event.target as HTMLInputElement;
-    const newRigStatus = inputElement.value;
-
-    this.rigStatuses.update((arr) => {
-      const newRigStatuses = [...arr];
-      newRigStatuses[index] = newRigStatus;
-      return newRigStatuses;
-    });
-
-
-    this.morningReport.update((reports) => {
-      const copy = [...reports];
-      copy[index] = { ...copy[index], rigStatus: newRigStatus };
-      return copy;
-    });
+  private getLayerById(id: string): GraphicsLayer | undefined {
+    return this.mapView?.map?.layers.find((l) => l.id === id) as
+      | GraphicsLayer
+      | undefined;
   }
 
-  onActionChange(event: Event) {
-    const select = event.target as HTMLSelectElement;
-    const action = select.value;
+  private async initMap(): Promise<void> {
+    let MapMod: typeof __esri.Map;
+    let MapViewMod: typeof __esri.MapView;
+    let GraphicsLayerMod: typeof GraphicsLayer;
+    let MapImageLayerMod: typeof MapImageLayer;
 
-    if (action === 'email') {
-      this.sendEmail();
-    } else if (action === 'download') {
-      this.downloadReport();
-    }
-  }
-
-  async sendEmail() {
     try {
-      const morningReport = this.morningReport();
-      const mapData = await this.wwellMap.captureMapAsBase64();
-      const waterWelltestResults = this.waterWelltestResult();
-      const emailRequest = this.emailService.buildEmailRequest(morningReport, mapData!, waterWelltestResults);
-      this.emailStore.sendEmail(emailRequest);
+      const [{ default: MapTmp },
+        { default: MapViewTmp },
+        { default: GraphicsLayerTmp },
+        { default: MapImageLayerTmp }
+      ] = await Promise.all([
+        import('@arcgis/core/Map'),
+        import('@arcgis/core/views/MapView'),
+        import('@arcgis/core/layers/GraphicsLayer'),
+        import('@arcgis/core/layers/MapImageLayer'),
+      ]);
+      MapMod = MapTmp;
+      MapViewMod = MapViewTmp;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      GraphicsLayerMod = GraphicsLayerTmp;
+      MapImageLayerMod = MapImageLayerTmp;
 
-      this.snackBar.open('Email sent successfully!', 'Dismiss', {
-        duration: 3000,
-        panelClass: ['bg-green-500', 'text-white']
+    } catch (e) {
+      console.error("Failed to load core ARcGIS module..", e);
+      this.errorMessage.set('Map could not be initialized')
+      return;
+    }
+    const map = new MapMod({ basemap: 'topo-vector' });
+    //  map.add(explorerLayer);
+    this.mapView = new MapViewMod({
+      container: this.mapViewEl?.nativeElement,
+      map,
+      center: MAP_CONFIG.center,
+      zoom: MAP_CONFIG.minZoom,
+      constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom }
+    });
+
+
+
+    const mapServerUrl = `${this.extConfigService.settings.mapServerUrl}`
+
+    await this.mapView.when(() => {
+
+      const explorerLayer = new MapImageLayerMod({
+        url: mapServerUrl,
+        sublayers: [
+          {
+            id: 6, // “Oil Wells”
+            visible: true,
+          },
+          {
+            id: 5, // “Gas Pipelines”
+            visible: true,
+          },
+        ],
+        // Optional visual tweaks
+        opacity: 0.8,
+        title: 'Explorer (Oil & Gas)',
       });
 
-    } catch (error) {
-      this.showError('Failed to send email. Please try again.');
+      this.legendLayer = createLegendLayer(this.mapView);
+      this.mapView?.map?.add(this.legendLayer);
+      const wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
+      const bubbleLayer = new GraphicLayer({ id: 'WWell-bubbles' });
+      map.addMany([explorerLayer, wwellLayer, bubbleLayer]);
+      this.mapReady.set(true);
+      this.bubbleLayerReady.set(bubbleLayer);
+    })
+
+    this.stationaryWatchHandle = reactiveWatch(
+      () => this.mapView?.stationary,
+      (isStationary) => {
+        if (isStationary) {
+          const layer = this.bubbleLayerReady();
+          if (layer) this.layoutBubbles(layer);
+        }
+      }
+    );
+  }
+
+  private async drawWWellIcons(layer: GraphicsLayer): Promise<void> {
+    layer.removeAll();
+    const { default: Point } = await import('@arcgis/core/geometry/Point');
+    const { default: PictureMarkerSymbol } = await import('@arcgis/core/symbols/PictureMarkerSymbol');
+    const wells = this.wwells();
+    for (const wwell of wells) {
+      const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
+      const symbol = new PictureMarkerSymbol({
+        url: STYLE.markerIcon,
+        width: STYLE.markerSize,
+        height: STYLE.markerSize
+      });
+      layer.add(
+        new Graphic({
+          geometry: point,
+          symbol,
+          attributes: {
+            wwellId: wwell.wwellId,
+            Location: wwell.location
+          },
+        })
+      );
     }
   }
 
-  downloadReport() {
-    this.wwellMap.saveMapImage();
+  private layoutBubbles(layer: GraphicsLayer): void {
+    if (!this.mapView) return;
+    layer.removeAll();
+    this.placedBubbles = [];
+
+    const view = this.mapView;
+    const viewW = view.width;
+    const viewH = view.height;
+
+    const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
+    const iconRadius = STYLE.markerSize / 2;
+    const graphics: Graphic[] = [];
+    const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: { wkid: 4326 } });
+
+    const wells: WWell[] = this.wwells();
+    for (const wwell of wells) {
+      // ---- 3.1  Anchor point (screen → map) --------------------
+      anchorPt.latitude = wwell.lat;
+      anchorPt.longitude = wwell.lng;
+
+      const sp = view.toScreen(anchorPt);
+      if (!sp) continue;
+
+      // keep the bubble inside the view margins
+      sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
+      sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
+
+      // ---- 3.2  Find a non‑overlapping screen position ----------
+      const obstacles = [
+        ...this.placedBubbles,
+        { x: sp.x, y: sp.y, radius: iconRadius + 6 },
+      ];
+      const finalScreen = findNonOverlappingPosition(
+        sp.x,
+        sp.y,
+        obstacles,
+        bubblePixelRadius
+      );
+
+      // ---- 3.3  Remember the placed bubble for the next iterations
+      this.placedBubbles.push({
+        x: finalScreen.x,
+        y: finalScreen.y,
+        radius: bubblePixelRadius,
+      });
+
+      // ---- 3.4  Convert back to map coordinates -----------------
+      let finalMapPoint = view.toMap(finalScreen) as __esri.Point | null;
+      if (!finalMapPoint) finalMapPoint = anchorPt.clone();
+
+      // ---- 3.5  Small offset so the bubble never sits on the oil well
+      const offsetLat = 3;
+      const offsetLng = 2;
+      finalMapPoint.latitude = Math.min(
+        Math.max(finalMapPoint.latitude! + offsetLat, MAP_BOUNDS.minLat),
+        MAP_BOUNDS.maxLat
+      );
+      finalMapPoint.longitude = Math.min(
+        Math.max(finalMapPoint.longitude! + offsetLng, MAP_BOUNDS.minLng),
+        MAP_BOUNDS.maxLng
+      );
+      // 4.1  Stick (polyline from oil‑well to bubble)
+      const stick = new Graphic({
+        geometry: new Polyline({
+          paths: [
+            [
+              [wwell.lng, wwell.lat],
+              [finalMapPoint.longitude!, finalMapPoint.latitude!],
+            ],
+          ],
+          spatialReference: { wkid: 4326 },
+        }),
+        symbol: lineSymbol(tilesMap.get(wwell.label)!.color),
+      });
+
+      // 4.2  Top rectangle (bubble “head”)
+      const topPoly = translatePolygon(
+        topPolygonTemplate,
+        finalMapPoint.longitude!,
+        finalMapPoint.latitude!
+      );
+      const bubbleTop = new Graphic({
+        geometry: topPoly,
+        symbol: new SimpleFillSymbol({
+          color: tilesMap.get(wwell.label)!.color,
+          outline: { color: [0, 0, 0], width: 1 },
+        }),
+      });
+
+      // 4.3  Bottom rectangle (bubble “tail”)
+      const bottomPoly = translatePolygon(
+        bottomPolygonTemplate,
+        finalMapPoint.longitude!,
+        finalMapPoint.latitude!
+      );
+      const bubbleBottom = new Graphic({
+        geometry: bottomPoly,
+        symbol: new SimpleFillSymbol({
+          color: [0, 191, 255, 0.9],
+          outline: { color: [0, 0, 0], width: 1 },
+        }),
+      });
+
+      // Inside the loop, after you have `finalMapPoint`:
+      const wwellIdLabel = new Graphic({
+        geometry: finalMapPoint,
+        // No clone – we keep the concrete TextSymbol type
+        symbol: wwellIdTextSymbol(STYLE.textFont),
+      });
+      (wwellIdLabel.symbol as TextSymbol).text = `${wwell.wwellId}`;
+      (wwellIdLabel.symbol as TextSymbol).verticalAlignment = "middle";
+      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = "center";
+
+      const locationLabel = new Graphic({
+        geometry: finalMapPoint,
+        symbol: locationTextSymbol(STYLE.textFont),
+      });
+      (locationLabel.symbol as TextSymbol).text = `${wwell.location}`;
+      (locationLabel.symbol as TextSymbol).horizontalAlignment = "center";
+      (locationLabel.symbol as TextSymbol).verticalAlignment = "middle";
+      graphics.push(stick, bubbleTop, bubbleBottom, wwellIdLabel, locationLabel);
+    }
+    layer.addMany(graphics);
   }
 
-  private showError(message: string) {
-    this.snackBar.open(message, 'Dissmiss', {
-      duration: 3000,
-      panelClass: ['bg-red-500', 'text-white']
+  async saveMapImage(): Promise<void> {
+
+
+    // Download
+    const base64 = await this.captureMapAsBase64();
+    this.downloadBase64(base64, 'water-wells-map.png');
+  }
+
+  async captureMapAsBase64() {
+    if (!this.mapView) return;
+
+    // Show the legend
+    this.legendLayer!.visible = true;
+
+    // Wait for the layer view to finish drawing
+    await this.waitForLegendRender();
+
+    // Capture screenshot
+    const base64 = await this.getScreenshotBase64();
+
+    // Hide the legend again (so the UI stays clean)
+    this.legendLayer!.visible = false;
+    return base64;
+
+  }
+
+  private async waitForLegendRender(): Promise<void> {
+    const layerView = await this.mapView!.whenLayerView(this.legendLayer!);
+    if (!layerView.updating) {
+      await new Promise(requestAnimationFrame);
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const handle = watch(() => layerView.updating,
+        (updating) => {
+          if (!updating) {
+            handle.remove();
+            requestAnimationFrame(() => resolve());
+          }
+        })
     });
+  }
+
+  private async getScreenshotBase64(): Promise<string> {
+    const screenshot = await this.mapView!.takeScreenshot({
+      format: 'png',
+      quality: 1,
+    });
+    const [, rawBase64] = screenshot.dataUrl.split(',');
+    if (!rawBase64) throw new Error('Failed to extract Base‑64 payload');
+
+    // Resize (optional)
+    const img = new Image();
+    img.src = `data:image/png;base64,${rawBase64}`;
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+    });
+
+    const scale = Math.min(1, MAX_WIDTH / img.width);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Small pause to let the browser finish any pending paint
+    await new Promise((r) => setTimeout(r, 300));
+
+    const resizedDataUrl = canvas.toDataURL('image/jpeg', 1);
+    const [, resizedBase64] = resizedDataUrl.split(',');
+    return resizedBase64;
+  }
+
+  private downloadBase64(base64: string | undefined, fileName: string): void {
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${base64}`;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
 }
-
-
-==
+=====
 
 jest.mock('@arcgis/core/Graphic', () => ({
   Graphic: jest.fn().mockImplementation(() => ({
@@ -310,323 +525,138 @@ jest.mock('@arcgis/core/identity/OAuthInfo', () => ({
   })),
 }));
 
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MorningreportComponent } from './morningreport.component';
 
-describe('MorningreportComponent', () => {
-  let component: MorningreportComponent;
-  let fixture: ComponentFixture<MorningreportComponent>;
+jest.mock('@arcgis/core/Graphic')
+jest.mock('@arcgis/core/geometry/Point', () => ({
+  default: class Point {
+    x: number | undefined;
+    y: number | undefined;
+    latitude: number | undefined;
+    longitude: number | undefined;
+    constructor(options?: any) {
+      this.x = 100;
+      this.y = 200;
+      this.latitude = options?.latitude;
+      this.longitude = options?.longitude;
+      Object.assign(this, options);
+    }
+  },
+}));
+
+jest.mock('@arcgis/core/geometry/Polyline');
+jest.mock('@arcgis/core/layers/GraphicsLayer');
+jest.mock('@arcgis/core/symbols/SimpleFillSymbol', () => ({
+  default: jest.fn().mockImplementation(() => ({ color: [0, 0, 0, 0.5] })),
+}));
+
+jest.mock('@arcgis/core/symbols/TextSymbol', () => ({
+  default: jest.fn().mockImplementation(() => ({ color: [0, 0, 0, 1] })),
+}))
+jest.mock('@arcgis/core/Map');
+jest.mock('@arcgis/core/views/MapView');
+jest.mock('@arcgis/core/symbols/PicturemarkerSymbol', () => ({
+  default: class PictureMarkerSymbol {
+    width: number | undefined;
+    height: number | undefined;
+    url: string;
+    constructor(options?: any) {
+      this.width = 100;
+      this.height = 200;
+      this.url = options?.url;
+      Object.assign(this, options);
+    }
+  },
+}));
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { PLATFORM_ID } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatCardModule } from '@angular/material/card';
+import { MorningReport } from '../models/morining-report.model';
+import { MoriningReportService } from '../services/morining-report.service';
+import { WwellmapComponent } from './wwellmap.component';
+
+//Mock ArcGIS
+jest.mock('@arcgis/core/Graphic');
+jest.mock('@arcgis/core/layers/GraphicsLayer');
+jest.mock('@arcgis/core/symbols/simpleFillSymbol', () => {
+  return {
+    default: class SimpleFillSymbolMock {
+      constructor(options?: any) {
+        Object.assign(this, options);
+      }
+    }
+  }
+});
+
+jest.mock('@arcgis/core/symbols/TextSymbol', () => ({
+  default: jest.fn().mockImplementation(() => ({ color: [0, 0, 0, 1] })),
+}));
+
+jest.mock('@arcgis/core/symbols/SimpleFillSymbol', () => ({
+  default: jest.fn().mockImplementation(() => ({ color: [0, 0, 0, 0.5] })),
+}));
+
+describe('WwellmapComponent', () => {
+  let component: WwellmapComponent;
+  let fixture: ComponentFixture<WwellmapComponent>;
+  let mockMorningReportService: jest.Mocked<MoriningReportService>;
+
+  const mockRawWWells: MorningReport[] = [
+    {
+      epANum: "99327",
+      wGnrName: "AFMR-136",
+      wRigCd: "99327",
+      racEstDdLatCord: "29.9539",
+      racEstDdLonCord: "40.1970",
+      biNum: "1514",
+      trgtRsvrCd: "9865",
+      stLongCd: "PUCH",
+      wStDmrkDpth: "5321",
+      wPrsntDpth: 4784,
+      wDpthChgDis: 273,
+      wOpRmk:
+        'DRILL 12-1/4" HOLE,CHC, SHORT TRIP, DRILL 12-1/4" HOLE',
+      foremanRmk: `OBJECTIVES:
+HZEM-873 WILL BE USED AS DRILLING WATER SUPPLY WELL SUPPORTING EXPLORATORY UNCONVENTIONAL BLOCK HZEM-6
+THE WELL WILL BE COMPLETED WITH +/-725 FT OF 7" SCREEN SPACED ACROSS THE BEST WASI AQUIFER SAND AT TOTAL DEPTH OF 5800 FT BGL
+...`,
+      plLtrlEndDpth: 5892,
+      wEvntTime: "",
+      rigStatus: ""
+    }
+  ];
+
+  const mockMapViewElement = document.createElement('div');
+  mockMapViewElement.id = 'mapViewMode';
+  document.body.appendChild(mockMapViewElement);
 
   beforeEach(async () => {
+    mockMorningReportService = {
+      getMorningReport: jest.fn(),
+    } as any;
+
     await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, MorningreportComponent],
+      imports: [WwellmapComponent, HttpClientTestingModule, MatCardModule],
+      providers: [{ provide: PLATFORM_ID, useValue: 'browser' }]
     })
       .compileComponents();
 
-    fixture = await TestBed.createComponent(MorningreportComponent);
+    fixture = TestBed.createComponent(WwellmapComponent);
     component = fixture.componentInstance;
+    component['mapViewEl'] = { nativeElement: mockMapViewElement } as any;
     fixture.detectChanges();
   });
 
-  it('should create', () => {
+  afterEach(() => {
+    //httpTestingController.verify();
+    jest.clearAllMocks();
+    fixture.destroy();
+  })
+
+  it('should create the component', () => {
     expect(component).toBeTruthy();
   });
+
 });
-==
-<div class="max-w-6xl mx-auto p-4 bg-white mt-[2em] mr-bg-image">
-  <!-- Header -->
-  <div class="text-center mb-6">
-    <!-- <h1 class="text-2xl font-bold text-gray-800">Ground Water Division</h1> -->
-
-    <!-- <p class="text-lg text-gray-600 mt-2">
-      {{ today() | date : "EEE d MMM y" }}
-    </p> -->
-
-    <div
-      _ngcontent-ng-c396839820=""
-      class="px-4 py-4 border border-gray-300 flex justify-between items-center morning-report-header border-t border-t-gray-200 shadow-sm"
-    >
-      <div class="flex items-center justify-center gap-2 w-full">
-        <span class="font-bold text-2xl tracking-wide text-white"
-          >Daily Drilling Operation Summary</span
-        >
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading -->
-  @if (loading()) {
-  <div class="flex justify-center py-12">
-    <mat-spinner diameter="40"></mat-spinner>
-  </div>
-  }
-
-  <!-- Action dropdown -->
-  <div class="action-dropdown mb-4">
-    <div class="flex items-center justify-end gap-2">
-      <button
-        (click)="sendEmail()"
-        class="text-lg cursor-pointer bg-blue-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center gap-2"
-      >
-        <mat-icon>email</mat-icon>
-        <span>Email</span>
-      </button>
-    </div>
-  </div>
-  <div id="report-content" class="space-y-6">
-    <!-- ---------- WATER TEST RESULTS  ---------- -->
-    @if (hasError()) {
-    <div class="bg-red-100 text-red-800 p-3 rounded">
-      <p>Error ({{ statusCode() }}): {{ errorMessage() }}</p>
-    </div>
-    } @else {
-    <!-- Card header -->
-    <div
-      class="px-4 py-4 border border-gray-300 flex justify-between items-center bg-white border-t border-t-gray-200 shadow-sm"
-    >
-      <div class="flex items-center justify-center gap-2 w-full">
-        <span class="font-bold text-2xl tracking-wide text-gray-800"
-          >Water Well Test Results</span
-        >
-      </div>
-    </div>
-
-    @for (result of waterWelltestResult(); track result.wellName; let i =
-    $index) {
-    <mat-card
-      class="overflow-hidden border border-gray-300 rounded-lg bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
-    >
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white">
-        <!-- LEFT column -->
-        <div class="p-4 border-r border-gray-300 bg-white">
-          <div class="grid grid-cols-2 gap-y-4">
-            <!-- Water Well name -->
-            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
-              Well Name:
-            </div>
-            <div
-              class="font-semibold text-center p-2"
-              [class.text-red-600]="!result.wellName"
-            >
-              {{ result.wellName || "Missing" }}
-            </div>
-
-            <!-- RPM -->
-            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
-              RPM
-            </div>
-            <div
-              class="font-semibold text-center p-2"
-              [class.text-red-600]="!result.rPM"
-            >
-              {{ result.rPM || "0" }}
-            </div>
-
-            <!-- H2S -->
-            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
-              H2S (PPM)
-            </div>
-            <div
-              class="font-semibold text-center p-2"
-              [class.text-red-600]="!result.h2sPPM"
-            >
-              {{ result.h2sPPM || "Missing" }}
-            </div>
-
-            <!-- Temperature  -->
-            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
-              Temperature (°C)
-            </div>
-            <div
-              class="font-semibold text-center p-2"
-              [class.text-red-600]="!result.temperature"
-            >
-              {{ result.temperature || "Missing" }}
-            </div>
-          </div>
-        </div>
-
-        <!-- RIGHT column -->
-        <div class="p-4 bg-white">
-          <div class="grid grid-cols-2 gap-y-4">
-            <!-- Current Formation -->
-            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
-              Aquifer
-            </div>
-            <div class="font-semibold text-center p-2">
-              {{ result.trgtRsvrCd || "Missing" }}
-            </div>
-
-            <!-- Test rate (GPM -->
-            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
-              Test rate (GPM)
-            </div>
-            <div
-              class="font-semibold text-center p-2"
-              [class.text-red-600]="!result.testRate"
-            >
-              {{ result?.testRate || "Missing" }}
-            </div>
-
-            <!-- Well productivity (GPM/FT) -->
-            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
-              Well productivity (GPM/ft):
-            </div>
-            <div
-              class="font-semibold text-center p-2"
-              [class.text-red-600]="!result.wellProductivity"
-            >
-              {{ result?.wellProductivity || "Missing" }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </mat-card>
-    } }
-
-    <!-- Morning Report -->
-
-    @for (report of morningReport(); track report.epANum; let i = $index) {
-    <mat-card
-      class="overflow-hidden border border-gray-300 rounded-lg bg-white"
-    >
-      <!-- Card header -->
-      <div
-        class="px-4 py-2 border border-gray-300 flex justify-between items-center morning-report-grid-header"
-      >
-        <div class="flex items-center justify-center gap-2">
-          <span class="font-bold text-lg mr-row-header-font-color">{{
-            report.wGnrName
-          }}</span>
-          (
-          <span class="font-bold text-lg mr-row-header-font-color">{{
-            report.wRigCd
-          }}</span
-          >)
-        </div>
-
-        <div class="flex items-center justify-center gap-2">
-          <mat-form-field class="w-64" appearance="outline">
-            <input
-              matInput
-              placeholder="Rig status"
-              [(ngModel)]="report.rigStatus"
-              name="rigStatus"
-            />
-          </mat-form-field>
-        </div>
-      </div>
-
-      <!-- Two‑column grid (left + right) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-0 bg-white">
-        <!-- LEFT column -->
-        <div class="bg-white">
-          <div class="grid grid-cols-2">
-            <!-- Target Aquifer -->
-            <div class="mr-row-color text-white text-xl p-1 font-bold border">
-              Target Aquafier:
-            </div>
-            <div
-              class="font-semibold text-center text-xl p-1 border"
-              [class.text-red-600]="!report.trgtRsvrCd"
-              [class.text-sky-500]="report.trgtRsvrCd"
-            >
-              {{ report.trgtRsvrCd || "Missing" }}
-            </div>
-
-            <!-- Planned Total Depth -->
-            <div class="mr-row-color text-white text-xl p-1 font-bold border">
-              Planned Total Depth (ft):
-            </div>
-            <div
-              class="font-semibold text-center text-xl p-1 border"
-              [class.text-red-600]="!report.plLtrlEndDpth"
-              [class.text-sky-500]="report.plLtrlEndDpth"
-            >
-              {{ report.plLtrlEndDpth || "Missing" }}
-            </div>
-
-            <!-- Footage -->
-            <div class="mr-row-color text-white text-xl p-1 font-bold border">
-              Footage(ft):
-            </div>
-            <div
-              class="font-semibold text-center text-xl p-1 border"
-              [class.text-red-600]="!report.wDpthChgDis"
-              [class.text-sky-500]="report.wDpthChgDis"
-            >
-              {{ report.wDpthChgDis || "Missing" }}
-            </div>
-
-            <!-- OPERATION row – spans both columns -->
-            <div class="mr-row-color text-white text-xl p-1 font-bold">
-              Operation:
-            </div>
-            <div
-              class="font-semibold text-center col-span-2 text-xl p-1"
-              [class.text-sky-500]="report.wOpRmk"
-            >
-              {{ report.wOpRmk || "XXXX" }}
-            </div>
-          </div>
-        </div>
-
-        <!-- RIGHT column -->
-        <div class="bg-white">
-          <div class="grid grid-cols-2">
-            <!-- Current Formation -->
-            <div class="mr-row-color text-white text-xl p-1 font-bold border">
-              Current Formation(ft):
-            </div>
-            <div
-              class="font-semibold text-center text-xl p-1 border"
-              [class.text-sky-500]="report.stLongCd"
-              [class.text-red-600]="!report.stLongCd"
-            >
-              {{ report.stLongCd || "NA" }}
-            </div>
-
-            <!-- Current Depth -->
-            <div class="mr-row-color text-white font-bold text-xl p-1 border">
-              Current Depth(ft):
-            </div>
-            <div
-              class="font-semibold text-center text-xl p-1 border"
-              [class.text-red-600]="!report.wPrsntDpth"
-              [class.text-sky-500]="report.wPrsntDpth"
-            >
-              {{ report?.wPrsntDpth || "Missing" }}
-            </div>
-
-            <!-- Supporting -->
-            <div class="mr-row-color text-white font-bold text-xl p-1 border">
-              Supporting:
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- end grid -->
-    </mat-card>
-    }
-
-    <!-- Empty state (map) -->
-    <mat-card
-      class="overflow-hidden border border-gray-300 rounded-lg mb-4 bg-white"
-    >
-      <app-wwellmap #wwellMap></app-wwellmap>
-      <div class="legend-container">
-        <div class="custom-legend">
-          <div class="legend-tile wells-owner-tile">Wells Ownership</div>
-          <div class="legend-tile green-tile">3300</div>
-          <div class="legend-tile purple-tile">58</div>
-          <div class="legend-tile red-tile">1514</div>
-          <div class="legend-tile blue-tile">60</div>
-          <div class="legend-aquifier-tile aquifier-tile">Aquifier</div>
-        </div>
-      </div>
-    </mat-card>
-  </div>
-</div>
-==
+===
+<div #mapViewNode style="height: 90vh; width: 100%;"></div>
