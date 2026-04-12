@@ -1,60 +1,603 @@
-import { TestBed } from '@angular/core/testing';
+import { MorningReport } from "../../models/morining-report.model";
+import { WaterWellTestResult } from "../../models/water-well-test-result";
 
-import { ExternalConfigService } from './external-config-service';
+export interface EmailRequest {
+  subject: string;
+  from: string;
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  replyTo?: string;
+  templateData: {
+    morningReport: MorningReport[];
+    mapImageData: string;
+    waterWellTestResults?: WaterWellTestResult[];
+  };
+  generatePdf: boolean;
+  templateName: string;
+}
+==
+import { EmailRequest } from '../models/EmailRequest';
 
-describe('ExternalConfigServiceService', () => {
-  let service: ExternalConfigService;
+export interface EmailState {
+  email: EmailRequest;
+  isSending: boolean;
+  error: string | "";
+}
+==
+export const EMAIL_FROM = "mohammad.alam.33@aramco.com";
+export const EMAIL_TO: string[] = ["mohammad.alam.33@aramco.com"];
+export const EMAIL_CC: string[] = ["kiran.polisetty@aramco.com"];
+export const EMAIL_SUBJECT = "Summary Of Morning Report";
+export const EMAIL_TEMPLATE_NAME = 'morning-drilling-report';
+====
+import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { EmailService } from '../../core/services/email/email.service';
+import { EmailStore } from '../../core/stores/email/email.store';
+import { MorningReport } from '../../models/morining-report.model';
+import { MoriningReportService } from '../../services/morining-report.service';
+import { SHARED_MODULES } from '../../shared/shared.module';
+import { WwellmapComponent } from '../../wwellmap/wwellmap.component';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ApiResponse } from '../../core/models/api-response.model';
+import { WaterWellTestResult } from '../../models/water-well-test-result';
+import { catchError, finalize, of, tap } from 'rxjs';
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(ExternalConfigService);
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-});
-===
-
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
-import { AppConfig } from '../models/app-config';
-import { environment } from '../../../environments/enviroment';
-
-@Injectable({
-  providedIn: 'root'
+@Component({
+  selector: 'app-morningreport',
+  imports: [...SHARED_MODULES, WwellmapComponent, ReactiveFormsModule, FormsModule],
+  providers: [MoriningReportService],
+  templateUrl: './morningreport.component.html',
+  styleUrl: './morningreport.component.scss'
 })
-export class ExternalConfigService {
+export class MorningreportComponent implements OnInit {
 
-  private http = inject(HttpClient);
-  private config: AppConfig | null = null;
+  morningReports!: MorningReport[];
+  @ViewChild('wwellMap') wwellMap!: WwellmapComponent;
 
-  async loadConfig(): Promise<void> {
-    const url = `${environment.externalConfigFileUrl}?t=${Date.now()}`;
+  private emailStore = inject(EmailStore);
+  private morningService = inject(MoriningReportService);
+  private snackBar = inject(MatSnackBar);
+  private emailService = inject(EmailService)
+
+  morningReport = signal<MorningReport[]>([]);
+  private readonly _wellTestResults = signal<ApiResponse<WaterWellTestResult>>({
+    statusCode: 0,
+    error: false,
+    message: "",
+    data: []
+  });
+
+  loading = signal(true);
+  today = signal(new Date())
+  rigStatuses = signal<string[]>([]);
+
+  public readonly hasError = computed(() => this._wellTestResults().error);
+  public readonly errorMessage = computed(() => this._wellTestResults().message);
+  public readonly waterWelltestResult = computed(() => this._wellTestResults().data);
+  public readonly statusCode = computed(() => this._wellTestResults().statusCode);
+  public readonly isLoading = signal<boolean>(false);
+
+  rigStatusCtrl = new FormControl('');
+
+
+  supportingInfo = ["ANDR GOSP-1", "DMDA-2"];
+
+
+
+  ngOnInit(): void {
+    this.loadMorningReportData();
+    this.loadWaterWellTestResults();
+  }
+
+  private loadWaterWellTestResults(): void {
+    this.loading.set(true);
+
+    this.morningService
+      .getWaterWellTestResultData()
+      .pipe(
+        tap((apiResp) => this._wellTestResults.set(apiResp)),
+        catchError((err) => {
+          const fallback: ApiResponse<WaterWellTestResult> = {
+            statusCode: err.status,
+            error: true,
+            message: err.message,
+            data: [],
+          };
+          this._wellTestResults.set(fallback);
+          return of(fallback);
+        }),
+        finalize(() => this.isLoading.set(false))
+      )
+      .subscribe();
+  }
+
+
+  loadMorningReportData() {
+
+    this.loading.set(true);
+    this.morningService.getMorningReport().subscribe({
+
+      next: reports => {
+        this.loading.set(false);
+        this.morningReport.set(reports);
+      },
+
+      error: (error) => {
+        this.loading.set(false);
+        this.showError("Failed to load Morning Report");
+      }
+    })
+  }
+
+  onStatusChange(event: Event, index: number) {
+    const inputElement = event.target as HTMLInputElement;
+    const newRigStatus = inputElement.value;
+
+    this.rigStatuses.update((arr) => {
+      const newRigStatuses = [...arr];
+      newRigStatuses[index] = newRigStatus;
+      return newRigStatuses;
+    });
+
+
+    this.morningReport.update((reports) => {
+      const copy = [...reports];
+      copy[index] = { ...copy[index], rigStatus: newRigStatus };
+      return copy;
+    });
+  }
+
+  onActionChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    const action = select.value;
+
+    if (action === 'email') {
+      this.sendEmail();
+    } else if (action === 'download') {
+      this.downloadReport();
+    }
+  }
+
+  async sendEmail() {
     try {
-      this.config = await lastValueFrom(this.http.get<AppConfig>(url));
-    } catch (err) {
-      console.error('Critical Error: Could not load App Config', err);
-      throw err;
+      const morningReport = this.morningReport();
+      const mapData = await this.wwellMap.captureMapAsBase64();
+      const waterWelltestResults = this.waterWelltestResult();
+      const emailRequest = this.emailService.buildEmailRequest(morningReport, mapData!, waterWelltestResults);
+      this.emailStore.sendEmail(emailRequest);
+
+      this.snackBar.open('Email sent successfully!', 'Dismiss', {
+        duration: 3000,
+        panelClass: ['bg-green-500', 'text-white']
+      });
+
+    } catch (error) {
+      this.showError('Failed to send email. Please try again.');
     }
   }
 
-  get settings(): AppConfig {
-    if (!this.config) {
-      throw new Error('AppConfig not loaded');
-    }
-    return this.config;
+  downloadReport() {
+    this.wwellMap.saveMapImage();
   }
+
+  private showError(message: string) {
+    this.snackBar.open(message, 'Dissmiss', {
+      duration: 3000,
+      panelClass: ['bg-red-500', 'text-white']
+    });
+  }
+
 }
 
 
 ==
-{
-    "tokenUrl": "https://token-dev.enp.aramco.com.sa/token/apps/AGWA",
-    "dailyOperatioServicenUrl": "http://localhost:8080",
-    "emailServiceUrl": "https://agwa-integrations-dev.apps.ocpb.enp.aramco.com.sa",
-    "esriUrl": "https://eccenterprisegis.enp.aramco.com.sa/arcgis",
-    "mapServerUrl": "https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/EARTH/EARTH_Layers/MapServer",
-    "appId": "M0M4nfZyToqUlgQy"
-}
+
+jest.mock('@arcgis/core/Graphic', () => ({
+  Graphic: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/core/reactiveUtils', () => ({
+  watch: jest.fn(),
+  when: jest.fn(),
+  whenOnce: jest.fn(),
+  pausable: jest.fn(),
+  sync: jest.fn(),
+  syncAndInitial: jest.fn(),
+  initial: jest.fn(),
+  on: jest.fn(),
+}));
+
+jest.mock('@arcgis/core/geometry/Point', () => ({
+  Point: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/geometry/Polyline', () => ({
+  Polyline: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+
+
+jest.mock('@arcgis/core/geometry/Polygon', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation((options) => {
+    return {
+      rings: options.rings,
+      spatialReference: {
+        wkid: options.spatialReference.wkid,
+      },
+    };
+  }),
+}));
+
+jest.mock('@arcgis/core/layers/GraphicsLayer', () => ({
+  GraphicsLayer: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/layers/MapImageLayer', () => ({
+  MapImageLayer: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/symbols/SimpleFillSymbol', () => ({
+  SimpleFillSymbol: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/symbols/SimpleLineSymbol', () => ({
+  SimpleLineSymbol: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/symbols/SimpleMarkerSymbol', () => ({
+  SimpleMarkerSymbol: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/symbols/TextSymbol', () => ({
+  TextSymbol: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/config.js', () => ({
+  esriConfig: jest.fn().mockImplementation(() => ({
+  })),
+}));
+
+jest.mock('@arcgis/core/identity/IdentityManager', () => ({
+  IdentityManager: jest.fn().mockImplementation(() => ({
+
+  })),
+}));
+
+jest.mock('@arcgis/core/identity/OAuthInfo', () => ({
+  OAuthInfo: jest.fn().mockImplementation(() => ({
+
+  })),
+}));
+
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MorningreportComponent } from './morningreport.component';
+
+describe('MorningreportComponent', () => {
+  let component: MorningreportComponent;
+  let fixture: ComponentFixture<MorningreportComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule, MorningreportComponent],
+    })
+      .compileComponents();
+
+    fixture = await TestBed.createComponent(MorningreportComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+==
+<div class="max-w-6xl mx-auto p-4 bg-white mt-[2em] mr-bg-image">
+  <!-- Header -->
+  <div class="text-center mb-6">
+    <!-- <h1 class="text-2xl font-bold text-gray-800">Ground Water Division</h1> -->
+
+    <!-- <p class="text-lg text-gray-600 mt-2">
+      {{ today() | date : "EEE d MMM y" }}
+    </p> -->
+
+    <div
+      _ngcontent-ng-c396839820=""
+      class="px-4 py-4 border border-gray-300 flex justify-between items-center morning-report-header border-t border-t-gray-200 shadow-sm"
+    >
+      <div class="flex items-center justify-center gap-2 w-full">
+        <span class="font-bold text-2xl tracking-wide text-white"
+          >Daily Drilling Operation Summary</span
+        >
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+  <div class="flex justify-center py-12">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  }
+
+  <!-- Action dropdown -->
+  <div class="action-dropdown mb-4">
+    <div class="flex items-center justify-end gap-2">
+      <button
+        (click)="sendEmail()"
+        class="text-lg cursor-pointer bg-blue-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center gap-2"
+      >
+        <mat-icon>email</mat-icon>
+        <span>Email</span>
+      </button>
+    </div>
+  </div>
+  <div id="report-content" class="space-y-6">
+    <!-- ---------- WATER TEST RESULTS  ---------- -->
+    @if (hasError()) {
+    <div class="bg-red-100 text-red-800 p-3 rounded">
+      <p>Error ({{ statusCode() }}): {{ errorMessage() }}</p>
+    </div>
+    } @else {
+    <!-- Card header -->
+    <div
+      class="px-4 py-4 border border-gray-300 flex justify-between items-center bg-white border-t border-t-gray-200 shadow-sm"
+    >
+      <div class="flex items-center justify-center gap-2 w-full">
+        <span class="font-bold text-2xl tracking-wide text-gray-800"
+          >Water Well Test Results</span
+        >
+      </div>
+    </div>
+
+    @for (result of waterWelltestResult(); track result.wellName; let i =
+    $index) {
+    <mat-card
+      class="overflow-hidden border border-gray-300 rounded-lg bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
+    >
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white">
+        <!-- LEFT column -->
+        <div class="p-4 border-r border-gray-300 bg-white">
+          <div class="grid grid-cols-2 gap-y-4">
+            <!-- Water Well name -->
+            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
+              Well Name:
+            </div>
+            <div
+              class="font-semibold text-center p-2"
+              [class.text-red-600]="!result.wellName"
+            >
+              {{ result.wellName || "Missing" }}
+            </div>
+
+            <!-- RPM -->
+            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
+              RPM
+            </div>
+            <div
+              class="font-semibold text-center p-2"
+              [class.text-red-600]="!result.rPM"
+            >
+              {{ result.rPM || "0" }}
+            </div>
+
+            <!-- H2S -->
+            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
+              H2S (PPM)
+            </div>
+            <div
+              class="font-semibold text-center p-2"
+              [class.text-red-600]="!result.h2sPPM"
+            >
+              {{ result.h2sPPM || "Missing" }}
+            </div>
+
+            <!-- Temperature  -->
+            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
+              Temperature (°C)
+            </div>
+            <div
+              class="font-semibold text-center p-2"
+              [class.text-red-600]="!result.temperature"
+            >
+              {{ result.temperature || "Missing" }}
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT column -->
+        <div class="p-4 bg-white">
+          <div class="grid grid-cols-2 gap-y-4">
+            <!-- Current Formation -->
+            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
+              Aquifer
+            </div>
+            <div class="font-semibold text-center p-2">
+              {{ result.trgtRsvrCd || "Missing" }}
+            </div>
+
+            <!-- Test rate (GPM -->
+            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
+              Test rate (GPM)
+            </div>
+            <div
+              class="font-semibold text-center p-2"
+              [class.text-red-600]="!result.testRate"
+            >
+              {{ result?.testRate || "Missing" }}
+            </div>
+
+            <!-- Well productivity (GPM/FT) -->
+            <div class="bg-green-600 text-white font-bold p-2 rounded-t-lg">
+              Well productivity (GPM/ft):
+            </div>
+            <div
+              class="font-semibold text-center p-2"
+              [class.text-red-600]="!result.wellProductivity"
+            >
+              {{ result?.wellProductivity || "Missing" }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card>
+    } }
+
+    <!-- Morning Report -->
+
+    @for (report of morningReport(); track report.epANum; let i = $index) {
+    <mat-card
+      class="overflow-hidden border border-gray-300 rounded-lg bg-white"
+    >
+      <!-- Card header -->
+      <div
+        class="px-4 py-2 border border-gray-300 flex justify-between items-center morning-report-grid-header"
+      >
+        <div class="flex items-center justify-center gap-2">
+          <span class="font-bold text-lg mr-row-header-font-color">{{
+            report.wGnrName
+          }}</span>
+          (
+          <span class="font-bold text-lg mr-row-header-font-color">{{
+            report.wRigCd
+          }}</span
+          >)
+        </div>
+
+        <div class="flex items-center justify-center gap-2">
+          <mat-form-field class="w-64" appearance="outline">
+            <input
+              matInput
+              placeholder="Rig status"
+              [(ngModel)]="report.rigStatus"
+              name="rigStatus"
+            />
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Two‑column grid (left + right) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-0 bg-white">
+        <!-- LEFT column -->
+        <div class="bg-white">
+          <div class="grid grid-cols-2">
+            <!-- Target Aquifer -->
+            <div class="mr-row-color text-white text-xl p-1 font-bold border">
+              Target Aquafier:
+            </div>
+            <div
+              class="font-semibold text-center text-xl p-1 border"
+              [class.text-red-600]="!report.trgtRsvrCd"
+              [class.text-sky-500]="report.trgtRsvrCd"
+            >
+              {{ report.trgtRsvrCd || "Missing" }}
+            </div>
+
+            <!-- Planned Total Depth -->
+            <div class="mr-row-color text-white text-xl p-1 font-bold border">
+              Planned Total Depth (ft):
+            </div>
+            <div
+              class="font-semibold text-center text-xl p-1 border"
+              [class.text-red-600]="!report.plLtrlEndDpth"
+              [class.text-sky-500]="report.plLtrlEndDpth"
+            >
+              {{ report.plLtrlEndDpth || "Missing" }}
+            </div>
+
+            <!-- Footage -->
+            <div class="mr-row-color text-white text-xl p-1 font-bold border">
+              Footage(ft):
+            </div>
+            <div
+              class="font-semibold text-center text-xl p-1 border"
+              [class.text-red-600]="!report.wDpthChgDis"
+              [class.text-sky-500]="report.wDpthChgDis"
+            >
+              {{ report.wDpthChgDis || "Missing" }}
+            </div>
+
+            <!-- OPERATION row – spans both columns -->
+            <div class="mr-row-color text-white text-xl p-1 font-bold">
+              Operation:
+            </div>
+            <div
+              class="font-semibold text-center col-span-2 text-xl p-1"
+              [class.text-sky-500]="report.wOpRmk"
+            >
+              {{ report.wOpRmk || "XXXX" }}
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT column -->
+        <div class="bg-white">
+          <div class="grid grid-cols-2">
+            <!-- Current Formation -->
+            <div class="mr-row-color text-white text-xl p-1 font-bold border">
+              Current Formation(ft):
+            </div>
+            <div
+              class="font-semibold text-center text-xl p-1 border"
+              [class.text-sky-500]="report.stLongCd"
+              [class.text-red-600]="!report.stLongCd"
+            >
+              {{ report.stLongCd || "NA" }}
+            </div>
+
+            <!-- Current Depth -->
+            <div class="mr-row-color text-white font-bold text-xl p-1 border">
+              Current Depth(ft):
+            </div>
+            <div
+              class="font-semibold text-center text-xl p-1 border"
+              [class.text-red-600]="!report.wPrsntDpth"
+              [class.text-sky-500]="report.wPrsntDpth"
+            >
+              {{ report?.wPrsntDpth || "Missing" }}
+            </div>
+
+            <!-- Supporting -->
+            <div class="mr-row-color text-white font-bold text-xl p-1 border">
+              Supporting:
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- end grid -->
+    </mat-card>
+    }
+
+    <!-- Empty state (map) -->
+    <mat-card
+      class="overflow-hidden border border-gray-300 rounded-lg mb-4 bg-white"
+    >
+      <app-wwellmap #wwellMap></app-wwellmap>
+      <div class="legend-container">
+        <div class="custom-legend">
+          <div class="legend-tile wells-owner-tile">Wells Ownership</div>
+          <div class="legend-tile green-tile">3300</div>
+          <div class="legend-tile purple-tile">58</div>
+          <div class="legend-tile red-tile">1514</div>
+          <div class="legend-tile blue-tile">60</div>
+          <div class="legend-aquifier-tile aquifier-tile">Aquifier</div>
+        </div>
+      </div>
+    </mat-card>
+  </div>
+</div>
+==
