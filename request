@@ -1,3 +1,32 @@
+
+
+
+ getWaterWellTestResultData(): Observable<ApiResponse<WaterWellTestResult>> {
+    return this.http.get<ApiResponse<WaterWellTestResult>>(this.apiUrl + "/morning-report/waterWellTestResults");
+  }
+
+  /*
+   This method is for testing and validation of map content and will be eliminated after integration testing is done.
+   Reason behind to create a temporary method:-  Test data received from the upstream does not have relavent co-orindates for KSA. 
+   So, we have to manipulate the data to have the co-ordinates confined only to KSA. 
+  */
+
+  getMorningReportForKSA(): Observable<MorningReport[]> {
+    return this.http.get<MorningReport[]>('assets/morning-report-sample2.json').pipe(
+      map(reports => reports.map(report => ({
+        ...report,
+        plLtrlEndDpth: report.plLtrlEndDpth ? Number(report.plLtrlEndDpth) : null,
+        wDpthChgDis: report.wDpthChgDis ? Number(report.wDpthChgDis) : null,
+        wPrsntDpth: report.wPrsntDpth ? Number(report.wPrsntDpth) : null
+      })))
+    );
+
+  }
+====
+
+
+
+
 import { MorningReport } from "../../models/morining-report.model";
 import { WaterWellTestResult } from "../../models/water-well-test-result";
 
