@@ -1,46 +1,281 @@
-import { inject, Injectable } from '@angular/core';
-import esriConfig from "@arcgis/core/config.js";
-import esriId from "@arcgis/core/identity/IdentityManager";
-import OAuthInfo from "@arcgis/core/identity/OAuthInfo";
-import { ExternalConfigService } from '../shared/services/external-config-service';
+import Point from "@arcgis/core/geometry/Point";
+import Polygon from "@arcgis/core/geometry/Polygon";
+import Graphic from "@arcgis/core/Graphic";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
+import TextSymbol from '@arcgis/core/symbols/TextSymbol';
+import { ArcGISPoint, BubblePoint, LEGEND_FONT_SMAAL_BOLD, WWellGraphics, tilesArray, tilesMap } from "./map.config";
 
-@Injectable({
-    providedIn: 'root'
-})
-export class EsriMapService {
+export function isValidPlacement(
+    bubblePoint: Point | null | undefined,
+    existing: WWellGraphics[],
+    bubbleRadius: number): boolean {    
+    if (!bubblePoint) return false;
+    return !existing.some((e) => {
+        if (!e?.bubble) return false;
+        const dx = bubblePoint.longitude! - e.bubble.longitude!;
+        const dy = bubblePoint.latitude! - e.bubble.latitude!;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < bubbleRadius * 2;
+    });
+}
 
-    private extAppConfigService = inject(ExternalConfigService);
 
-    async authenticateUserForMapAccess(popup = false) {
-
-        const portalUrl = `${this.extAppConfigService.settings.esriServiceUrl}`
-        esriConfig.portalUrl = portalUrl;
-        const info = new OAuthInfo({
-            appId: `${this.extAppConfigService.settings.appId}`,
-            portalUrl,
-            popup
-        });
-
-        esriId.registerOAuthInfos([info]);
-        const url = `${portalUrl}/sharing`;
-
-        try {
-            const credentials = await esriId.checkSignInStatus(url);
-            return credentials;
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) {
-            try {
-                const credential = await esriId.getCredential(url);
-                return credential;
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            } catch (popupError) {
-                return Promise.reject(new Error("Popup authentication failed or was canceled."));
-            }
+export function generateSquarePositions(
+    lat: number,
+    lng: number,
+    radius: number,
+    steps: number
+): Point[] {
+    const totalPoints = steps * (2 * steps + 1);
+    const positions = new Array<Point>(totalPoints);
+    let i = 0;
+    for (let dx = 1; dx <= steps; dx++) {
+        const lon = lng + dx * radius;               
+        for (let dy = -steps; dy <= steps; dy++) {
+            const latOffset = lat + dy * radius;
+            positions[i++] = new Point({
+                latitude:  latOffset,
+                longitude: lon,
+            });
         }
     }
-
-    destroyEsriMapCredentials() {
-        esriId.destroyCredentials();
-    }
+    return positions;
 }
-==
+
+export function getBubbleRadius(mapView: __esri.MapView): number {
+    const zoom = mapView.zoom;
+    return zoom >= 10 ? 0.01 : zoom >= 8 ? 0.05 : 0.1;
+}
+
+export function findNonOverlappingPosition(
+  x: number,
+  y: number,
+  placedBubbles: { x: number; y: number; radius: number }[],
+  radius: number
+): ArcGISPoint {
+  const maxAttempt = 60;
+  const baseStep = radius * 1.5;
+  const safety = 2;
+
+  let angle = 0;
+  let attempt = 0;
+  let newX = x;
+  let newY = y;
+
+  // Re‑use a single plain object – no allocation inside the loop
+  const candidate: BubblePoint = { latitude: 0, longitude: 0 };
+
+  while (attempt < maxAttempt) {
+    // Fill the candidate with the current coordinates
+    candidate.latitude = newY;   // latitude ↔ y
+    candidate.longitude = newX;  // longitude ↔ x
+
+    // Linear scan of the already‑placed bubbles (≤ 15 items → cheap)
+    const collides = placedBubbles.some((b) => {
+      const existing: BubblePoint & { radius: number } = {
+        latitude: b.y,
+        longitude: b.x,
+        radius: b.radius,
+      };
+      // squared‑distance test – no Math.hypot, no sqrt
+      const dx = existing.longitude - candidate.longitude;
+      const dy = existing.latitude - candidate.latitude;
+      const minDist = existing.radius + radius + safety;
+      return dx * dx + dy * dy < minDist * minDist;
+    });
+
+    if (!collides) {
+      // Success – return a real ArcGIS Point (the type the map expects)
+      return toArcGIS(candidate);
+    }
+
+    // Move to the next point on the 30°‑spaced spiral
+    angle += Math.PI / 6;               // 30°
+    const distance = baseStep * (1 + attempt / 6);
+    newX = x + Math.cos(angle) * distance;
+    newY = y + Math.sin(angle) * distance;
+    ++attempt;
+  }
+
+  // If we exhausted all attempts we fall back to the original centre.
+  return new ArcGISPoint({ latitude: y, longitude: x });
+}
+
+
+export function createLegendLayer(mapView?: __esri.MapView): GraphicsLayer {
+    const legendLayer = new GraphicsLayer({ title: 'Legend' , visible: false});
+    if (!mapView) return legendLayer;
+
+    const offsetX = 55.00;
+    const offsetY = 32.30;
+    const baseLng = offsetX;
+    const baseLat = offsetY;
+
+    //rectangle container
+
+    const rect = new Graphic({
+        geometry: {
+            type: 'extent',
+            xmin: baseLng,
+            ymin: baseLat - 2.3,
+            xmax: baseLng + 3.3,
+            ymax: baseLat,
+            spatialReference: { wkid: 4326 },
+        },
+        symbol: new SimpleFillSymbol({
+            color: [255, 255, 255, 0.8],
+            outline: { color: [0, 0, 0], width: 1 },
+        }),
+    });
+    legendLayer.add(rect);
+    //Well Ownership title
+    const wellOwnershipTileWidth = 3.0;
+    const wellOwnershipTileHeight = 0.5;
+    const wellOwnershipX = baseLng + 0.2;
+    const wellOwnershipY = baseLat - 0.1;
+
+    //Tile rectangle
+    const wellOwnershipTitle = new Graphic({
+        geometry: {
+            type: 'extent',
+            xmin: wellOwnershipX,
+            ymin: wellOwnershipY - wellOwnershipTileHeight,
+            xmax: wellOwnershipX + wellOwnershipTileWidth,
+            ymax: wellOwnershipY,
+            spatialReference: { wkid: 4326}
+        },
+        symbol: new SimpleFillSymbol({
+             color: [235,245,100,0.9],
+             outline: { color: [0,0,0], width: 1},
+        }),
+    });
+    legendLayer.add(wellOwnershipTitle);
+
+    const title = new Graphic({
+        geometry: new Point({
+            longitude: baseLng + 1.7,
+            latitude: baseLat - 0.3,
+            spatialReference: { wkid: 4326 },
+        }),
+        symbol: new TextSymbol({
+            text: 'Wells Ownership',
+            font: LEGEND_FONT_SMAAL_BOLD,
+            horizontalAlignment: 'center',
+            verticalAlignment: 'top',
+            color: [0, 0, 0],
+        }),
+    });
+    legendLayer.add(title);
+
+    //title definitions
+    tilesArray.forEach((tile, i: number) => {
+        const row = Math.floor(i / 2);
+        const col = i % 2;
+        const tileWidth = 1.4; //slightly wider
+        const tileHeight = 0.3; //slightly taller
+        const tileX = baseLng + 0.2 + col * 1.6;
+        const tileY = baseLat + 0.5 - row * 0.5;
+
+        //Tile rectangle 
+        const tileRect = new Graphic({
+            geometry: {
+                type: 'extent',
+                xmin: tileX,
+                ymin: tileY - 1.6,
+                xmax: tileX + 1.4,
+                ymax: tileY - 1.2,
+                spatialReference: { wkid: 4326 }
+            },
+            symbol: new SimpleFillSymbol({
+                color: tile.color,
+                outline: tilesMap.get(tile.biNum) ? { color: [0, 0, 0], width: 1 } : null,
+            }),
+        });
+        legendLayer.add(tileRect);
+
+        //Text inside tile (centered)
+        const label = new Graphic({
+            geometry: new Point({
+                longitude: tileX + tileWidth / 2,
+                latitude: tileY - tileHeight / 2,
+                spatialReference: { wkid: 4326 },
+            }),
+            symbol: new TextSymbol({
+                text: tile.biNum,
+                font: LEGEND_FONT_SMAAL_BOLD,
+                color: [0, 0, 0],
+                horizontalAlignment: 'center',
+                verticalAlignment: 'middle',
+                yoffset: -50,
+                xoffset: -0,
+            }),
+        });
+        legendLayer.add(label);
+    });
+
+    const aquifierTileWidth = 3;
+    const aquifierTileHeight = 0.5;
+    const aquifierX = baseLng + 0.2;
+    const aquifierY = baseLat - 1.7;
+
+    //Tile rectangle
+    const aquiferRect = new Graphic({
+        geometry: {
+            type: 'extent',
+            xmin: aquifierX,
+            ymin: aquifierY - aquifierTileHeight,
+            xmax: aquifierX + aquifierTileWidth,
+            ymax: aquifierY,
+            spatialReference: { wkid: 4326}
+        },
+        symbol: new SimpleFillSymbol({
+             color: [3,160,250,0.9],
+             outline: { color: [0,0,0], width: 1},
+        }),
+    });
+    legendLayer.add(aquiferRect);
+    //Text inside the aquifier title
+    const aquifierLabel = new Graphic({
+        geometry: new Point({
+            longitude: aquifierX + aquifierTileWidth/2 ,
+            latitude: aquifierY + aquifierTileHeight/2 - 0.4,
+            spatialReference: {wkid: 4326},
+        }),
+        symbol: new TextSymbol({
+            text: 'Target Aquifier',
+            font: LEGEND_FONT_SMAAL_BOLD,
+            color: [255,255,255],
+            horizontalAlignment: 'center',
+            verticalAlignment: 'top'
+        }),
+    });
+    legendLayer.add(aquifierLabel);
+    return legendLayer;
+}
+
+/**
+ * Helper that turns a `BubblePoint` into a real ArcGIS Point.
+ * Use it only when you need to hand the point to the ArcGIS API.
+ */
+export function toArcGIS(p: BubblePoint): ArcGISPoint {
+  // The ArcGIS Point constructor accepts an object with latitude & longitude.
+  return new ArcGISPoint(p);
+}
+
+export function translatePolygon(
+  template: Polygon,
+  lng: number,
+  lat: number
+): Polygon {
+  // clone the template (cheap – just copies the rings array)
+  const poly = template.clone() as Polygon;
+  const rings = poly.rings as number[][][];
+  for (const ring of rings) {
+    for (const pt of ring) {
+      pt[0] += lng; // x → longitude
+      pt[1] += lat; // y → latitude
+    }
+  }
+  return poly;
+}
