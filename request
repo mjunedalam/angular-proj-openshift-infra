@@ -1,1 +1,268 @@
 eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiBUb2tlbiIsInVwbiI6IkFMQU1NWDFPIiwiZXhwIjoxNzc2MTAxMTcxLCJqdGkiOiIwMDAwMDA3OTM0SUdFWEg3S01SSSIsImF1ZCI6IkFHV0EiLCJsYXN0X2xvZ2luIjoxNzc2MDU3OTcxLCJncm91cHMiOlsiR1dEX2NsaWVudCIsIkdXRF9tZW1iZXIiLCJHV0RfYWRtaW4iXSwiaWF0IjoxNzc2MDgzMzA5LCJpc3MiOiJodHRwczovL29jcGEuZW5wLmFyYW1jby5jb20uc2EvIn0.Hw3P018JQdBKWfPb80ttUR-v6Kpf_rppvoaExnyL27AHmAefSzhukUp9TlTptfPZDAfItNkeWP4Rb4jzQeHtnrbYsroVXCa83OcOUIUBCEgKLpnJjdJJ3kCqiw3zbX9MnVAVB7KQBCLqWWlihh5rgCEeTqcElLe2CL_kbCVjhD0oaWDVOHBssQAjO8vzMWyejwv4-sRz5d8QbptAJSquQeoirW09QFVZKsCyidQ9wwTFtc8Q3JtPMVFwRdWDUiHgn-4eiF0RNYMH7b0Di-MobiSYUaMUV4PSr-2Lr1b4tQotUL7Wx_eiWRcKYjVzPW9P1Stcy25qpgMu4DjBgWLn2g
+
+
+
+<div class="well-chips-container">
+  <!-- Date picker section — positioned on the left -->
+  <div class="date-picker-section">
+    <label for="well-date-input" class="date-picker-label">Date:</label>
+    <input
+      #dateInput
+      id="well-date-input"
+      type="date"
+      class="date-picker-input"
+      [value]="formattedDate()"
+      (change)="onDateChange($event)"
+      aria-label="Select date for well data"
+    />
+  </div>
+
+  <!-- Well name chips and navigation — centered -->
+  <div class="chip-strip" role="list" aria-label="Available wells">
+    <span class="chip-strip__label">Active Wells</span>
+
+    @if (store.hasPrevPage()) {
+      <button
+        class="chip chip--nav"
+        aria-label="Previous wells"
+        (click)="store.prevPage()"
+      >
+        ‹
+      </button>
+    }
+
+    @for (well of store.pagedWellNames(); track well.epANum) {
+      <button
+        class="chip"
+        role="listitem"
+        [ngClass]="{ 'chip--active': well.epANum === store.selectedEpANum() }"
+        [attr.aria-pressed]="well.epANum === store.selectedEpANum()"
+        (click)="store.selectWell(well.epANum)"
+      >
+        <span class="chip__dot"></span>
+        {{ well.wellName }}
+      </button>
+    }
+
+    @if (store.hasNextPage()) {
+      <button
+        class="chip chip--nav"
+        aria-label="Next wells"
+        (click)="store.nextPage()"
+      >
+        ›
+      </button>
+    }
+
+    <span class="chip-strip__page-indicator">{{ pageLabel() }}</span>
+  </div>
+</div>
+
+<!-- Loading bar — sits directly below chip strip, inline in flow, no fixed position -->
+<div
+  class="well-loading-bar"
+  [class.well-loading-bar--active]="store.loading()"
+>
+  <div class="well-loading-bar__fill"></div>
+</div>
+===
+$chip-bg:            #ffffff; /* White by default */
+$chip-border:        #cbd5e1;
+$chip-text:          #334155; /* Dark text */
+$chip-active-bg:     #87ceeb; /* Sky blue when selected */
+$chip-active-border: #38bdf8;
+$strip-bg:           #ffffff; /* Removed black background */
+$accent:             #0ea5e9;
+
+.chip-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 20px;
+  background: $strip-bg;
+  border-bottom: 1px solid #e2e8f0;
+ border: 1px solid #0000002e;
+    margin-bottom: 1em;
+    border-radius: 8px;
+    margin-top: 1em;
+
+  &__label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  &__page-indicator {
+    font-size: 10px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+    flex-shrink: 0;
+  }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px 5px 10px;
+  border-radius: 20px;
+  border: 1.5px solid $chip-border;
+  background: $chip-bg;
+  color: $chip-text;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+
+  &:hover {
+    background: #f8fafc;
+    border-color: $accent;
+    color: #0f172a;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba($accent, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &--active {
+    background: $chip-active-bg;
+    border-color: $chip-active-border;
+    color: #0f172a; /* Dark text for contrast against sky blue */
+    box-shadow: 0 2px 10px rgba(135, 206, 235, 0.55);
+
+    .chip__dot {
+      background: #ffffff;
+      box-shadow: 0 0 5px #ffffff;
+    }
+  }
+
+  &--nav {
+    min-width: 28px;
+    padding: 5px 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0369a1;
+    border-color: #bae6fd;
+    background: #f0f9ff;
+    line-height: 1;
+
+    &:hover {
+      background: #e0f2fe;
+      border-color: #38bdf8;
+      color: #0284c7;
+      transform: translateY(-1px);
+    }
+  }
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #94a3b8;
+    flex-shrink: 0;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+
+  .well-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;   // left‑aligned date, centered chips
+  flex-wrap: wrap;                  // keep things on one line on wide screens,
+                                    // wrap on narrow screens
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+/* date‑picker container (keeps label + input together) */
+.date-picker-section {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* label */
+.date-picker-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* input – matches the look of the chips */
+.date-picker-input {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.5px solid $chip-border;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: $chip-text;
+  background: $chip-bg;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 3px solid rgba($accent, 0.4);
+    outline-offset: 2px;
+  }
+
+  &:hover {
+    background: #f8fafc;
+    border-color: $accent;
+  }
+}
+}
+==
+/**
+ * WellNameChipsComponent — SMART
+ * Injects WellStore — reads pagedWellNames, selectedEpANum, pagination signals.
+ * Calls store.selectWell(), store.nextPage(), store.prevPage() directly.
+ * Zero @Input / @Output needed.
+ */
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { NgClass } from '@angular/common';
+import { WellStore } from '../../../core/stores/wwell-data/well.store';
+
+@Component({
+  selector: 'app-well-name-chips',
+  standalone: true,
+  imports: [NgClass],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './well-name-chips.component.html',
+  styleUrl: './well-name-chips.component.scss',
+})
+export class WellNameChipsComponent {
+  onDateChange($event: Event) {
+
+  }
+  formattedDate() {
+
+  }
+  protected readonly store = inject(WellStore);
+
+  protected readonly pageLabel = computed(() =>
+    `${this.store.wellNamesPage() + 1} / ${this.store.totalPages()}`
+  );
+}
+==
+
