@@ -1,19 +1,2 @@
-{
-    "statusCode": 200,
-    "error": false,
-    "message": "Water well test results fetched successfully",
-    "data": [
-        {
-            "wOpkRemark": "CONT ,TEST THE WELL (NON-NATURAL FLOWING) AS FOLLOWING:\nPRODUCTIVITY: 1000 GPM / 1700 RPM.\nAQUIFER: UMER\nPUMP SETTING DEPTH: 822' RKB (796' BGL).\nINITIAL WATER LEVEL 335.7 FT BGL\nPUMPING WATER LEVEL 564.7 FT BGL\nDRAW DOWN:229 FT (PWL-SWL)\nSC: 4.37 GPM/FT\nH2S: NO PPM\nTDS: 2900 PPM\nWATER COLOR: WHITE NOT CLEAR \nTEMPERATURE: 61 DEG CELSIUS.\nSEDIMENTS: NO %\nTEST PERIOD: 12 HRS\nRECOVERY: 90 MIN  \n\n** CONDUCTED TEST BY GWD HYDROLOGISTS.",
-            "wellName": "ANDR-971",
-            "wActDate": "2025-05-20 00:00:00",
-            "rPM": 1700,
-            "testRate": 1000,
-            "wellProductivity": 0,
-            "temperature": 61,
-            "h2sPPM": "0",
-            "trgtRsvrCd": "UMER",
-            "tds": 2900
-        }
-    ]
-}
+2:43:36 PM [vite] (client) error while updating dependencies:
+Error: EPERM: operation not permitted, rename 'C:\Dev\JavaDev\agwa-development\agwa-frontend\.angular\cache\19.2.22\agwa\vite\deps_temp_28df365c' -> 'C:\Dev\JavaDev\agwa-development\agwa-frontend\.angular\cache\19.2.22\agwa\vite\deps'
