@@ -1,4 +1,41 @@
 
+
+
+import { inject } from '@angular/core';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
+import { EmailRequest } from 'src/models/email-request.model';
+import { EmailService } from '../../services/email/email.service';
+
+interface EmailState {
+  status: 'idle' | 'sending' | 'sent' | 'failed';
+  error: string | null;
+}
+
+const initialState: EmailState = {
+  status: 'idle',
+  error: null
+};
+
+export const EmailStore = signalStore(
+  { providedIn: 'root' },
+  withState(initialState),
+  withMethods((store, emailService = inject(EmailService)) => ({
+    sendEmail(request: EmailRequest) {
+      patchState(store, { status: 'sending', error: null });
+      emailService.sendEmail(request).
+        subscribe({
+          next: () => {
+            patchState(store, { status: 'sent' });
+          },
+          error: () => {
+            patchState(store, { status: 'failed', error: 'Failed to send email' })
+          }
+        });
+    }
+  }))
+);
+
+===
 import { Injectable } from '@angular/core';
 import { JwtHelperService } from '@auth0/angular-jwt'
 
