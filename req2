@@ -1,135 +1,50 @@
-Here’s the exact Email to Me flow, from UI click to logged-in user email.
+[ERROR] TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'string | null' is not assignable to parameter of type 'string'.
+      Type 'null' is not assignable to type 'string'. [plugin angular-compiler]
 
-1. UI Trigger
-reports.component.html (line 15)
+    src/app/core/stores/auth/auth.store.ts:41:29:
+      41 │                     http.get(extAppConfigService.settings.tokenUrl, {
+         ╵                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-<button
-  type="button"
-  class="reports-page__cta"
-  [disabled]="!canSendEmail()"
-  (click)="sendEmailToMe()"
->
-  {{ isSending() ? 'Sending...' : 'Email to Me' }}
-</button>
-2. Component Action
-reports.component.ts (line 36)
+  The last overload is declared here.
 
-protected readonly currentUserEmail = computed(() => this.authStore.userEmail());
-protected readonly canSendEmail = computed(() =>
-  !!this.currentUserEmail() && this.reportCount() > 0 && !this.isSending(),
-);
+    node_modules/@angular/common/http/index.d.ts:1076:4:
+      1076 │     get<T>(url: string, options?: {
+           ╵     ~~~
 
-protected async sendEmailToMe(): Promise<void> {
-  if (!this.canSendEmail()) {
-    this.errorMessage.set('No logged-in email or report data is available.');
-    this.sendSuccess.set(false);
-    return;
-  }
 
-  this.isSending.set(true);
-  this.sendSuccess.set(false);
-  this.errorMessage.set('');
+X [ERROR] TS2339: Property 'trim' does not exist on type 'ArrayBuffer'. [plugin angular-compiler]
 
-  try {
-    const emailRequest = this.emailService.buildEmailRequest(
-      this.reports(),
-      'data:image/png;base64,MOCK_REPORT_MAP_IMAGE',
-      [],
-    );
+    src/app/core/stores/auth/auth.store.ts:47:28:
+      47 │                 if (!token?.trim()) {
+         ╵                             ~~~~
 
-    await firstValueFrom(this.emailService.sendEmail(emailRequest));
-    this.sendSuccess.set(true);
-  } catch (error) {
-    this.errorMessage.set(
-      error instanceof Error ? error.message : 'Failed to send email.',
-    );
-  } finally {
-    this.isSending.set(false);
-  }
-}
-3. Service Builds Request
-email.service.ts (line 20)
 
-private getCurrentUserEmail(): string {
-  const userEmail = this.authStore.userEmail();
+X [ERROR] TS2345: Argument of type 'ArrayBuffer' is not assignable to parameter of type 'string'. [plugin angular-compiler]
 
-  if (!userEmail) {
-    throw new Error('No logged-in user email is available.');
-  }
+    src/app/core/stores/auth/auth.store.ts:51:34:
+      51 │                 if (jwt.isExpired(token)) {
+         ╵                                   ~~~~~
 
-  return userEmail;
-}
 
-buildEmailRequest(
-  reports: MorningReport[],
-  mapImageData: string,
-  waterWellTestResults?: WaterWellTestResult[],
-): EmailRequest {
-  const userEmail = this.getCurrentUserEmail();
+X [ERROR] TS2345: Argument of type 'ArrayBuffer' is not assignable to parameter of type 'string'. [plugin angular-compiler]
 
-  return {
-    userEmail,
-    subject: EMAIL_SUBJECT,
-    from: EMAIL_FROM,
-    to: [userEmail],
-    cc: EMAIL_CC,
-    replyTo: userEmail,
-    templateName: EMAIL_TEMPLATE_NAME,
-    generatePdf: false,
-    templateData: {
-      morningReport: reports,
-      mapImageData,
-      waterWellTestResults
-    }
-  };
-}
-4. Service Sends API Call
-email.service.ts (line 30)
+    src/app/core/stores/auth/auth.store.ts:55:50:
+      55 │                 const user = jwt.decode<AuthUser>(token);
+         ╵                                                   ~~~~~
 
-sendEmail(emailRequest: EmailRequest): Observable<void> {
-  const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-  const userEmail = emailRequest.userEmail?.trim() || this.getCurrentUserEmail();
 
-  return this.http.post<void>(this.apiUrl, {
-    ...emailRequest,
-    userEmail,
-    to: [userEmail],
-  }, { headers });
-}
-5. Auth Store Exposes Current User Email
-auth.store.ts (line 22)
+X [ERROR] TS2322: Type 'ArrayBuffer' is not assignable to type 'string'. [plugin angular-compiler]  
 
-withComputed(({ token, user }) => ({
-  isTokenExpired: computed(() => selectIsTokenExpired(token(), inject(JwtService))),
-  displayUsername: computed(() => selectDisplayUsername(user())),
-  userEmail: computed(() => selectUserEmail(user())),
-})),
-6. Selector Converts upn to Email
-auth.selectors.ts (line 52)
+    src/app/core/stores/auth/auth.store.ts:58:20:
+      58 │                     token,
+         ╵                     ~~~~~
 
-export function selectUserEmail(user: AuthUser | null): string {
-  const upn = typeof user?.upn === 'string' ? user.upn.trim() : '';
-  return upn ? `${upn}@gmail.com` : '';
-}
-7. Email Payload Model
-email-request.model.ts (line 4)
 
-export interface EmailRequest {
-  userEmail: string;
-  subject: string;
-  from: string;
-  to: string[];
-  cc?: string[];
-  replyTo?: string;
-  templateData: {
-    morningReport: MorningReport[];
-    mapImageData: string;
-    waterWellTestResults?: WaterWellTestResult[];
-  };
-  generatePdf: boolean;
-  templateName: string;
-}
-Flow summary:
+X [ERROR] TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'. 
+  Type 'null' is not assignable to type 'string'. [plugin angular-compiler]
 
-Email to Me button -> sendEmailToMe() -> emailService.buildEmailRequest() -> authStore.userEmail() -> selectUserEmail(user.upn + '@gmail.com') -> emailService.sendEmail() -> backend /send-email
-
+    src/app/features/morningreport/morningreport.component.ts:142:88:
+      142 │ ...morningReport, mapData!, currentUserEmail, waterWelltestResults);
+          ╵                             ~~~~~~~~~~~~~~~~
