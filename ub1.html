@@ -1,34 +1,144 @@
+import { JwtService } from "../../service/jwt.service";
 
-import { inject } from '@angular/core';
-import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
-import { EmailRequest } from 'src/models/email-request.model';
-import { EmailService } from '../../services/email/email.service';
-
-interface EmailState {
-  status: 'idle' | 'sending' | 'sent' | 'failed';
-  error: string | null;
+export interface AuthUser {
+  readonly upn?: string;
+  readonly name?: string;
+  readonly preferred_username?: string;
+  readonly unique_name?: string;
+  readonly exp?: number;
+  readonly roles?: string[];
+  readonly [key: string]: unknown;
 }
 
-const initialState: EmailState = {
-  status: 'idle',
-  error: null
+export interface LoginRequest {
+  readonly username: string;
+  readonly password: string;
+}
+
+export interface AuthState {
+  readonly token: string | null;
+  readonly isAuthenticated: boolean;
+  readonly user: AuthUser | null;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+}
+
+export const initialState: AuthState = {
+  token: null,
+  isAuthenticated: false,
+  user: null,
+  isLoading: false,
+  error: null,
 };
 
-export const EmailStore = signalStore(
+export function selectIsTokenExpired(token: string | null, jwt: JwtService): boolean {
+  return token ? jwt.isExpired(token) : true;
+}
+
+export function selectDisplayUsername(user: AuthUser | null): string {
+  if (!user) return 'User';
+
+  const username =
+    user.upn ||
+    user.preferred_username ||
+    user.name ||
+    user.unique_name;
+
+  return typeof username === 'string' && username.trim().length > 0
+    ? username.trim()
+    : 'User';
+}
+
+export function selectUserEmail(user: AuthUser | null): string {
+  const upn = typeof user?.upn === 'string' ? user.upn.trim() : '';
+
+  return upn ? `${upn}@gmail.com` : '';
+}
+===
+import { computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { firstValueFrom } from 'rxjs';
+import { JwtService } from '../../service/jwt.service';
+import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
+import { ExternalConfigService } from 'src/services/external-config.service';
+import {
+  AuthUser,
+  AuthState,
+  initialState,
+  LoginRequest,
+  selectDisplayUsername,
+  selectIsTokenExpired, 
+  selectUserEmail,
+} from './auth.selectors';
+
+export const AuthStore = signalStore(
   { providedIn: 'root' },
-  withState(initialState),
-  withMethods((store, emailService = inject(EmailService)) => ({
-    sendEmail(request: EmailRequest) {
-      patchState(store, { status: 'sending', error: null });
-      emailService.sendEmail(request).
-        subscribe({
-          next: () => {
-            patchState(store, { status: 'sent' });
-          },
-          error: () => {
-            patchState(store, { status: 'failed', error: 'Failed to send email' })
-          }
+  withState<AuthState>(initialState),
+  withComputed(({ token, user }) => ({
+    isTokenExpired: computed(() => selectIsTokenExpired(token(), inject(JwtService))),
+    displayUsername: computed(() => selectDisplayUsername(user())),
+    userEmail: computed(() => selectUserEmail(user())),
+  })),
+  withMethods((
+    store,
+    http = inject(HttpClient),
+    router = inject(Router),
+    jwt = inject(JwtService),
+    loading = inject(LoaderService),
+    extAppConfigService = inject(ExternalConfigService),
+  ) => ({
+    async login(_credentials?: LoginRequest): Promise<void> {
+      patchState(store, { isLoading: true, error: null });
+      loading.show();
+
+      try {
+        const token = await firstValueFrom(
+          http.get(extAppConfigService.settings.tokenUrl, {
+            responseType: 'text',
+            withCredentials: true,
+          }),
+        );
+
+        if (!token?.trim()) {
+          throw new Error('Authentication token was empty.');
+        }
+
+        if (jwt.isExpired(token)) {
+          throw new Error('Authentication token is expired.');
+        }
+
+        const user = jwt.decode<AuthUser>(token);
+
+        patchState(store, {
+          token,
+          isAuthenticated: true,
+          user,
+          isLoading: false,
+          error: null,
         });
-    }
-  }))
+
+        await router.navigate(['/home']);
+      } catch (error) {
+        patchState(store, {
+          ...initialState,
+          error: error instanceof Error ? error.message : 'Login failed.',
+        });
+      } finally {
+        loading.hide();
+      }
+    },
+
+    logout() {
+      patchState(store, initialState);
+      void router.navigate(['/login']);
+    },
+
+    autoLogin() {
+      patchState(store, initialState);
+    },
+  })),
 );
+
+
