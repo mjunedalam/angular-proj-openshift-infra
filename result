@@ -1,109 +1,32 @@
-/Users/junedalam/local-proj/Angular-Practice/src/app/features/persentation/persentation.component.html (line 4)
+async sendEmail() {
+  try {
+    const currentUserEmail = this.authStore.userEmail();
+    const morningReport = this.morningReport();
+    const mapData = await this.wwellMap.captureMapAsBase64();
+    const waterWelltestResults = this.waterWelltestResult();
 
-<div class="presentation__toolbar">
-  <app-well-name-chips class="toolbar__chips" />
-</div>
-Exact date picker UI:
-well-name-chips.component.html (line 3)
+    console.log("User Email:", currentUserEmail);
 
-<div class="date-picker-section">
-  <label for="well-date-input" class="date-picker-label">Date:</label>
-  <input
-    #dateInput
-    id="well-date-input"
-    type="date"
-    class="date-picker-input"
-    [value]="formattedDate()"
-    (change)="onDateChange($event)"
-    aria-label="Select date for well data"
-  />
-</div>
-UI to component trace:
-well-name-chips.component.ts (line 22)
+    const emailRequest = this.emailService.buildEmailRequest(
+      morningReport,
+      mapData!,
+      currentUserEmail,
+      waterWelltestResults
+    );
 
-protected readonly store = inject(WellStore);
-protected readonly themeStore = inject(ThemeStore);
+    this.emailStore.sendEmail(emailRequest).subscribe({
+      next: () => {
+        this.snackBar.open('Email sent successfully!', 'Dismiss', {
+          duration: 3000,
+          panelClass: ['bg-green-500', 'text-white']
+        });
+      },
+      error: () => {
+        this.showError('Failed to send email. Please try again.');
+      }
+    });
 
-@ViewChild('dateInput') dateInput?: ElementRef<HTMLInputElement>;
-
-protected readonly formattedDate = computed(() =>
-  formatDateForInput(this.store.selectedDate())
-);
-
-ngAfterViewInit(): void {
-  const input = this.dateInput?.nativeElement;
-  if (!input) return;
-
-  effect(() => {
-    input.style.colorScheme = this.themeStore.mode();
-  });
-
-  input.addEventListener('click', (e: Event) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if ('showPicker' in input && typeof input.showPicker === 'function') {
-      input.showPicker();
-    } else {
-      input.focus();
-      input.click();
-    }
-  });
-}
-
-protected onDateChange(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  if (input.value) {
-    const newDate = parseDateFromInput(input.value);
-    this.store.setSelectedDate(newDate);
+  } catch (error) {
+    this.showError('Failed to send email. Please try again.');
   }
 }
-Component to store trace:
-well.store.ts (line 227)
-
-setSelectedDate(date: Date): void {
-  patchState(store, { selectedDate: date });
-
-  if (store.selectedEpANum() !== null) {
-    selectWell({ epANum: store.selectedEpANum()!, date });
-  }
-}
-Store reload path:
-well.store.ts (line 160)
-
-const selectWell = rxMethod<{ epANum: number; date?: Date }>(
-  pipe(
-    tap(({ epANum, date }) => {
-      patchState(store, {
-        selectedEpANum: epANum,
-        selectedDate: date || new Date(),
-        loading: true,
-        error: null,
-      });
-    }),
-    switchMap(({ epANum, date }) =>
-      wellDataService.getWellDetails(epANum, date).pipe(/* ... */)
-    ),
-  ),
-);
-Date helpers used by the component:
-date.util.ts (line 7)
-
-export function formatDateForInput(date: Date): string {
-  if (!date) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-export function parseDateFromInput(isoString: string): Date {
-  if (!isoString) return new Date();
-  const [year, month, day] = isoString.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
-Trace summary:
-PresentationComponent -> <app-well-name-chips /> -> date <input type="date"> -> onDateChange() -> store.setSelectedDate() -> selectWell(..., date) -> wellDataService.getWellDetails(epANum, date)
-
-If you want, I can also collapse this into one minimal “copy-paste” snippet for adding the same date picker directly inside PersentationComponent.
