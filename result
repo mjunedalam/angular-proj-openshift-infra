@@ -1,32 +1,301 @@
-async sendEmail() {
-  try {
-    const currentUserEmail = this.authStore.userEmail();
-    const morningReport = this.morningReport();
-    const mapData = await this.wwellMap.captureMapAsBase64();
-    const waterWelltestResults = this.waterWelltestResult();
+import { inject, Injectable } from '@angular/core';
+import { EmailRequest } from 'src/app/shared/models/email/email-request.model';
+import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { MorningReport } from '../../models/morning-report/morning-report.model';
+import { EMAIL_FROM, EMAIL_CC, EMAIL_SUBJECT, EMAIL_TEMPLATE_NAME } from 'src/app/shared/models/config/email.config';
+import { WaterWellTestResult } from 'src/app/shared/models/wwell/wwell-test-result.model';
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
+@Injectable({
+  providedIn: 'root'
+})
+export class EmailService {
 
-    console.log("User Email:", currentUserEmail);
+  private extConfigService = inject(ExternalConfigService);
+  private http = inject(HttpClient);
+  private apiUrl = `${this.extConfigService.settings.emailServiceUrl}` + "/send-email";
 
-    const emailRequest = this.emailService.buildEmailRequest(
-      morningReport,
-      mapData!,
-      currentUserEmail,
-      waterWelltestResults
-    );
 
-    this.emailStore.sendEmail(emailRequest).subscribe({
-      next: () => {
-        this.snackBar.open('Email sent successfully!', 'Dismiss', {
-          duration: 3000,
-          panelClass: ['bg-green-500', 'text-white']
-        });
-      },
-      error: () => {
-        this.showError('Failed to send email. Please try again.');
+  sendEmail(emailRequest: EmailRequest): Observable<void> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.post<void>(this.apiUrl, emailRequest, { headers });
+  }
+
+  buildEmailRequest(
+    reports: MorningReport[],
+    mapImageData: string,
+    recipientEmail: string,
+    waterWellTestResults?: WaterWellTestResult[],
+  ): EmailRequest {
+    return {
+      subject: EMAIL_SUBJECT,
+      from: EMAIL_FROM,
+      to: [recipientEmail],
+      cc: EMAIL_CC,
+      replyTo: '',
+      templateName: EMAIL_TEMPLATE_NAME,
+      generatePdf: false,
+      templateData: {
+        morningReport: reports,
+        mapImageData: mapImageData,
+        waterWellTestResults
       }
-    });
+    };
+  }
+}
 
-  } catch (error) {
-    this.showError('Failed to send email. Please try again.');
+===
+import { JwtService } from 'src/app/core/services/jwt/jwt.service';
+
+export interface AuthUser {
+  readonly upn?: string;
+  readonly name?: string;
+  readonly preferred_username?: string;
+  readonly unique_name?: string;
+  readonly exp?: number;
+  readonly roles?: string[];
+  readonly [key: string]: unknown;
+}
+
+export interface LoginRequest {
+  readonly username: string;
+  readonly password: string;
+}
+
+export interface AuthState {
+  readonly token: string | null;
+  readonly isAuthenticated: boolean;
+  readonly user: AuthUser | null;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+}
+
+export const initialState: AuthState = {
+  token: null,
+  isAuthenticated: false,
+  user: null,
+  isLoading: false,
+  error: null,
+};
+
+export function selectIsTokenExpired(token: string | null, jwt: JwtService): boolean {
+  return token ? jwt.isExpired(token) : true;
+}
+
+export function selectDisplayUsername(user: AuthUser | null): string {
+  if (!user) return 'User';
+
+  const username =
+    user.name ||
+    user.preferred_username ||
+    user.upn ||
+    user.unique_name;
+
+  return typeof username === 'string' && username.trim().length > 0
+    ? username.trim()
+    : 'User';
+}
+
+export function selectUserEmail(user: AuthUser | null): string | null {
+  const upn = user?.upn;
+
+  if (typeof upn !== 'string') {
+    return null;
+  }
+
+  const normalizedUpn = upn.trim();
+
+  if (!normalizedUpn) {
+    return null;
+  }
+
+  return normalizedUpn.includes('@')
+    ? normalizedUpn
+    : `${normalizedUpn}@gmail.com`;
+}
+==
+import { computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { firstValueFrom } from 'rxjs';
+import { JwtService } from '../../service/jwt.service';
+import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
+import { ExternalConfigService } from 'src/services/external-config.service';
+import {
+  AuthUser,
+  AuthState,
+  initialState,
+  LoginRequest,
+  selectDisplayUsername,
+  selectIsTokenExpired, 
+  selectUserEmail,
+} from './auth.selectors';
+
+export const AuthStore = signalStore(
+  { providedIn: 'root' },
+  withState<AuthState>(initialState),
+  withComputed(({ token, user }) => ({
+    isTokenExpired: computed(() => selectIsTokenExpired(token(), inject(JwtService))),
+    displayUsername: computed(() => selectDisplayUsername(user())),
+    userEmail: computed(() => selectUserEmail(user())),
+  })),
+  withMethods((
+    store,
+    http = inject(HttpClient),
+    router = inject(Router),
+    jwt = inject(JwtService),
+    loading = inject(LoaderService),
+    extAppConfigService = inject(ExternalConfigService),
+  ) => ({
+    async login(_credentials?: LoginRequest): Promise<void> {
+      patchState(store, { isLoading: true, error: null });
+      loading.show();
+
+      try {
+        const token = await firstValueFrom(
+          http.get(extAppConfigService.settings.tokenUrl, {
+            responseType: 'text',
+            withCredentials: true,
+          }),
+        );
+
+        if (!token?.trim()) {
+          throw new Error('Authentication token was empty.');
+        }
+
+        if (jwt.isExpired(token)) {
+          throw new Error('Authentication token is expired.');
+        }
+
+        const user = jwt.decode<AuthUser>(token);
+
+        patchState(store, {
+          token,
+          isAuthenticated: true,
+          user,
+          isLoading: false,
+          error: null,
+        });
+
+        await router.navigate(['/home']);
+      } catch (error) {
+        patchState(store, {
+          ...initialState,
+          error: error instanceof Error ? error.message : 'Login failed.',
+        });
+      } finally {
+        loading.hide();
+      }
+    },
+
+    logout() {
+      patchState(store, initialState);
+      void router.navigate(['/login']);
+    },
+
+    autoLogin() {
+      patchState(store, initialState);
+    },
+  })),
+);
+
+==
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { InputTextModule } from 'primeng/inputtext';
+
+import { AuthStore } from 'src/app/core/store/auth/auth.store';
+import { EmailStore } from 'src/app/core/store/email/email.store';
+import { MorningReportStore } from 'src/app/core/store/morning-report/morning-report';
+import { EmailService } from '../../core/services/email/email.service';
+import { WwellmapComponent } from '../wwell-map/wwell-map.component';
+
+@Component({
+  selector: 'app-morningreport',
+  standalone: true,
+  imports: [
+    WwellmapComponent,
+    FormsModule,
+    ButtonModule,
+    CardModule,
+    InputTextModule,
+  ],
+  templateUrl: './morning-report.component.html',
+  styleUrl: './morning-report.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class MorningReportComponent implements OnInit {
+  @ViewChild('wwellMap') protected wwellMap!: WwellmapComponent;
+
+  protected readonly store = inject(MorningReportStore);
+  private authStore = inject(AuthStore);
+  private emailStore = inject(EmailStore);
+  private emailService = inject(EmailService);
+
+  protected readonly morningReport = this.store.morningReport;
+  protected readonly hasError = this.store.hasError;
+  protected readonly errorMessage = this.store.errorMessage;
+  protected readonly waterWelltestResult = this.store.waterWelltestResult;
+  protected readonly statusCode = this.store.statusCode;
+  protected readonly loading = this.store.loading;
+  protected readonly waterWellTestResultsLoading = this.store.waterWellTestResultsLoading;
+  protected readonly isLoadingState = computed(
+    () => this.loading() || this.waterWellTestResultsLoading(),
+  );
+  protected readonly skeletonCards = [1, 2, 3];
+  protected readonly skeletonLines = [1, 2, 3, 4];
+
+  ngOnInit(): void {
+    this.store.loadMorningReportData();
+    this.store.loadWaterWellTestResults();
+  }
+
+  protected async sendEmail(): Promise<void> {
+    try {
+      const recipientEmail = this.authStore.userEmail();
+
+      if (!recipientEmail) {
+        this.showError('Unable to determine the logged-in user email.');
+        return;
+      }
+
+      const morningReport = this.morningReport();
+      const mapData = await this.wwellMap.captureMapAsBase64();
+      const waterWelltestResults = this.waterWelltestResult();
+      const emailRequest = this.emailService.buildEmailRequest(
+        morningReport,
+        mapData!,
+        recipientEmail,
+        waterWelltestResults,
+      );
+      this.emailStore.sendEmail(emailRequest);
+
+      // this.snackBar.open('Email sent successfully!', 'Dismiss', {
+      //   duration: 3000,
+      //   panelClass: ['bg-green-500', 'text-white']
+      // });
+
+    } catch {
+      this.showError('Failed to send email. Please try again.');
+    }
+  }
+
+  protected downloadReport(): void {
+    this.wwellMap.saveMapImage();
+  }
+
+  private showError(message: string): void {
+    this.store.setUiError(message);
+    console.error(message);
   }
 }
