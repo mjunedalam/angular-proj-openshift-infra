@@ -1,144 +1,451 @@
-import { JwtService } from "../../service/jwt.service";
+import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { EmailService } from '../../core/services/email/email.service';
+import { EmailStore } from '../../core/stores/email/email.store';
+import { MorningReport } from '../../models/morining-report.model';
+import { MoriningReportService } from '../../services/morining-report.service';
+import { SHARED_MODULES } from '../../shared/shared.module';
+import { WwellmapComponent } from '../../wwellmap/wwellmap.component';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ApiResponse } from '../../core/models/api-response.model';
+import { WaterWellTestResult } from '../../models/water-well-test-result';
+import { catchError, finalize, of, tap } from 'rxjs';
+import { AuthStore } from '../../core/stores/auth/auth.store';
 
-export interface AuthUser {
-  readonly upn?: string;
-  readonly name?: string;
-  readonly preferred_username?: string;
-  readonly unique_name?: string;
-  readonly exp?: number;
-  readonly roles?: string[];
-  readonly [key: string]: unknown;
+@Component({
+  selector: 'app-morningreport',
+  imports: [...SHARED_MODULES, WwellmapComponent, ReactiveFormsModule, FormsModule],
+  providers: [MoriningReportService],
+  templateUrl: './morningreport.component.html',
+  styleUrl: './morningreport.component.scss'
+})
+export class MorningreportComponent implements OnInit {
+
+  morningReports!: MorningReport[];
+  @ViewChild('wwellMap') wwellMap!: WwellmapComponent;
+
+  private emailStore = inject(EmailStore);
+  private morningService = inject(MoriningReportService);
+  private snackBar = inject(MatSnackBar);
+  private emailService = inject(EmailService)
+  private authStore = inject(AuthStore);
+
+
+
+  morningReport = signal<MorningReport[]>([]);
+  private readonly _wellTestResults = signal<ApiResponse<WaterWellTestResult>>({
+    statusCode: 0,
+    error: false,
+    message: "",
+    data: []
+  });
+
+  loading = signal(true);
+  today = signal(new Date())
+  rigStatuses = signal<string[]>([]);
+
+  public readonly hasError = computed(() => this._wellTestResults().error);
+  public readonly errorMessage = computed(() => this._wellTestResults().message);
+  public readonly waterWelltestResult = computed(() => this._wellTestResults().data);
+  public readonly statusCode = computed(() => this._wellTestResults().statusCode);
+  public readonly isLoading = signal<boolean>(false);
+
+  rigStatusCtrl = new FormControl('');
+
+
+  supportingInfo = ["ANDR GOSP-1", "DMDA-2"];
+
+
+
+  ngOnInit(): void {
+    this.loadMorningReportData();
+    this.loadWaterWellTestResults();
+  }
+
+  private loadWaterWellTestResults(): void {
+    this.loading.set(true);
+
+    this.morningService
+      .getWaterWellTestResultData()
+      .pipe(
+        tap((apiResp) => this._wellTestResults.set(apiResp)),
+        catchError((err) => {
+          const fallback: ApiResponse<WaterWellTestResult> = {
+            statusCode: err.status,
+            error: true,
+            message: err.message,
+            data: [],
+          };
+          this._wellTestResults.set(fallback);
+          return of(fallback);
+        }),
+        finalize(() => this.isLoading.set(false))
+      )
+      .subscribe();
+  }
+
+
+  loadMorningReportData() {
+
+    this.loading.set(true);
+    this.morningService.getMorningReport().subscribe({
+
+      next: reports => {
+        this.loading.set(false);
+        this.morningReport.set(reports);
+      },
+
+      error: (error) => {
+        this.loading.set(false);
+        this.showError("Failed to load Morning Report");
+      }
+    })
+  }
+
+  onStatusChange(event: Event, index: number) {
+    const inputElement = event.target as HTMLInputElement;
+    const newRigStatus = inputElement.value;
+
+    this.rigStatuses.update((arr) => {
+      const newRigStatuses = [...arr];
+      newRigStatuses[index] = newRigStatus;
+      return newRigStatuses;
+    });
+
+
+    this.morningReport.update((reports) => {
+      const copy = [...reports];
+      copy[index] = { ...copy[index], rigStatus: newRigStatus };
+      return copy;
+    });
+  }
+
+  onActionChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    const action = select.value;
+
+    if (action === 'email') {
+      this.sendEmail();
+    } else if (action === 'download') {
+      this.downloadReport();
+    }
+  }
+
+  async sendEmail() {
+    try {
+      const currentUserEmail = computed(() => this.authStore.userEmail());
+      const morningReport = this.morningReport();
+      const mapData = await this.wwellMap.captureMapAsBase64();
+      const waterWelltestResults = this.waterWelltestResult();
+      const emailRequest = this.emailService.buildEmailRequest(morningReport, mapData!, currentUserEmail(), waterWelltestResults);
+      this.emailStore.sendEmail(emailRequest);
+
+      this.snackBar.open('Email sent successfully!', 'Dismiss', {
+        duration: 3000,
+        panelClass: ['bg-green-500', 'text-white']
+      });
+
+    } catch (error) {
+      this.showError('Failed to send email. Please try again.');
+    }
+  }
+
+  downloadReport() {
+    this.wwellMap.saveMapImage();
+  }
+
+  private showError(message: string) {
+    this.snackBar.open(message, 'Dissmiss', {
+      duration: 3000,
+      panelClass: ['bg-red-500', 'text-white']
+    });
+  }
+
 }
 
-export interface LoginRequest {
-  readonly username: string;
-  readonly password: string;
+import { inject, Injectable } from '@angular/core';
+import { EmailRequest } from '../../models/EmailRequest';
+import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { MorningReport } from '../../../models/morining-report.model';
+import { EMAIL_CC, EMAIL_FROM, EMAIL_SUBJECT, EMAIL_TEMPLATE_NAME, EMAIL_TO } from './email.config';
+import { WaterWellTestResult } from '../../../models/water-well-test-result';
+import { ExternalConfigService } from '../../../shared/services/external-config-service';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class EmailService {
+
+  private extConfigService = inject(ExternalConfigService);
+  private http = inject(HttpClient);
+  private apiUrl = `${this.extConfigService.settings.emailServiceUrl}` + "/send-email";
+
+
+
+  sendEmail(emailRequest: EmailRequest): Observable<void> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.post<void>(this.apiUrl, emailRequest, { headers });
+  }
+
+  buildEmailRequest(reports: MorningReport[], mapImageData: string, userEmail: string, waterWellTestResults?: WaterWellTestResult[]): EmailRequest {
+    return {
+      subject: EMAIL_SUBJECT,
+      from: EMAIL_FROM,
+      to: [userEmail],
+      cc: EMAIL_CC,
+      replyTo: '',
+      templateName: EMAIL_TEMPLATE_NAME,
+      generatePdf: false,
+      templateData: {
+        morningReport: reports,
+        mapImageData: mapImageData,
+        waterWellTestResults
+      }
+    };
+  }
 }
-
-export interface AuthState {
-  readonly token: string | null;
-  readonly isAuthenticated: boolean;
-  readonly user: AuthUser | null;
-  readonly isLoading: boolean;
-  readonly error: string | null;
-}
-
-export const initialState: AuthState = {
-  token: null,
-  isAuthenticated: false,
-  user: null,
-  isLoading: false,
-  error: null,
-};
-
-export function selectIsTokenExpired(token: string | null, jwt: JwtService): boolean {
-  return token ? jwt.isExpired(token) : true;
-}
-
-export function selectDisplayUsername(user: AuthUser | null): string {
-  if (!user) return 'User';
-
-  const username =
-    user.upn ||
-    user.preferred_username ||
-    user.name ||
-    user.unique_name;
-
-  return typeof username === 'string' && username.trim().length > 0
-    ? username.trim()
-    : 'User';
-}
-
-export function selectUserEmail(user: AuthUser | null): string {
-  const upn = typeof user?.upn === 'string' ? user.upn.trim() : '';
-
-  return upn ? `${upn}@gmail.com` : '';
-}
-===
 import { computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
-import { firstValueFrom } from 'rxjs';
-import { JwtService } from '../../service/jwt.service';
-import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
-import { ExternalConfigService } from 'src/services/external-config.service';
 import {
-  AuthUser,
-  AuthState,
-  initialState,
-  LoginRequest,
-  selectDisplayUsername,
-  selectIsTokenExpired, 
-  selectUserEmail,
+    patchState,
+    signalStore,
+    withComputed,
+    withMethods,
+    withState,
+} from '@ngrx/signals';
+import { firstValueFrom } from 'rxjs';
+import { JwtService } from '../../services/jwt.service';
+import { LoadingService } from '../../services/loading.service';
+import { ExternalConfigService } from '../../../shared/services/external-config-service';
+import {
+    AuthUser,
+    AuthState,
+    initialState,
+    LoginRequest,
+    selectDisplayUsername,
+    selectIsTokenExpired,
+    selectUserEmail,
 } from './auth.selectors';
 
 export const AuthStore = signalStore(
-  { providedIn: 'root' },
-  withState<AuthState>(initialState),
-  withComputed(({ token, user }) => ({
-    isTokenExpired: computed(() => selectIsTokenExpired(token(), inject(JwtService))),
-    displayUsername: computed(() => selectDisplayUsername(user())),
-    userEmail: computed(() => selectUserEmail(user())),
-  })),
-  withMethods((
-    store,
-    http = inject(HttpClient),
-    router = inject(Router),
-    jwt = inject(JwtService),
-    loading = inject(LoaderService),
-    extAppConfigService = inject(ExternalConfigService),
-  ) => ({
-    async login(_credentials?: LoginRequest): Promise<void> {
-      patchState(store, { isLoading: true, error: null });
-      loading.show();
+    { providedIn: 'root' },
+    withState<AuthState>(initialState),
+    withComputed(({ token, user }) => ({
+        isTokenExpired: computed(() =>
+            selectIsTokenExpired(token(), inject(JwtService)),
+        ),
+        displayUsername: computed(() => selectDisplayUsername(user())),
+        userEmail: computed(() => selectUserEmail(user())),
+    })),
+    withMethods(
+        (
+            store,
+            http = inject(HttpClient),
+            router = inject(Router),
+            jwt = inject(JwtService),
+            loading = inject(LoadingService),
+            cfg = inject(ExternalConfigService),
+        ) => ({
+            async login(_credentials?: LoginRequest): Promise<void> {
+                patchState(store, { isLoading: true, error: null });
+                loading.show();
 
-      try {
-        const token = await firstValueFrom(
-          http.get(extAppConfigService.settings.tokenUrl, {
-            responseType: 'text',
-            withCredentials: true,
-          }),
-        );
+                try {
+                    /** -----------------------------------------------------------
+                     *  1️⃣  Guard the URL – it must be a non‑null string
+                     * ----------------------------------------------------------- */
+                    const url = cfg.settings?.tokenUrl;
+                    if (!url) {
+                        throw new Error('Token endpoint URL is not configured.');
+                    }
 
-        if (!token?.trim()) {
-          throw new Error('Authentication token was empty.');
-        }
+                    /** -----------------------------------------------------------
+                     *  2️⃣  Get the token as plain text (string)
+                     * ----------------------------------------------------------- */
+                    const token = await firstValueFrom<string>(
+                        http.get(url, {
+                            responseType: 'text' as const, // tells Angular the payload is a string
+                            withCredentials: true,
+                        }),
+                    );
 
-        if (jwt.isExpired(token)) {
-          throw new Error('Authentication token is expired.');
-        }
+                    /** -----------------------------------------------------------
+                     *  3️⃣  Validate the token
+                     * ----------------------------------------------------------- */
+                    if (!token?.trim()) {
+                        throw new Error('Authentication token was empty.');
+                    }
+                    if (jwt.isExpired(token)) {
+                        throw new Error('Authentication token is expired.');
+                    }
 
-        const user = jwt.decode<AuthUser>(token);
+                    /** -----------------------------------------------------------
+                     *  4️⃣  Decode and store the user info
+                     * ----------------------------------------------------------- */
+                    const user = jwt.decode<AuthUser>(token);
+                    patchState(store, {
+                        token,
+                        isAuthenticated: true,
+                        user,
+                        isLoading: false,
+                        error: null,
+                    });
 
-        patchState(store, {
-          token,
-          isAuthenticated: true,
-          user,
-          isLoading: false,
-          error: null,
-        });
+                    await router.navigate(['/main/home']);
+                } catch (err) {
+                    patchState(store, {
+                        ...initialState,
+                        error:
+                            err instanceof Error ? err.message : 'Login failed.',
+                    });
+                } finally {
+                    loading.hide();
+                }
+            },
 
-        await router.navigate(['/home']);
-      } catch (error) {
-        patchState(store, {
-          ...initialState,
-          error: error instanceof Error ? error.message : 'Login failed.',
-        });
-      } finally {
-        loading.hide();
-      }
-    },
+            logout() {
+                patchState(store, initialState);
+                void router.navigate(['/login']);
+            },
 
-    logout() {
-      patchState(store, initialState);
-      void router.navigate(['/login']);
-    },
-
-    autoLogin() {
-      patchState(store, initialState);
-    },
-  })),
+            autoLogin() {
+                // Here you could read a persisted token and repeat the validation
+                patchState(store, initialState);
+            },
+        }),
+    ),
 );
+import { JwtService } from "../../services/jwt.service";
+
+export interface AuthUser {
+    readonly upn?: string;
+    readonly name?: string;
+    readonly preferred_username?: string;
+    readonly unique_name?: string;
+    readonly exp?: number;
+    readonly roles?: string[];
+    readonly [key: string]: unknown;
+}
+
+export interface LoginRequest {
+    readonly username: string;
+    readonly password: string;
+}
+
+export interface AuthState {
+    readonly token: string | null;
+    readonly isAuthenticated: boolean;
+    readonly user: AuthUser | null;
+    readonly isLoading: boolean;
+    readonly error: string | null;
+}
+
+export const initialState: AuthState = {
+    token: null,
+    isAuthenticated: false,
+    user: null,
+    isLoading: false,
+    error: null,
+};
+
+export function selectIsTokenExpired(token: string | null, jwt: JwtService): boolean {
+    return token ? jwt.isExpired(token) : true;
+}
+
+export function selectDisplayUsername(user: AuthUser | null): string {
+    if (!user) return 'User';
+
+    const username =
+        user.upn ||
+        user.preferred_username ||
+        user.name ||
+        user.unique_name;
+
+    return typeof username === 'string' && username.trim().length > 0
+        ? username.trim()
+        : 'User';
+}
+
+export function selectUserEmail(user: AuthUser | null): string {
+    const upn = typeof user?.upn === 'string' ? user.upn.trim() : '';
+
+    return upn ? `${upn}@gmail.com` : '';
+}
+import { inject, Injectable } from '@angular/core';
+import { EmailRequest } from '../../models/EmailRequest';
+import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { MorningReport } from '../../../models/morining-report.model';
+import { EMAIL_CC, EMAIL_FROM, EMAIL_SUBJECT, EMAIL_TEMPLATE_NAME, EMAIL_TO } from './email.config';
+import { WaterWellTestResult } from '../../../models/water-well-test-result';
+import { ExternalConfigService } from '../../../shared/services/external-config-service';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class EmailService {
+
+  private extConfigService = inject(ExternalConfigService);
+  private http = inject(HttpClient);
+  private apiUrl = `${this.extConfigService.settings.emailServiceUrl}` + "/send-email";
 
 
+
+  sendEmail(emailRequest: EmailRequest): Observable<void> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.post<void>(this.apiUrl, emailRequest, { headers });
+  }
+
+  buildEmailRequest(reports: MorningReport[], mapImageData: string, userEmail: string, waterWellTestResults?: WaterWellTestResult[]): EmailRequest {
+    return {
+      subject: EMAIL_SUBJECT,
+      from: EMAIL_FROM,
+      to: [userEmail],
+      cc: EMAIL_CC,
+      replyTo: '',
+      templateName: EMAIL_TEMPLATE_NAME,
+      generatePdf: false,
+      templateData: {
+        morningReport: reports,
+        mapImageData: mapImageData,
+        waterWellTestResults
+      }
+    };
+  }
+}
+
+import { inject } from '@angular/core';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
+import { EmailRequest } from '../../models/EmailRequest';
+import { EmailService } from '../../services/email/email.service';
+
+interface EmailState {
+  status: 'idle' | 'sending' | 'sent' | 'failed';
+  error: string | null;
+}
+
+const initialState: EmailState = {
+  status: 'idle',
+  error: null
+};
+
+export const EmailStore = signalStore(
+  { providedIn: 'root' },
+  withState(initialState),
+  withMethods((store, emailService = inject(EmailService)) => ({
+    sendEmail(request: EmailRequest) {
+      patchState(store, { status: 'sending', error: null });
+      emailService.sendEmail(request).
+        subscribe({
+          next: () => {
+            patchState(store, { status: 'sent' });
+          },
+          error: () => {
+            patchState(store, { status: 'failed', error: 'Failed to send email' })
+          }
+        });
+    }
+  }))
+);
