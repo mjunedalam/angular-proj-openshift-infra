@@ -1,40 +1,34 @@
-import { inject, Injectable } from '@angular/core';
+
+import { inject } from '@angular/core';
+import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { EmailRequest } from 'src/models/email-request.model';
-import { Observable } from 'rxjs';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { MorningReport } from 'src/models/morining-report.model';
-import { EMAIL_FROM, EMAIL_CC, EMAIL_SUBJECT, EMAIL_TEMPLATE_NAME, EMAIL_TO } from 'src/models/config/email.config';
-import { WaterWellTestResult } from 'src/app/shared/models/wwell/wwell-test-result.model';
-import { ExternalConfigService } from 'src/services/external-config.service';
-@Injectable({
-  providedIn: 'root'
-})
-export class EmailService {
+import { EmailService } from '../../services/email/email.service';
 
-  private extConfigService = inject(ExternalConfigService);
-  private http = inject(HttpClient);
-  private apiUrl = `${this.extConfigService.settings.emailServiceUrl}` + "/send-email";
-
-
-  sendEmail(emailRequest: EmailRequest): Observable<void> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http.post<void>(this.apiUrl, emailRequest, { headers });
-  }
-
-  buildEmailRequest(reports: MorningReport[], mapImageData: string, waterWellTestResults?: WaterWellTestResult[]): EmailRequest {
-    return {
-      subject: EMAIL_SUBJECT,
-      from: EMAIL_FROM,
-      to: EMAIL_TO,
-      cc: EMAIL_CC,
-      replyTo: '',
-      templateName: EMAIL_TEMPLATE_NAME,
-      generatePdf: false,
-      templateData: {
-        morningReport: reports,
-        mapImageData: mapImageData,
-        waterWellTestResults
-      }
-    };
-  }
+interface EmailState {
+  status: 'idle' | 'sending' | 'sent' | 'failed';
+  error: string | null;
 }
+
+const initialState: EmailState = {
+  status: 'idle',
+  error: null
+};
+
+export const EmailStore = signalStore(
+  { providedIn: 'root' },
+  withState(initialState),
+  withMethods((store, emailService = inject(EmailService)) => ({
+    sendEmail(request: EmailRequest) {
+      patchState(store, { status: 'sending', error: null });
+      emailService.sendEmail(request).
+        subscribe({
+          next: () => {
+            patchState(store, { status: 'sent' });
+          },
+          error: () => {
+            patchState(store, { status: 'failed', error: 'Failed to send email' })
+          }
+        });
+    }
+  }))
+);
