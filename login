@@ -1,1 +1,601 @@
 
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
+
+import { AuthStore } from '../../core/stores/auth/auth.store';
+import { LoginRequest } from '../../shared/models/auth/login-request.model';
+import { SHARED_MODULES } from '../../shared/shared.module';
+
+@Component({
+  selector: 'app-login',
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.scss'],
+  standalone: true,
+  imports: [
+    ReactiveFormsModule,
+    ...SHARED_MODULES
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class LoginComponent {
+  readonly loginForm: FormGroup;
+
+  readonly showCredentials = signal<boolean>(false);
+
+  private readonly authStore = inject(AuthStore);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly router = inject(Router);
+
+  constructor() {
+    this.loginForm = new FormGroup({
+      username: new FormControl('', Validators.required),
+      password: new FormControl('', Validators.required)
+    });
+  }
+
+  toggleCredentials(): void {
+    this.showCredentials.update(v => !v);
+
+    if (!this.showCredentials()) {
+      this.loginForm.reset();
+    }
+  }
+
+  onSubmit(): void {
+    if (this.loginForm.valid) {
+      const credentials = this.loginForm.value as LoginRequest;
+      this.authStore.login(credentials);
+    } else {
+      this.loginForm.markAllAsTouched();
+    }
+  }
+
+  ssoLogin(): void {
+    const ssoPayload = {} as LoginRequest;
+    this.authStore.login(ssoPayload);
+  }
+}
+===
+<div class="login-layout bg-[url('/assets/login-background.png')]">
+  <div class="login-overlay"></div>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <svg
+          class="main-logo"
+          xmlns="http://www.w3.org/2000/svg"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          viewBox="0 0 156 162"
+        >
+          <defs>
+            <filter
+              id="a"
+              x="28.387"
+              y="32.445"
+              width="95.296"
+              height="95.34"
+              filterUnits="userSpaceOnUse"
+            >
+              <feOffset dy="3" input="SourceAlpha" />
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feFlood flood-opacity="0.161" />
+              <feComposite operator="in" in2="b" />
+              <feComposite in="SourceGraphic" />
+            </filter>
+            <linearGradient
+              id="c"
+              x1="1.057"
+              y1="2.52"
+              x2="0.357"
+              y2="-0.017"
+              gradientUnits="objectBoundingBox"
+            >
+              <stop offset="0" stop-color="#5080f0" />
+              <stop offset="1" stop-color="#18e3e3" />
+            </linearGradient>
+            <linearGradient
+              id="d"
+              x1="0.576"
+              y1="1.13"
+              x2="0.246"
+              y2="-0.901"
+              xlink:href="#c"
+            />
+            <clipPath id="f"><rect width="156" height="162" /></clipPath>
+          </defs>
+          <g id="e" clip-path="url(#f)">
+            <g transform="translate(37.887 38.945)">
+              <g
+                transform="matrix(1, 0, 0, 1, -37.89, -38.95)"
+                filter="url(#a)"
+              >
+                <path
+                  d="M120.918,204.639a37.857,37.857,0,0,1-12.089,27.809,31.878,31.878,0,0,1-2.966,2.524,30.379,30.379,0,0,1-4.3,2.878,38.186,38.186,0,0,1-37.639,0,30.939,30.939,0,0,1-4.251-2.834c-1.018-.8-2.036-1.639-2.967-2.524a38.152,38.152,0,1,1,64.207-27.853Z"
+                  transform="translate(-6.74 -127.52)"
+                  fill="#fff"
+                  stroke="#c9fffb"
+                  stroke-width="1"
+                />
+              </g>
+              <path
+                d="M94.946,194.5a12.267,12.267,0,1,1-12.267-12.267A12.267,12.267,0,0,1,94.946,194.5Z"
+                transform="translate(-44.53 -166.413)"
+                fill="url(#c)"
+              />
+              <path
+                d="M108.787,232.286a31.888,31.888,0,0,1-2.966,2.524,30.384,30.384,0,0,1-4.3,2.878,38.186,38.186,0,0,1-37.639,0,30.947,30.947,0,0,1-4.251-2.834c-1.018-.8-2.036-1.639-2.966-2.524C60.875,220.375,70.971,212,82.749,212,94.44,212,104.491,220.375,108.787,232.286Z"
+                transform="translate(-44.579 -166.307)"
+                fill="url(#d)"
+              />
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <div class="login-actions">
+        <button class="btn-sso" (click)="ssoLogin()">
+          <svg
+            class="sso-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+          Login with SSO
+        </button>
+
+        <div class="divider">
+          <span>OR</span>
+        </div>
+        <button
+          class="btn-toggle"
+          [class.active]="showCredentials()"
+          (click)="toggleCredentials()"
+        >
+          <svg
+            class="lock-icon"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Login with Credentials
+          <svg
+            class="chevron-icon"
+            [class.rotated]="showCredentials()"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+
+        <!-- Expandable Credentials Form -->
+        @if (showCredentials()) {
+          <div class="credentials-wrapper">
+            <form
+              [formGroup]="loginForm"
+              (ngSubmit)="onSubmit()"
+              class="form-body"
+            >
+              <!-- Username -->
+              <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-wrapper">
+                  <input
+                    type="text"
+                    id="username"
+                    formControlName="username"
+                    placeholder="Enter your username"
+                    autocomplete="username"
+                    [class.is-invalid]="
+                      loginForm.get('username')?.invalid &&
+                      loginForm.get('username')?.touched
+                    "
+                  />
+                  <svg
+                    class="input-icon"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+                @if (
+                  loginForm.get("username")?.hasError("required") &&
+                  loginForm.get("username")?.touched
+                ) {
+                  <div class="error-msg">Username is required</div>
+                }
+              </div>
+
+              <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                  <input
+                    type="password"
+                    id="password"
+                    formControlName="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    [class.is-invalid]="
+                      loginForm.get('password')?.invalid &&
+                      loginForm.get('password')?.touched
+                    "
+                  />
+                  <svg
+                    class="input-icon"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect
+                      x="3"
+                      y="11"
+                      width="18"
+                      height="11"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                @if (
+                  loginForm.get("password")?.hasError("required") &&
+                  loginForm.get("password")?.touched
+                ) {
+                  <div class="error-msg">Password is required</div>
+                }
+              </div>
+              <button
+                type="submit"
+                [disabled]="!loginForm.valid"
+                class="btn-submit"
+              >
+                Sign In
+              </button>
+            </form>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+==
+.login-layout {
+  height: 100vh;
+  width: 100vw;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 40px; 
+}
+
+@media (max-width: 640px) {
+  .login-layout {
+    padding: 16px;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.login-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.login-container {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.login-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 40px 32px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Header --- */
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.main-logo {
+  display: inline-block;
+  width: 170px;
+  height: auto;
+  margin-bottom: 4px;
+}
+
+.brand-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+.login-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.btn-sso {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+
+  .sso-icon { width: 18px; height: 18px; }
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 8px 0;
+  
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  span {
+    padding: 0 12px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+.btn-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 20px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  .lock-icon {
+    margin-right: 8px;
+    color: #64748b;
+  }
+
+  .chevron-icon {
+    margin-left: auto;
+    color: #94a3b8;
+    transition: transform 0.3s ease;
+    &.rotated { transform: rotate(180deg); }
+  }
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  &.active {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+    margin-bottom: -16px;
+    padding-bottom: 24px;
+  }
+}
+
+.credentials-wrapper {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-top: none;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  padding: 16px 20px 24px 20px;
+  animation: slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top;
+}
+
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-left: 2px;
+  }
+
+  .input-wrapper {
+    position: relative;
+    width: 100%;
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      transition: color 0.2s ease;
+      pointer-events: none; 
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px 12px 42px; 
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #0f172a;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+
+      &:focus {
+        outline: none;
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        
+        ~ .input-icon {
+          color: #0ea5e9; 
+        }
+      }
+
+      &::placeholder { color: #94a3b8; }
+      
+      &.is-invalid {
+        border-color: #ef4444;
+        &:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+        ~ .input-icon { color: #ef4444; }
+      }
+    }
+  }
+}
+
+.error-msg {
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 2px;
+  animation: fade-in 0.2s ease;
+}
+
+.btn-submit {
+  margin-top: 8px;
+  width: 100%;
+  padding: 12px;
+  background: #1e293b;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: #0f172a;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+===
+
