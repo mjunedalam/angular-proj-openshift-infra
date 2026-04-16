@@ -1,2 +1,48 @@
-2:23:37 PM [vite] (client) error while updating dependencies:
-Error: EPERM: operation not permitted, rename 'C:\Dev\JavaDev\agwa-development\agwa-frontend\.angular\cache\19.2.22\agwa\vite\deps_temp_bdac2253' -> 'C:\Dev\JavaDev\agwa-development\agwa-frontend\.angular\cache\19.2.22\agwa\vite\deps'
+
+@use '@angular/material' as mat;
+@use "tailwindcss" as *;
+
+
+//@import "../node_modules/ag-grid-community/styles/ag-grid.css";
+//import "../node_modules/ag-grid-community/styles/ag-theme-alpine.css";
+@include mat.core();
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif}
+
+
+/* 
+   Gradient definitions 
+  */
+
+svg defs linearGradient#mainGradient stop:nth-child(1) { stop-color: #5d6264; }
+svg defs linearGradient#mainGradient stop:nth-child(2) { stop-color: #fff; }
+svg defs linearGradient#mainGradient stop:nth-child(3) { stop-color: #5d6264; }
+
+svg defs linearGradient#complCasingGradient stop { stop-color: #4ca746; }
+
+/* 
+   Grid pattern (used by the liner‑screen component)
+ */
+ 
+svg defs pattern#gridpattern path {
+  stroke: #333;
+  stroke-width: 2;
+  fill: none;
+}
+
+.agwa-theme-bg-color {
+  background: #5084F0;
+background: linear-gradient(90deg, rgba(80, 132, 240, 1) 44%, rgba(121, 207, 241, 1) 86%);
+}
+
+.hover-card:hover{
+  box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
+-webkit-box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
+-moz-box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
+transition: 0.3s ease;
+}
+
+.word-wrap{
+  word-wrap: break-word;
+}
