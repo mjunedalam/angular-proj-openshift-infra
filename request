@@ -1,511 +1,1025 @@
-eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiBUb2tlbiIsInVwbiI6IkFMQU1NWDFPIiwiZXhwIjoxNzc2MTAxMTcxLCJqdGkiOiIwMDAwMDA3OTM0SUdFWEg3S01SSSIsImF1ZCI6IkFHV0EiLCJsYXN0X2xvZ2luIjoxNzc2MDU3OTcxLCJncm91cHMiOlsiR1dEX2NsaWVudCIsIkdXRF9tZW1iZXIiLCJHV0RfYWRtaW4iXSwiaWF0IjoxNzc2MDgzMzA5LCJpc3MiOiJodHRwczovL29jcGEuZW5wLmFyYW1jby5jb20uc2EvIn0.Hw3P018JQdBKWfPb80ttUR-v6Kpf_rppvoaExnyL27AHmAefSzhukUp9TlTptfPZDAfItNkeWP4Rb4jzQeHtnrbYsroVXCa83OcOUIUBCEgKLpnJjdJJ3kCqiw3zbX9MnVAVB7KQBCLqWWlihh5rgCEeTqcElLe2CL_kbCVjhD0oaWDVOHBssQAjO8vzMWyejwv4-sRz5d8QbptAJSquQeoirW09QFVZKsCyidQ9wwTFtc8Q3JtPMVFwRdWDUiHgn-4eiF0RNYMH7b0Di-MobiSYUaMUV4PSr-2Lr1b4tQotUL7Wx_eiWRcKYjVzPW9P1Stcy25qpgMu4DjBgWLn2g
+<div class="border-4 border-blue-300 bg-white shadow-lg ">
+  <div class="flex">
+    <div class="w-1/12 bg-gray-100 text-white p-2 border-r border-gray-100 flex flex-col gap-4 text-center">
+      <div class="font-bold pb-2 text-white">
+        <div class="bg-yellow-100 border border-black px-8 py-1 font-bold text-center text-black rounded-lg well-list grow">
+          Wells List
+        </div>
+
+        <mat-chip-listbox class="mat-mdc-chip-set-stacked">
+          @for (well of morningReportStore.visibleWells(); track well.epANum) {
+          <mat-chip-option [selected]="morningReportStore.selectedWellId() === well.epANum"
+            (click)="onWellSelect(well.epANum)">
+            {{ well.wGnrName }}
+          </mat-chip-option>
+          }
+        </mat-chip-listbox>
+      </div>
+      <div class="mt-20 leading-tight text-gray-700 text-xl">
+        Wellsite & Water Operation Department
+      </div>
+    </div>
+
+    <div class="w-11/12 p-2">
+      <div class="flex gap-2 mb-2">
+        <div class="bg-yellow-100 border border-black px-8 py-1 font-bold text-center rounded-lg grow">
+          Single Well Review
+        </div>
+        <!-- <div class="bg-yellow-100 px-4 py-1 border border-gray-400 font-bold">
+          File Uploader List
+        </div> -->
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <div class="col-span-2 space-y-4">
+          <app-wwell-header [data]="wwellDataStore.miscWellData()"></app-wwell-header>
+          <app-database-info [data]="wwellDataStore.miscWellData()"></app-database-info>
+          <app-operation-summary [data]="wwellDataStore.miscWellData()"></app-operation-summary>
 
 
+          <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
+            <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+              Drilling Remarks
+            </div>
 
-<div class="well-chips-container">
-  <!-- Date picker section — positioned on the left -->
-  <div class="date-picker-section">
-    <label for="well-date-input" class="date-picker-label">Date:</label>
-    <input
-      #dateInput
-      id="well-date-input"
-      type="date"
-      class="date-picker-input"
-      [value]="formattedDate()"
-      (change)="onDateChange($event)"
-      aria-label="Select date for well data"
-    />
+            <input type="text" class="p-1 w-full h-15" [value]="wwellDataStore.miscWellData()?.ops" />
+          </div>
+          <app-formation-tops-and-casing [data]="wwellDataStore.miscWellData()"></app-formation-tops-and-casing>
+          <app-casing-info [data]="wwellDataStore.miscWellData()"></app-casing-info>
+          <app-wwell-test [data]="wwellDataStore.miscWellData()"></app-wwell-test>
+        </div>
+
+        <div class="col-span-1 flex flex-col gap-2">
+          <app-file-upload></app-file-upload>
+
+          <div class="lt-orange border border-black grid grid-cols-2 gap-4 p-2 rounded">
+
+            <mat-form-field class=" p-1  text-center font-bold">
+              <mat-label> Status </mat-label>
+              <mat-select [(ngModel)]="selectedValue" name="food">
+                @for (status of statuses; track status) {
+                <mat-option [value]="status.value">{{
+                  status.value
+                  }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field class=" p-1  text-center font-bold">
+              <mat-label>Area</mat-label>
+              <mat-select [(ngModel)]="selectedArea" name="food">
+                @for (area of areas; track area) {
+                <mat-option [value]="area.value">{{
+                  area.value
+                  }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <div class="bg-gray-200 box rounded">
+              <mat-label>Formation Drilling</mat-label>
+              <div class="text-sm font-semibold">{{ 56 }}</div>
+            </div>
+            <div class="bg-gray-200 box rounded">
+              <mat-label>Bit Size</mat-label>
+              <div class="text-sm font-semibold">{{ 200 }}</div>
+            </div>
+            <div class="bg-gray-200 box rounded">
+              <mat-label>Circulation</mat-label>
+              <div class="text-sm font-semibold">{{ 40 }}</div>
+            </div>
+            <div class="bg-gray-200 box rounded">
+              <mat-label>Mud Weight</mat-label>
+              <div class="text-sm font-semibold">{{ 123 }}</div>
+            </div>
+            <div class="box col-span-2  w-1/2 bg-gray-200 rounded" style="    margin: 0 auto;
+    margin-bottom: 1em;">
+              <mat-label>Avg ROP</mat-label>
+              <div class="text-sm font-semibold">{{ 100 }}</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Well name chips and navigation — centered -->
-  <div class="chip-strip" role="list" aria-label="Available wells">
-    <span class="chip-strip__label">Active Wells</span>
-
-    @if (store.hasPrevPage()) {
-      <button
-        class="chip chip--nav"
-        aria-label="Previous wells"
-        (click)="store.prevPage()"
-      >
-        ‹
-      </button>
-    }
-
-    @for (well of store.pagedWellNames(); track well.epANum) {
-      <button
-        class="chip"
-        role="listitem"
-        [ngClass]="{ 'chip--active': well.epANum === store.selectedEpANum() }"
-        [attr.aria-pressed]="well.epANum === store.selectedEpANum()"
-        (click)="store.selectWell(well.epANum)"
-      >
-        <span class="chip__dot"></span>
-        {{ well.wellName }}
-      </button>
-    }
-
-    @if (store.hasNextPage()) {
-      <button
-        class="chip chip--nav"
-        aria-label="Next wells"
-        (click)="store.nextPage()"
-      >
-        ›
-      </button>
-    }
-
-    <span class="chip-strip__page-indicator">{{ pageLabel() }}</span>
+  <div class="border-t border-gray-400 p-4 flex justify-between items-end bg-gray-50">
+    <div class="text-[12px] text-gray-500">
+      Saudi Aramco Company General Use
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="font-bold italic text-sm mr-4 text-gray-700">Data Source Legend</span>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-gray-500"></div>
+          Drill Eye
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-white border border-black"></div>
+          Manually Written
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-orange-500"></div>
+          GIS
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-yellow-100"></div>
+          Headers
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-blue-400"></div>
+          IR
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="w-8 h-4 bg-orange-200"></div>
+          List Insert
+        </div>
+      </div>
+    </div>
   </div>
-</div>
-
-<!-- Loading bar — sits directly below chip strip, inline in flow, no fixed position -->
-<div
-  class="well-loading-bar"
-  [class.well-loading-bar--active]="store.loading()"
->
-  <div class="well-loading-bar__fill"></div>
 </div>
 ===
-$chip-bg:            #ffffff; /* White by default */
-$chip-border:        #cbd5e1;
-$chip-text:          #334155; /* Dark text */
-$chip-active-bg:     #87ceeb; /* Sky blue when selected */
-$chip-active-border: #38bdf8;
-$strip-bg:           #ffffff; /* Removed black background */
-$accent:             #0ea5e9;
+.container {
+  border: 1px solid blue;
+  padding: 10px;
+}
 
-.chip-strip {
+.header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 20px;
-  background: $strip-bg;
-  border-bottom: 1px solid #e2e8f0;
- border: 1px solid #0000002e;
-    margin-bottom: 1em;
-    border-radius: 8px;
-    margin-top: 1em;
-
-  &__label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: #64748b;
-    margin-right: 4px;
-    flex-shrink: 0;
-  }
-
-  &__page-indicator {
-    font-size: 10px;
-    font-weight: 700;
-    color: #94a3b8;
-    letter-spacing: 0.5px;
-    margin-left: 6px;
-    flex-shrink: 0;
-  }
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 14px 5px 10px;
-  border-radius: 20px;
-  border: 1.5px solid $chip-border;
-  background: $chip-bg;
-  color: $chip-text;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  cursor: pointer;
-  outline: none;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.12s ease;
+.status-box,
+.area-box {
+  padding: 10px;
+  border: 1px solid black;
+}
 
-  &:hover {
-    background: #f8fafc;
-    border-color: $accent;
-    color: #0f172a;
-    transform: translateY(-1px);
-  }
+.status-box {
+  background-color: #FFC080;
+  /* Light orange */
+  width: 30%;
+}
 
-  &:focus-visible {
-    box-shadow: 0 0 0 3px rgba($accent, 0.4);
-  }
+.area-box {
+  width: 30%;
+}
 
-  &:active {
-    transform: translateY(0);
-  }
-
-  &--active {
-    background: $chip-active-bg;
-    border-color: $chip-active-border;
-    color: #0f172a; /* Dark text for contrast against sky blue */
-    box-shadow: 0 2px 10px rgba(135, 206, 235, 0.55);
-
-    .chip__dot {
-      background: #ffffff;
-      box-shadow: 0 0 5px #ffffff;
-    }
-  }
-
-  &--nav {
-    min-width: 28px;
-    padding: 5px 10px;
-    font-size: 16px;
-    font-weight: 700;
-    color: #0369a1;
-    border-color: #bae6fd;
-    background: #f0f9ff;
-    line-height: 1;
-
-    &:hover {
-      background: #e0f2fe;
-      border-color: #38bdf8;
-      color: #0284c7;
-      transform: translateY(-1px);
-    }
-  }
-
-  &__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #94a3b8;
-    flex-shrink: 0;
-    transition: background 0.2s, box-shadow 0.2s;
-  }
-
-  .well-header {
+.content {
   display: flex;
-  align-items: center;
-  justify-content: space-between;   // left‑aligned date, centered chips
-  flex-wrap: wrap;                  // keep things on one line on wide screens,
-                                    // wrap on narrow screens
-  gap: 1rem;
-  margin: 1rem 0;
 }
 
-/* date‑picker container (keeps label + input together) */
-.date-picker-section {
+.left-panel,
+.right-panel {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  flex-direction: column;
 }
 
-/* label */
-.date-picker-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
+.left-panel {
+  margin-right: 20px;
 }
 
-/* input – matches the look of the chips */
-.date-picker-input {
-  appearance: none;
-  -webkit-appearance: none;
-  border: 1.5px solid $chip-border;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-family: inherit;
-  color: $chip-text;
-  background: $chip-bg;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 3px solid rgba($accent, 0.4);
-    outline-offset: 2px;
-  }
-
-  &:hover {
-    background: #f8fafc;
-    border-color: $accent;
-  }
+.right-panel {
+  flex-grow: 1;
 }
+
+.box {
+  padding: 0px;
+  padding-left: 10px;
+  border: 1px solid black;
+}
+
+::ng-deep .mat-mdc-text-field-wrapper {
+  background-color: white !important;
+}
+
+.lt-orange {
+  background: #ffa500a3;
+}
+
+.well-list {
+  font-size: 13px;
+  margin-bottom: 8px;
 }
 ==
-/**
- * WellNameChipsComponent — SMART
- * Injects WellStore — reads pagedWellNames, selectedEpANum, pagination signals.
- * Calls store.selectWell(), store.nextPage(), store.prevPage() directly.
- * Zero @Input / @Output needed.
- */
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { NgClass } from '@angular/common';
-import { WellStore } from '../../../core/stores/wwell-data/well.store';
+import { Component, inject, OnInit } from '@angular/core';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
+import { WwellTestComponent } from "../wwell-test/wwell-test.component";
+import { DatabaseInfoComponent } from "../database-info/database-info.component";
+import { WwellHeaderComponent } from "../wwell-header/wwell-header.component";
+import { OperationSummaryComponent } from "../operation-summary/operation-summary.component";
+import { FormationTopsAndCasingComponent } from "../formation-tops-and-casing/formation-tops-and-casing.component";
+import { FileUploadComponent } from "../../../shared/components/file-upload/file-upload.component";
+import { WaterWellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+import { CasingInfoComponent } from '../casing-info/casing-info.component';
 
 @Component({
-  selector: 'app-well-name-chips',
-  standalone: true,
-  imports: [NgClass],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './well-name-chips.component.html',
-  styleUrl: './well-name-chips.component.scss',
+  selector: 'app-active-wwell-view',
+  imports: [...SHARED_MODULES, WwellTestComponent, DatabaseInfoComponent, WwellHeaderComponent, OperationSummaryComponent, FormationTopsAndCasingComponent, FileUploadComponent, CasingInfoComponent],
+  templateUrl: './active-wwell-view.component.html',
+  styleUrl: './active-wwell-view.component.scss'
 })
-export class WellNameChipsComponent {
-  onDateChange($event: Event) {
+export class ActiveWwellViewComponent implements OnInit {
 
+  morningReportStore = inject(MorningReportStore)
+  wwellDataStore = inject(WaterWellDataStore);
+
+
+  selectedValue: string | undefined;
+  statuses = [{ value: 'Test1' },
+  { value: 'Test2' }
+  ];
+
+  selectedArea: string | undefined;
+  areas = [{ value: 'RAK' },
+  { value: 'Central' },
+  { value: 'North West' },
+  { value: 'Jafurah' },
+  { value: 'Gh' }
+  ];
+
+
+  ngOnInit() {
+    this.morningReportStore.showAll();
+    this.morningReportStore.loadMorningReportData();
+    this.wwellDataStore.loadWellNames();
   }
-  formattedDate() {
 
+  files: File[] = [];
+
+  onFileChange(event: any) {
+    const files = event.target.files;
+    this.files = Array.from(files);
   }
-  protected readonly store = inject(WellStore);
 
-  protected readonly pageLabel = computed(() =>
-    `${this.store.wellNamesPage() + 1} / ${this.store.totalPages()}`
-  );
+  previewFile(file: File) {
+    // Add your preview logic here
+    console.log(file);
+  }
+
+  removeFile(index: number) {
+    this.files.splice(index, 1);
+  }
+
+  onWellSelect(id: any) {
+    this.wwellDataStore.selectWell(id);
+  }
+
+}
+
+=== casing ===
+<div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+    Casing/Liner Information (MD FT)
+  </div>
+
+  <div class="flex-1 overflow-y-auto p-4">
+    <div class="grid grid-cols-4 gap-2 mb-2">
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Casing Type</div>
+        <div class="text-gray-600">{{data()?.csgType}}</div>
+      </div>
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Casing Size</div>
+        <div class="text-gray-600">{{data()?.csgSize}}</div>
+      </div>
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Casing Depth</div>
+        <div class="text-gray-600">{{data()?.csgDepth}}</div>
+      </div>
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Casing Bot Depth</div>
+        <div class="text-gray-600">{{data()?.csgBotDpth}}</div>
+      </div>
+    </div>
+  </div>
+</div>
+==
+import { Component, input } from '@angular/core';
+import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+
+@Component({
+  selector: 'app-casing-info',
+  imports: [],
+  templateUrl: './casing-info.component.html',
+  styleUrl: './casing-info.component.scss'
+})
+export class CasingInfoComponent {
+
+  readonly data = input<MiscWellData | null>(null);
+
+  depthDiff(): number {
+    const d = this.data();
+    return (d?.planTvdDpth ?? 0) - (d?.stDmrkDpth ?? 0);
+  }
+
+}
+
+== databse ===
+<div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+    Database Information
+  </div>
+
+  <div class="flex-1 overflow-y-auto p-4">
+    <div class="grid grid-cols-8 gap-2 mb-2">
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Date</div>
+        <div class="text-gray-600">{{data()?.spuddate}}</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Date since spud</div>
+        <div class="text-gray-600">{{data()?.daysSinceSpud}}</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Spud date</div>
+        <div class="text-gray-600">{{data()?.spuddate}}</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">5 AM depth FT</div>
+        <div class="text-gray-600">1000 ft</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Last casing size</div>
+        <div class="text-gray-600">{{data()?.csgSize}}</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Rig</div>
+        <div class="text-gray-600">Rig 1</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Target Date</div>
+        <div class="text-gray-600">2022-01-15</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Release Date</div>
+        <div class="text-gray-600">2022-01-20</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-8 gap-2 mb-2">
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Pre 5 AM depth FT</div>
+        <div class="text-gray-600">900 ft</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Last casing size depth</div>
+        <div class="text-gray-600">800 ft</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Spud days</div>
+        <div class="text-gray-600">{{data()?.spuddays}}</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">S AM depth FT</div>
+        <div class="text-gray-600">1100 ft</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Rig Move KPI</div>
+        <div class="text-gray-600">10 days</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Well TD date</div>
+        <div class="text-gray-600">2022-01-25</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Footage FT.</div>
+        <div class="text-gray-600">{{data()?.footage}}</div>
+      </div>
+
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">S AM depth FT</div>
+        <div class="text-gray-600">1200 ft</div>
+      </div>
+    </div>
+  </div>
+</div>
+==
+/* database-information.component.css */
+
+.h-screen {
+  height: 100vh;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.border {
+  border: 1px solid #ddd;
+}
+
+.border-gray-300 {
+  border-color: #d1d5db;
+}
+
+.bg-yellow-100 {
+  background-color: #fef9c3;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.border-black {
+  border-color: #000;
+}
+
+.inline-block {
+  display: inline-block;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.grid {
+  display: grid;
+}
+
+.grid-cols-8 {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.bg-gray-200 {
+  background-color: #e5e5ea;
+}
+
+.p-2 {
+  padding: 0.5rem;
+}
+
+.text-gray-600 {
+  color: #718096;
+}
+
+.rounded {
+  border-radius: 0.25rem;
+}
+==
+import { Component, input } from '@angular/core';
+import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+
+@Component({
+  selector: 'app-database-info',
+  imports: [],
+  templateUrl: './database-info.component.html',
+  styleUrl: './database-info.component.scss'
+})
+export class DatabaseInfoComponent {
+
+  readonly data = input<MiscWellData | null>(null);
+
 }
 ==
 
+== Formation Tops ===
+<div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+    Formation Tops
+  </div>
 
-import { computed, inject } from '@angular/core';
-import {
-    patchState,
-    signalStore,
-    withComputed,
-    withHooks,
-    withMethods,
-    withState,
-} from '@ngrx/signals';
-import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { tapResponse } from '@ngrx/operators';
-import { delay, map, pipe, switchMap, tap } from 'rxjs';
+  <div class="flex-1 overflow-y-auto p-4">
+    <div class="grid grid-cols-4 gap-2 mb-2">
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Formation</div>
+        <div class="text-gray-600">{{data()?.formation}}</div>
+      </div>
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Prognosed</div>
+        <div class="text-gray-600">Test data</div>
+      </div>
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Actual Depth (ft)</div>
+        <div class="text-gray-600">{{data()?.csgDepth}}</div>
+      </div>
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Difference</div>
+        <div class="text-gray-600">{{depthDiff()}}</div>
+      </div>
+      <div class="bg-gray-200 p-2 rounded hover-card">
+        <div class="font-bold">Remarks</div>
+        <div class="text-gray-600">{{data()?.stDmrkRmk}}</div>
+      </div>
+    </div>
+  </div>
+</div>
+==
+import { Component, input } from '@angular/core';
+import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
 
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-import { WellboreDiagramData } from '../../../models/well-design/wellbore-diagram.model';
-import { WellLogsIndicators } from '../../../models/well-design/well-logs-indicators.model';
-import { MorningReport } from '../../../models/morining-report.model';
-import { WellName } from '../../../models/well-design/well-name.model';
-import { WwellDataService } from '../../../services/wwell-data.service';
-import { MoriningReportService } from '../../../services/morining-report.service';
+@Component({
+  selector: 'app-formation-tops-and-casing',
+  imports: [],
+  templateUrl: './formation-tops-and-casing.component.html',
+  styleUrl: './formation-tops-and-casing.component.scss'
+})
+export class FormationTopsAndCasingComponent {
 
-import { WellActions, WellEvents } from './well.actions';
-import {
-    PAGE_SIZE,
-    uniqueByWellName,
-    selectTotalPages,
-    selectPagedWellNames,
-    selectHasPrevPage,
-    selectHasNextPage,
-    selectTotalDepth,
-    selectDiagramData,
-    selectMiscWellData,
-    selectPickedFormations,
-    selectOffsetWells,
-    selectWellLogsIndicators,
-    selectWellTestResults,
-} from './well.selectors';
+  readonly data = input<MiscWellData | null>(null);
 
-const MIN_LOADER_DELAY = 800;
+  depthDiff(): number {
+    const d = this.data();
+    return (d?.planTvdDpth ?? 0) - (d?.stDmrkDpth ?? 0);
+  }
 
-const EXPECTED_KEYS: (keyof IWellData)[] = [
-    'WELL_MASTER', 'RIG_ACTIVITY', 'DRLG_OP_STATUS', 'DRLG_FD_TDAY',
-    'DRLG_FM_TOPS', 'NEW_TARGET_DAYS', 'NEXT_2_WELL_ACTIVITY', 'EXAD_RCD_PREWAP',
-    'EXAD_GWD_IR_CASING', 'EXAD_GWD_IR_TOPS', 'EXAD_GWD_IR_HYDROGEOLOGY',
-    'EXAD_GWD_IR_WATER', 'EXAD_GWD_IR_HEADER', 'WATER_WELL_TEST_OUTCOME',
-];
-
-function logMissingKeys(data: IWellData, epANum: number): void {
-    const missing = EXPECTED_KEYS.filter(k => data[k] == null);
-    const empty = EXPECTED_KEYS.filter(k => Array.isArray(data[k]) && (data[k] as unknown[]).length === 0);
-    if (missing.length) console.warn(`[${WellEvents.wellDetailsLoaded}] epANum=${epANum} missing:`, missing);
-    if (empty.length) console.info(`[${WellEvents.wellDetailsLoaded}] epANum=${epANum} empty:`, empty);
-    if (!missing.length && !empty.length) console.log(`[${WellEvents.wellDetailsLoaded}] epANum=${epANum} ✓`);
 }
 
-export interface MiscWellData {
-    readonly wellName: string;
-    readonly targetDesc: string;
-    readonly targetedAquifer: string;
-    readonly currentStatus: string;
-    readonly daysSinceSpud: number;
-    readonly targetDays: number;
-    readonly biNum: string;
-    readonly supportingWell: string;
-    readonly feetDrilledToday: number;
-    readonly previousWell: string;
-    readonly currentDepth: number;
-    readonly nextWell: string;
-    readonly footage: number;
-    readonly operationSummary: string;
-    readonly next24HrOperation: string;
+=== Operation Summary ===
+<div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+    Summary Of Operation
+  </div>
+  <div class="grid space-y-1 grid-cols-2 p-4">
+    <div class="bg-gray-200 p-2 min-h-12 mr-2 rounded">
+      Operation (retrieved from Drill Eye )
+    </div>
+    <textarea type="text" class="border-1 border-2 border-gray-200 p-1 rounded-lg" [value]="data()?.ops"></textarea>
+
+    <div class="bg-gray-200 p-2 min-h-12 mr-2 rounded">Next Operation</div>
+    <textarea type="text" class="border-1 border-2 border-gray-200 p-1 rounded-lg" [value]="data()?.nextOps"></textarea>
+  </div>
+</div>
+==
+import { Component, input } from '@angular/core';
+import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+
+@Component({
+  selector: 'app-operation-summary',
+  imports: [...SHARED_MODULES],
+  templateUrl: './operation-summary.component.html',
+  styleUrl: './operation-summary.component.scss'
+})
+export class OperationSummaryComponent {
+
+  readonly data = input<MiscWellData | null>(null);
+
+
 }
 
-export interface PickedFormationTops {
-    readonly formation: string;
-    readonly depth: number;
-    readonly remarks: string;
+== wwell header ==
+
+<div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+    Well Header: {{ data()?.wellName }}
+  </div>
+
+  @if (data(); as wellHeader) {
+  <div class="grid grid-cols-3 gap-0 border-collapse">
+    <div class="p-3 border-r border-b border-gray-200 bg-gray-50">
+      <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">Field</mat-label>
+      <div class="text-sm font-semibold text-gray-800">{{ wellHeader.field }}</div>
+    </div>
+
+    <div class="p-3 border-r border-b border-gray-200 bg-gray-50">
+      <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">Well</mat-label>
+      <div class="text-sm font-semibold text-gray-800">
+        {{ wellHeader.wellName }}
+      </div>
+    </div>
+
+    <div class="p-3 border-b border-gray-200 bg-orange-50">
+      <mat-label class="block text-[10px] font-bold text-orange-700 uppercase">Latitude (GIS)</mat-label>
+      <div class="text-sm font-semibold">{{ wellHeader.lat }}</div>
+    </div>
+
+    <div class="p-3 border-r border-b border-gray-200 bg-orange-50">
+      <mat-label class="block text-[10px] font-bold text-orange-700 uppercase">Longitude (GIS)</mat-label>
+      <div class="text-sm font-semibold">{{ wellHeader.lon }}</div>
+    </div>
+
+    <div class="p-3 border-r border-b border-gray-200 bg-blue-400 text-white">
+      <mat-label class="block text-[10px] font-bold uppercase opacity-80">Targeted Aquifer (IR)</mat-label>
+      <div class="text-sm font-bold">{{ wellHeader.targetedAquifer }}</div>
+    </div>
+
+    <div class="p-3 border-b border-gray-200 bg-gray-50">
+      <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">Target Depth</mat-label>
+      <div class="text-sm font-semibold">{{ wellHeader.depth }} ft</div>
+    </div>
+    
+    <div class="p-3 border-r border-gray-200 bg-gray-50">
+      <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">EP Num</mat-label>
+      <div class="text-sm font-semibold">{{ wellHeader.epNum }}</div>
+    </div>
+    
+    <div class="p-3 border-r border-gray-200 bg-gray-50">
+      <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">Status</mat-label>
+      <div class="text-sm font-semibold">
+        <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs">
+          {{ wellHeader.currentStatus }}
+        </span>
+      </div>
+    </div>
+
+    <div class="p-3 bg-gray-50">
+      <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">BI</mat-label>
+      <div class="text-sm font-semibold">{{ wellHeader.biNum }}</div>
+    </div>
+  </div>
+  } @else {
+  <div class="p-10 text-center text-gray-400 italic">
+    Please select a well from the list to view details.
+  </div>
+  }
+</div>
+===
+.h-screen {
+  height: 100vh;
 }
 
-export interface OffsetWaterWells {
-    readonly wellName: string;
-    readonly aquifer: string;
-    readonly tds: number;
-    readonly rpm: number;
-    readonly h2s: number;
-    readonly distance: number;
-    readonly productivity: number;
-    readonly rate: number;
+.flex-1 {
+  flex: 1;
 }
 
-export interface WellTestResult {
-    readonly wellName: string;
-    readonly testType: string;
-    readonly aquifer: string;
-    readonly rpm: number;
-    readonly flowRate: number;
-    readonly temperature: number;
-    readonly tds: number;
-    readonly productivity: number;
-    readonly h2s: number;
+.overflow-y-auto {
+  overflow-y: auto;
 }
 
-interface WellState {
-    readonly wellNames: WellName[];
-    readonly selectedEpANum: number | null;
-    readonly wellDetails: IWellData | null;
-    readonly loading: boolean;
-    readonly error: string | null;
-    readonly animationTrigger: number;
-    readonly wellNamesPage: number;
+.p-4 {
+  padding: 1rem;
 }
 
-const initialState: WellState = {
-    wellNames: [],
-    selectedEpANum: null,
-    wellDetails: null,
-    loading: false,
-    error: null,
-    animationTrigger: 0,
-    wellNamesPage: 0,
-};
+.border {
+  border: 1px solid #ddd;
+}
 
-export const WellStore = signalStore(
-    { providedIn: 'root' },
-    withState<WellState>(initialState),
+.border-gray-300 {
+  border-color: #d1d5db;
+}
 
-    withComputed(({ wellDetails, wellNames, wellNamesPage }) => {
-        const unique = computed(() => uniqueByWellName(wellNames()));
-        return {
-            uniqueWellNames: unique,
-            totalPages: computed(() => selectTotalPages(unique())),
-            pagedWellNames: computed(() => selectPagedWellNames(unique(), wellNamesPage())),
-            hasPrevPage: computed(() => selectHasPrevPage(wellNamesPage())),
-            hasNextPage: computed(() => selectHasNextPage(unique(), wellNamesPage())),
-            isLoaded: computed(() => wellDetails() !== null),
-            totalDepth: computed(() => selectTotalDepth(wellDetails())),
-            diagramData: computed((): WellboreDiagramData | null => selectDiagramData(wellDetails())),
-            miscWellData: computed((): MiscWellData | null => selectMiscWellData(wellDetails())),
-            pickedFormations: computed((): PickedFormationTops[] => selectPickedFormations(wellDetails())),
-            offsetWells: computed((): OffsetWaterWells[] => selectOffsetWells(wellDetails())),
-            wellsLogsIndicators: computed((): WellLogsIndicators | null => selectWellLogsIndicators(wellDetails())),
-            wellTestResults: computed((): WellTestResult[] => selectWellTestResults(wellDetails())),
-        };
-    }),
+.bg-yellow-100 {
+  background-color: #fef9c3;
+}
 
-    withMethods((
-        store,
-        wellDataService = inject(WwellDataService),
-        morningReportService = inject(MoriningReportService),
-    ) => {
-        function firstOnPage(pageIdx: number): WellName | undefined {
-            return store.uniqueWellNames()[pageIdx * PAGE_SIZE];
-        }
+.font-bold {
+  font-weight: 700;
+}
 
-        const selectWell = rxMethod<number>(
-            pipe(
-                tap((epANum) => {
-                    patchState(store, {
-                        selectedEpANum: epANum,
-                        loading: true,
-                        error: null,
-                    });
-                }),
-                switchMap(epANum =>
-                    wellDataService.getWellDetails(epANum).pipe(
-                        tapResponse({
-                            next: (wellDetails) => {
-                                logMissingKeys(wellDetails, store.selectedEpANum()!);
-                                patchState(store, {
-                                    wellDetails,
-                                    loading: false,
-                                    animationTrigger: store.animationTrigger() + 1,
-                                });
-                            },
-                            error: (err: Error) => {
-                                patchState(store, {
-                                    error: err.message ?? 'Failed to load well details',
-                                    loading: false,
-                                });
-                            },
-                        }),
-                    ),
-                ),
-            ),
-        );
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
 
-        const loadWellNames = rxMethod<void>(
-            pipe(
-                tap(() => {
-                    patchState(store, { loading: true, error: null });
-                }),
-                switchMap(() =>
-                    morningReportService.getMorningReport().pipe(
-                        delay(MIN_LOADER_DELAY),
-                        map((reports: MorningReport[]) =>
-                            reports.map(r => ({ wellName: r.wGnrName, epANum: Number(r.epANum) }))
-                        ),
-                        tapResponse({
-                            next: (wellNames) => {
-                                patchState(store, { wellNames, loading: false });
-                                if (wellNames.length > 0 && !store.selectedEpANum()) {
-                                    selectWell(wellNames[0].epANum);
-                                }
-                            },
-                            error: (err: Error) => {
-                                patchState(store, {
-                                    error: err.message ?? 'Failed to load well names',
-                                    loading: false,
-                                });
-                            },
-                        }),
-                    ),
-                ),
-            ),
-        );
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
 
-        return {
-            selectWell,
-            loadWellNames,
-            nextPage(): void {
-                const idx = store.wellNamesPage() + 1;
-                patchState(store, { wellNamesPage: idx });
-                const first = firstOnPage(idx);
-                if (first) selectWell(first.epANum);
-            },
-            prevPage(): void {
-                const idx = Math.max(0, store.wellNamesPage() - 1);
-                patchState(store, { wellNamesPage: idx });
-                const first = firstOnPage(idx);
-                if (first) selectWell(first.epANum);
-            },
-        };
-    }),
+.border-black {
+  border-color: #000;
+}
 
-    withHooks({
-        onInit() { /* bootstrap via component */ },
-        onDestroy() { /* cleanup if needed */ },
-    }),
-);
+.inline-block {
+  display: inline-block;
+}
 
-export { WellActions, WellEvents };
+.w-full {
+  width: 100%;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.grid {
+  display: grid;
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.bg-gray-200 {
+  background-color: #e5e5ea;
+}
+
+.p-2 {
+  padding: 0.5rem;
+}
+
+.text-gray-600 {
+  color: #718096;
+}
+===
+import { Component, input } from '@angular/core';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+
+@Component({
+  selector: 'app-wwell-header',
+  imports: [...SHARED_MODULES],
+  templateUrl: './wwell-header.component.html',
+  styleUrl: './wwell-header.component.scss'
+})
+export class WwellHeaderComponent {
+
+  readonly data = input<MiscWellData | null>(null);
+
+}
+==
+== wwell-test ===
+
+<div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
+  @if(getFlowType()) {
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider flex justify-between">
+    <span class="p-2">Well Test (Flow Test)</span>
+    <!-- <div class="input-field">
+      <p><mat-slide-toggle>Flow type</mat-slide-toggle></p>
+    </div> -->
+  </div>
+  } @else {
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider flex justify-between">
+    <span class="p-2">Well Test (Pump Test)</span>
+  </div>
+  }
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
+
+    <div class="space-y-4">
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            Aquifer(Target)
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.aquifer">
+        </div>
+      </div>
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            Aquifer(Estimate)
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.aquifer">
+        </div>
+      </div>
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            Temperature(°C)
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.temp">
+        </div>
+      </div>
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            H2S(Target)
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.h2s">
+        </div>
+      </div>
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            H2S(Estimate)
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.h2s">
+        </div>
+      </div>
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            TDS(PPM)
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.tds">
+        </div>
+      </div>
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            RPM
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.tds">
+        </div>
+      </div>
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            Test Duration(h)
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.duration">
+        </div>
+      </div>
+      <div class="md:flex md:items-center mb-2">
+        <div class="input-field">
+          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+            Conducted By
+          </label>
+        </div>
+        <div class="md:w-2/3">
+          <input
+            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.conductedBy">
+        </div>
+      </div>
+    </div>
+
+    @if(getFlowType()) {
+    <ng-container>
+      <div class="space-y-4">
+        <div class="md:flex md:items-center mb-2">
+          <div class="input-field">
+            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+              Test rate(GPM)
+            </label>
+          </div>
+          <div class="md:w-2/3">
+            <input
+              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.rate">
+          </div>
+        </div>
+        <div class="md:flex md:items-center mb-2">
+          <div class="input-field">
+            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+              SIWHP
+            </label>
+          </div>
+          <div class="md:w-2/3">
+            <input
+              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.rate">
+          </div>
+        </div>
+      </div>
+    </ng-container>
+    } @else {
+    <ng-container>
+      <div class="space-y-4">
+        <div class="md:flex md:items-center mb-2">
+          <div class="input-field">
+            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+              Pump Depth
+            </label>
+          </div>
+          <div class="md:w-2/3">
+            <input
+              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.depth">
+          </div>
+        </div>
+        <div class="md:flex md:items-center mb-2">
+          <div class="input-field">
+            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+              Well Productivity (Target)
+            </label>
+          </div>
+          <div class="md:w-2/3">
+            <input
+              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.productivity">
+          </div>
+        </div>
+        <div class="md:flex md:items-center mb-2">
+          <div class="input-field">
+            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+              Well Productivity (Estimate)
+            </label>
+          </div>
+          <div class="md:w-2/3">
+            <input
+              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.productivity">
+          </div>
+        </div>
+        <div class="md:flex md:items-center mb-2">
+          <div class="input-field">
+            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+              SWL(ft)
+            </label>
+          </div>
+          <div class="md:w-2/3">
+            <input
+              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.swl">
+          </div>
+        </div>
+
+        <div class="md:flex md:items-center mb-2">
+          <div class="input-field">
+            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+              DWL(ft)
+            </label>
+          </div>
+          <div class="md:w-2/3">
+            <input
+              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.dwl">
+          </div>
+        </div>
+      </div>
+    </ng-container>
+    }
+  </div>
+
+</div>
+==
+.input-field {
+    width: 9em;
+    max-width: 9em;
+    font-size: small;
+}
+==
+import { Component, input } from '@angular/core';
+import { SHARED_MODULES } from '../../../shared/shared.module';
+import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+
+@Component({
+  selector: 'app-wwell-test',
+  imports: [...SHARED_MODULES],
+  templateUrl: './wwell-test.component.html',
+  styleUrl: './wwell-test.component.scss'
+})
+export class WwellTestComponent {
+
+  readonly data = input<MiscWellData | null>(null);
+
+  getFlowType(): boolean {
+    return this.data()?.flowType === 'Y';
+  }
+}
+
+== 
+
+
+
+
+
+
 
