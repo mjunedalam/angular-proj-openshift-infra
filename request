@@ -1,428 +1,18 @@
-Store
-import { computed, inject } from '@angular/core';
-import {
-    patchState,
-    signalStore,
-    withComputed,
-    withMethods,
-    withState,
-} from '@ngrx/signals';
-import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { tapResponse } from '@ngrx/operators';
-import { map, pipe, switchMap, tap } from 'rxjs';
-import { MorningReport } from '../../../models/morining-report.model';
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-import { WellboreDiagramData } from '../../../models/well-design/wellbore-diagram.model';
-import { WwellDataService } from '../../../services/wwell-data.service';
-import { sortCasingsByDepthDesc } from '../../../utils/wellbore-math.util';
-import { MoriningReportService } from '../../../services/morining-report.service';
-import { WellName } from '../../../models/well-design/well-name.model';
-import { IFormationTops } from '../../../shared/models/wwell/formation-tops.model';
-import { WellLogsIndicators } from '../../../models/well-design/well-logs-indicators.model';
-import { IHeaderIR } from '../../../shared/models/wwell/header-ir.model';
-
-export interface MiscWellData {
-    //Well Header
-    field: string,
-    wellName: string;
-    lon: number;
-    lat: number;
-    targetedAquifer: string;
-    epNum: number;
-    //status: number;
-    biNum: string;
-    //Database Information
-    prsntDpth: number;
-    csgBotDpth: number;
-    spuddate: string,
-    spudOprDay: number;
-    prevDpth: number;
-    spuddays: number;
-    targetDepth: number;
-    csgSize: string;
-    csgType: string;
-    csgDepth: number;
-    //csgRemarks?: string | null;
-    //Summary Of Operation
-    ops: string;
-    nextOps: string;
-    wellType: string;
-    currentStatus: string;
-    daysSinceSpud: number;
-    targetDays: number;
-    waterWell: string;
-    footage: number;
-    previousWell: string;
-    currentDepth: number;
-    nextWell: string;
-    feetDrilledToday: number;
-    targetDesc: string;
-    supportingWell: string;
-    //Formation Tops
-    formation: string;
-    stDmrkDpth: number;
-    planTvdDpth: number;
-    stDmrkRmk?: string | null;
-    //Well Test
-    flowType: string;
-    aquifer?: string | null;
-    depth: number;
-    duration: number;
-    swl: number;
-    rate?: number | null;
-    dwl: number;
-    temp?: number | null;
-    productivity: number;
-    tds?: number | null;
-    conductedBy: string;
-    h2s?: number | null;
-}
-
-export interface PickedFormationTops {
-    formation: string;
-    depth: number;
-    remarks: string;
-}
-
-export interface OffsetWaterWells {
-    wellName: string;
-    aquifer: string;
-    tds: number;
-    rpm: number;
-    h2s: number;
-    distance: number;
-    productivity: number;
-    rate: number;
-}
-
-const PAGE_SIZE = 5;
-
-interface WellState {
-    readonly wellNames: WellName[];
-    readonly selectedEpANum: number | null;
-    readonly wellDetails: IWellData | null;
-    readonly loading: boolean;
-    readonly error: string | null;
-    readonly animationTrigger: number;
-    readonly wellNamesPage: number;
-}
-
-const initialState: WellState = {
-    wellNames: [],
-    selectedEpANum: null,
-    wellDetails: null,
-    loading: false,
-    error: null,
-    animationTrigger: 0,
-    wellNamesPage: 0,
-};
-
-const FALLBACK_STR = 'N/A';
-
-function mapToMiscWellData(d: IWellData | null): MiscWellData | null {
-    if (!d) return null;
-    //Well Header, Database Information
-    const rigActivity = d.RIG_ACTIVITY?.[0];
-    const nextWellActivity = d.NEXT_2_WELL_ACTIVITY?.[0];
-    const drlgOpStatus = d.DRLG_OP_STATUS?.[0];
-    const wellMaster = d.WELL_MASTER?.[0];
-    const exadGwdIrCasing = d.EXAD_GWD_IR_CASING?.[0];
-    //Summary Of Operation
-    const drlgOpSmry = d.DRLG_OP_SMRY?.[0];
-    //Formation Tops
-    const drlgFmTops = d.DRLG_FM_TOPS?.[0];
-    const exadGwdIrTops = d.EXAD_GWD_IR_TOPS?.[0];
-    //Well Test, Formation Tops
-    const wellTestOutcome = d.WATER_WELL_TEST_OUTCOME?.[0];
-    const exadGwdIrWater = d.EXAD_GWD_IR_WATER?.[0];
-    const exadRcdPrewap = d.EXAD_RCD_PREWAP?.[0];
-    const exadGwdIrHydrogeology = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
-
-    return {
-        //Well Header
-        field: 'Shaybah',
-        wellName: rigActivity?.wellName ?? d.WELL_MASTER?.[0]?.well ?? FALLBACK_STR,
-        lon: wellMaster?.lon,
-        lat: wellMaster?.lat,
-        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier ?? FALLBACK_STR,
-        epNum: nextWellActivity.epANum,
-        spuddate: rigActivity?.spuddate,
-        //status: 1,
-        biNum: rigActivity?.biNum ?? FALLBACK_STR,
-        //Database Information
-        prsntDpth: drlgOpStatus?.wPrsntDpth,
-        csgBotDpth: drlgOpStatus?.wCsgBotDpth,
-        spudOprDay: drlgOpStatus?.wSpudOprDay,
-        footage: drlgOpStatus?.footage,
-        prevDpth: drlgOpStatus?.wPrevDpth,
-        spuddays: drlgOpStatus?.epANum,
-        targetDepth: drlgOpStatus?.targetDepth,
-        csgSize: exadGwdIrCasing?.csgSize,
-        csgDepth: exadGwdIrCasing?.csgDepth,
-        csgType: exadGwdIrCasing?.csgType,
-        //Summary Of Operation
-        ops: drlgOpSmry?.wOpRmk,
-        nextOps: drlgOpStatus?.nxt24HrPlanRmk,
-        targetDesc: rigActivity?.welltype ?? rigActivity?.drlgPlanWellDesc ?? FALLBACK_STR,
-        currentStatus: drlgOpStatus?.nxt24HrPlanRmk ?? drlgOpStatus?.wOpRmk ?? FALLBACK_STR,
-        daysSinceSpud: drlgOpStatus?.spuddays ?? 0,
-        targetDays: d.NEW_TARGET_DAYS?.[0]?.targetDays ?? rigActivity?.wDrlgTrgtDay ?? 0,
-        supportingWell: rigActivity?.waterWell ?? FALLBACK_STR,
-        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? drlgOpStatus?.footage ?? 0,
-        previousWell: FALLBACK_STR,
-        currentDepth: drlgOpStatus?.wPrsntDpth ?? 0,
-        nextWell: d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity ?? FALLBACK_STR,
-        //Formation Tops
-        formation: drlgFmTops?.stLongCd,
-        stDmrkDpth: drlgFmTops?.wStDmrkDpth,
-        planTvdDpth: exadGwdIrTops?.planTvdDepth,
-        stDmrkRmk: drlgFmTops?.wStDmrkRmk,
-        //Well Test
-        flowType: exadGwdIrHydrogeology.flowType,
-        aquifer: wellTestOutcome.aquifer,
-        depth: exadRcdPrewap.estTargetDepth,
-        duration: exadGwdIrWater.testDuration,
-        swl: 155817,
-        rate: wellTestOutcome.flowRate,
-        dwl: 16555,
-        temp: exadGwdIrWater.testDuration,
-        productivity: exadGwdIrHydrogeology.estProductivity,
-        tds: wellTestOutcome.tds,
-        conductedBy: 'Abdulrahman',
-        h2s: wellTestOutcome.h2s,
-
-        wellType: '',
-        waterWell: '',
-        //footage: 0,
-
-    };
-}
-
-export const WaterWellDataStore = signalStore(
-    { providedIn: 'root' },
-    withState<WellState>(initialState),
-
-    withComputed(({ wellDetails, wellNames, wellNamesPage }) => ({
-
-        uniqueWellNames: computed(() => {
-            const seen = new Set<string>();
-            return wellNames().filter((w) => {
-                if (seen.has(w.wellName)) return false;
-                seen.add(w.wellName);
-                return true;
-            });
-        }),
-
-        isLoaded: computed(() => wellDetails() !== null),
-
-        totalDepth: computed(
-            () => wellDetails()?.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 4000,
-        ),
-
-        /** Total number of pages given PAGE_SIZE */
-        totalPages: computed(() => {
-            const seen = new Set<string>();
-            const unique = wellNames().filter((w) => {
-                if (seen.has(w.wellName)) return false;
-                seen.add(w.wellName);
-                return true;
-            });
-            return Math.ceil(unique.length / PAGE_SIZE);
-        }),
-
-        /** The 5 well names visible on the current page */
-        pagedWellNames: computed(() => {
-            const seen = new Set<string>();
-            const unique = wellNames().filter((w) => {
-                if (seen.has(w.wellName)) return false;
-                seen.add(w.wellName);
-                return true;
-            });
-            const start = wellNamesPage() * PAGE_SIZE;
-            return unique.slice(start, start + PAGE_SIZE);
-        }),
-
-        hasPrevPage: computed(() => wellNamesPage() > 0),
-
-        hasNextPage: computed(() => {
-            const seen = new Set<string>();
-            const unique = wellNames().filter((w) => {
-                if (seen.has(w.wellName)) return false;
-                seen.add(w.wellName);
-                return true;
-            });
-            return (wellNamesPage() + 1) * PAGE_SIZE < unique.length;
-        }),
-
-        diagramData: computed((): WellboreDiagramData | null => {
-            const d = wellDetails();
-            if (!d) return null;
-            return {
-                wellName: d.WELL_MASTER?.[0]?.well ?? '',
-                totalDepth: d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 4000,
-                casings: sortCasingsByDepthDesc(d.EXAD_GWD_IR_CASING ?? []),
-                geologicTops: [...(d.EXAD_GWD_IR_TOPS ?? [])].sort(
-                    (a, b) => a.planTvdDepth - b.planTvdDepth
-                ),
-                hydrogeology: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0] ?? null,
-                prewap: d.EXAD_RCD_PREWAP?.[0] ?? null,
-                rigActivity: d.RIG_ACTIVITY?.[0] ?? null,
-                currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ??
-                    d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ??
-                    0,
-
-                mudCirculation: []
-            };
-        }),
-
-        miscWellData: computed(() => mapToMiscWellData(wellDetails())),
-
-        pickedFormations: computed((): PickedFormationTops[] => {
-            return (wellDetails()?.DRLG_FM_TOPS ?? []).map((fm: IFormationTops) => ({
-                formation: fm.stLongCd ?? '',
-                depth: fm.wStDmrkDpth ?? 0,
-                remarks: fm.wStDmrkRmk ?? ''
-            }));
-        }),
-
-        offsetWells: computed((): OffsetWaterWells[] => {
-            const d = wellDetails();
-            if (!d) return [];
-
-            const offsetData = d.EXAD_GWD_IR_WATER ?? [];
-            const testOutcomes = d.WATER_WELL_TEST_OUTCOME ?? [];
-            return offsetData.map((ow) => {
-                const test = testOutcomes.find(t => t.wellName === ow.offsetWaterWell);
-                return {
-                    wellName: ow.offsetWaterWell,
-                    aquifer: ow.aquifer || test?.aquifer || 'WASI',
-                    tds: test?.tds ?? 0,
-                    rpm: ow?.rpm ?? 0,
-                    h2s: ow.h2s,
-                    distance: ow.distance ?? 0,
-                    productivity: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estProductivity ?? 2.1,
-                    rate: test?.flowRate ?? ow.flowRate ?? 930
-                };
-            });
-        }),
-
-        wellsLogsIndicators: computed<WellLogsIndicators | null>(() => {
-            const d = wellDetails();
-            if (!d) return null;
-
-            const header: IHeaderIR | undefined = d.EXAD_GWD_IR_HEADER?.[0];
-            return {
-                rcc: !!header?.dtRemarks,
-                mudLog: !!header?.mudRemarks,
-                logging: !!header?.loggingRemarks
-            };
-        }),
-
-    })),
-
-    withMethods((store, wellDataService = inject(WwellDataService), morningReportService = inject(MoriningReportService)) => {
-
-        const selectWell = rxMethod<number>(
-            pipe(
-                tap((epANum) =>
-                    patchState(store, {
-                        selectedEpANum: epANum,
-                        loading: true,
-                        error: null,
-                    }),
-                ),
-                switchMap((epANum) =>
-                    wellDataService.getWellDetails(epANum).pipe(
-                        tapResponse({
-                            next: (wellDetails) =>
-                                patchState(store, {
-                                    wellDetails,
-                                    loading: false,
-                                    animationTrigger: store.animationTrigger() + 1,
-                                }),
-                            error: (err: Error) =>
-                                patchState(store, {
-                                    error: err.message ?? 'Failed to load well details',
-                                    loading: false,
-                                }),
-                        }),
-                    ),
-                ),
-            ),
-        );
-
-        const loadWellNames = rxMethod<void>(
-            pipe(
-                tap(() => patchState(store, { loading: true, error: null })),
-                switchMap(() =>
-                    morningReportService.getMorningReport().pipe(
-                        map((reports: MorningReport[]) =>
-                            reports.map((report) => ({
-                                wellName: report.wGnrName,
-                                epANum: Number(report.epANum)
-                            }))
-                        ),
-                        tapResponse({
-                            next: (wellNames) => {
-                                patchState(store, { wellNames, loading: false });
-                                if (wellNames.length > 0 && !store.selectedEpANum()) {
-                                    selectWell(wellNames[0].epANum);
-                                }
-                            },
-                            error: (err: Error) =>
-                                patchState(store, {
-                                    error: err.message ?? 'Failed to load well names',
-                                    loading: false,
-                                }),
-                        }),
-                    ),
-                ),
-            ),
-        );
-        return {
-            selectWell,
-            loadWellNames,
-            nextPage(): void {
-                const nextPageIndex = store.wellNamesPage() + 1;
-                patchState(store, { wellNamesPage: nextPageIndex });
-                // Auto-select first well on the new page
-                const seen = new Set<string>();
-                const unique = store.wellNames().filter((w) => {
-                    if (seen.has(w.wellName)) return false;
-                    seen.add(w.wellName);
-                    return true;
-                });
-                const firstOnPage = unique[nextPageIndex * PAGE_SIZE];
-                if (firstOnPage) selectWell(firstOnPage.epANum);
-            },
-            prevPage(): void {
-                const prevPageIndex = Math.max(0, store.wellNamesPage() - 1);
-                patchState(store, { wellNamesPage: prevPageIndex });
-                // Auto-select first well on the new page
-                const seen = new Set<string>();
-                const unique = store.wellNames().filter((w) => {
-                    if (seen.has(w.wellName)) return false;
-                    seen.add(w.wellName);
-                    return true;
-                });
-                const firstOnPage = unique[prevPageIndex * PAGE_SIZE];
-                if (firstOnPage) selectWell(firstOnPage.epANum);
-            },
-        };
-    }),
-);
+1. ActiveWwellViewComponent
 
 <div class="border-4 border-blue-300 bg-white shadow-lg ">
   <div class="flex">
     <div class="w-1/12 bg-gray-100 text-white p-2 border-r border-gray-100 flex flex-col gap-4 text-center">
       <div class="font-bold pb-2 text-white">
-        <div class="bg-yellow-100 border border-black px-8 py-1 font-bold text-center text-black rounded-lg well-list grow">
+        <div
+          class="bg-yellow-100 border border-black px-8 py-1 font-bold text-center text-black rounded-lg well-list grow well-header">
           Wells List
         </div>
 
         <mat-chip-listbox class="mat-mdc-chip-set-stacked">
           @for (well of morningReportStore.visibleWells(); track well.epANum) {
           <mat-chip-option [selected]="morningReportStore.selectedWellId() === well.epANum"
+            [ngClass]="{'well-selected':morningReportStore.selectedWellId() === well.epANum}"
             (click)="onWellSelect(well.epANum)">
             {{ well.wGnrName }}
           </mat-chip-option>
@@ -436,7 +26,7 @@ export const WaterWellDataStore = signalStore(
 
     <div class="w-11/12 p-2">
       <div class="flex gap-2 mb-2">
-        <div class="bg-yellow-100 border border-black px-8 py-1 font-bold text-center rounded-lg grow">
+        <div class="bg-yellow-100 border border-black px-8 py-1 font-bold text-center rounded-lg grow well-header">
           Single Well Review
         </div>
         <!-- <div class="bg-yellow-100 px-4 py-1 border border-gray-400 font-bold">
@@ -446,21 +36,21 @@ export const WaterWellDataStore = signalStore(
 
       <div class="grid grid-cols-3 gap-2">
         <div class="col-span-2 space-y-4">
-          <app-wwell-header [data]="wwellDataStore.miscWellData()"></app-wwell-header>
-          <app-database-info [data]="wwellDataStore.miscWellData()"></app-database-info>
-          <app-operation-summary [data]="wwellDataStore.miscWellData()"></app-operation-summary>
+          <app-wwell-header></app-wwell-header>
+          <app-database-info></app-database-info>
+          <app-operation-summary></app-operation-summary>
 
 
           <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
-            <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+            <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider well-header">
               Drilling Remarks
             </div>
 
             <input type="text" class="p-1 w-full h-15" [value]="wwellDataStore.miscWellData()?.ops" />
           </div>
-          <app-formation-tops-and-casing [data]="wwellDataStore.miscWellData()"></app-formation-tops-and-casing>
-          <app-casing-info [data]="wwellDataStore.miscWellData()"></app-casing-info>
-          <app-wwell-test [data]="wwellDataStore.miscWellData()"></app-wwell-test>
+          <app-formation-tops-and-casing></app-formation-tops-and-casing>
+          <app-casing-info></app-casing-info>
+          <app-wwell-test></app-wwell-test>
         </div>
 
         <div class="col-span-1 flex flex-col gap-2">
@@ -468,14 +58,18 @@ export const WaterWellDataStore = signalStore(
 
           <div class="lt-orange border border-black grid grid-cols-2 gap-4 p-2 rounded">
 
-            <mat-form-field class=" p-1  text-center font-bold">
-              <mat-label> Status </mat-label>
-              <mat-select [(ngModel)]="selectedValue" name="food">
-                @for (status of statuses; track status) {
-                <mat-option [value]="status.value">{{
-                  status.value
-                  }}</mat-option>
-                }
+            <mat-form-field>
+              <mat-label>Status</mat-label>
+
+              <mat-select [(ngModel)]="selectedValue" (selectionChange)="onSelect($event.value)">
+
+                <mat-option *ngFor="let s of statuses" [value]="s.value">
+                  {{ s.value }}
+                </mat-option>
+
+                <mat-option [value]="ADD_NEW_SENTINEL">
+                  <mat-icon inline>add</mat-icon> Add new…
+                </mat-option>
               </mat-select>
             </mat-form-field>
             <mat-form-field class=" p-1  text-center font-bold">
@@ -528,31 +122,30 @@ export const WaterWellDataStore = signalStore(
           <div class="w-8 h-4 bg-gray-500"></div>
           Drill Eye
         </div>
-        <div class="flex items-center gap-1">
+        <!-- <div class="flex items-center gap-1">
           <div class="w-8 h-4 bg-white border border-black"></div>
           Manually Written
-        </div>
+        </div> -->
         <div class="flex items-center gap-1">
           <div class="w-8 h-4 bg-orange-500"></div>
           GIS
         </div>
-        <div class="flex items-center gap-1">
+        <!-- <div class="flex items-center gap-1">
           <div class="w-8 h-4 bg-yellow-100"></div>
           Headers
-        </div>
+        </div> -->
         <div class="flex items-center gap-1">
           <div class="w-8 h-4 bg-blue-400"></div>
           IR
         </div>
-        <div class="flex items-center gap-1">
+        <!-- <div class="flex items-center gap-1">
           <div class="w-8 h-4 bg-orange-200"></div>
           List Insert
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
 </div>
-===
 .container {
   border: 1px solid blue;
   padding: 10px;
@@ -609,15 +202,15 @@ export const WaterWellDataStore = signalStore(
 }
 
 .lt-orange {
-  background: #ffa500a3;
+  background: rgb(134 205 234);
 }
 
 .well-list {
   font-size: 13px;
   margin-bottom: 8px;
 }
-==
-import { Component, inject, OnInit } from '@angular/core';
+
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { SHARED_MODULES } from '../../../shared/shared.module';
 import { MorningReportStore } from '../../../core/stores/moringreport/morning-report.store';
 import { WwellTestComponent } from "../wwell-test/wwell-test.component";
@@ -628,6 +221,10 @@ import { FormationTopsAndCasingComponent } from "../formation-tops-and-casing/fo
 import { FileUploadComponent } from "../../../shared/components/file-upload/file-upload.component";
 import { WaterWellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
 import { CasingInfoComponent } from '../casing-info/casing-info.component';
+import { WwellDataService, StatusDto } from '../../../services/wwell-data.service';
+import { MatDialog } from '@angular/material/dialog';
+import { AddStatusDialogComponent } from '../../../shared/components/dialog/add-status-dialog.component';
+
 
 @Component({
   selector: 'app-active-wwell-view',
@@ -640,11 +237,13 @@ export class ActiveWwellViewComponent implements OnInit {
   morningReportStore = inject(MorningReportStore)
   wwellDataStore = inject(WaterWellDataStore);
 
+  private wwellDataService = inject(WwellDataService);
+  private dialog = inject(MatDialog);
 
-  selectedValue: string | undefined;
-  statuses = [{ value: 'Test1' },
-  { value: 'Test2' }
-  ];
+  readonly ADD_NEW_SENTINEL = '__ADD_NEW__';
+  statuses: StatusDto[] = [];
+  selectedValue: string | null = null
+
 
   selectedArea: string | undefined;
   areas = [{ value: 'RAK' },
@@ -659,6 +258,7 @@ export class ActiveWwellViewComponent implements OnInit {
     this.morningReportStore.showAll();
     this.morningReportStore.loadMorningReportData();
     this.wwellDataStore.loadWellNames();
+    this.loadStatuses();
   }
 
   files: File[] = [];
@@ -681,11 +281,48 @@ export class ActiveWwellViewComponent implements OnInit {
     this.wwellDataStore.selectWell(id);
   }
 
+  private loadStatuses(): void {
+    this.wwellDataService.getAll().subscribe(list => (this.statuses = list));
+  }
+
+  onSelect(v: string): void {
+    if (v === this.ADD_NEW_SENTINEL) {
+      this.openAddDialog();
+      this.selectedValue = null;
+    } else {
+      this.wwellDataService.setStatus(v);
+      this.selectedValue = v;
+    }
+  }
+
+  private openAddDialog(): void {
+    const dlg = this.dialog.open(AddStatusDialogComponent, {
+      width: '280px',
+      data: { name: '' },
+      disableClose: true
+    });
+
+    dlg.afterClosed().subscribe(async (name?: string) => {
+      if (!name) return;
+
+      const created = await this.wwellDataService.create(name).toPromise();
+
+      if (!created) return;
+
+      this.statuses = [...this.statuses, created];
+      this.selectedValue = created.value;
+
+      this.wwellDataService.setStatus(created.value);
+    });
+  }
+
+
 }
 
-=== casing ===
+2. CasingInfoComponent
+
 <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
-  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider well-header">
     Casing/Liner Information (MD FT)
   </div>
 
@@ -693,26 +330,25 @@ export class ActiveWwellViewComponent implements OnInit {
     <div class="grid grid-cols-4 gap-2 mb-2">
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Casing Type</div>
-        <div class="text-gray-600">{{data()?.csgType}}</div>
+        <div class="text-gray-600">{{data?.csgType}}</div>
       </div>
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Casing Size</div>
-        <div class="text-gray-600">{{data()?.csgSize}}</div>
+        <div class="text-gray-600">{{data?.csgSize}}</div>
       </div>
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Casing Depth</div>
-        <div class="text-gray-600">{{data()?.csgDepth}}</div>
+        <div class="text-gray-600">{{data?.csgDepth}}</div>
       </div>
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Casing Bot Depth</div>
-        <div class="text-gray-600">{{data()?.csgBotDpth}}</div>
+        <div class="text-gray-600">{{data?.csgBotDpth}}</div>
       </div>
     </div>
   </div>
 </div>
-==
-import { Component, input } from '@angular/core';
-import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+import { Component, inject } from '@angular/core';
+import { MiscWellData, WaterWellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
 
 @Component({
   selector: 'app-casing-info',
@@ -722,18 +358,22 @@ import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
 })
 export class CasingInfoComponent {
 
-  readonly data = input<MiscWellData | null>(null);
+  private readonly wwellDataStore = inject(WaterWellDataStore);
+
+  get data(): MiscWellData | null {
+    return this.wwellDataStore.miscWellData();
+  }
 
   depthDiff(): number {
-    const d = this.data();
+    const d = this.wwellDataStore.miscWellData();
     return (d?.planTvdDpth ?? 0) - (d?.stDmrkDpth ?? 0);
   }
 
 }
 
-== databse ===
+3. DatabaseInfoComponent
 <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
-  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider well-header">
     Database Information
   </div>
 
@@ -741,89 +381,88 @@ export class CasingInfoComponent {
     <div class="grid grid-cols-8 gap-2 mb-2">
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Date</div>
-        <div class="text-gray-600">{{data()?.spuddate}}</div>
+        <div class="text-gray-600 word-wrap">{{data?.spuddate}}</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Date since spud</div>
-        <div class="text-gray-600">{{data()?.daysSinceSpud}}</div>
+        <div class="text-gray-600 word-wrap">{{data?.daysSinceSpud}}</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Spud date</div>
-        <div class="text-gray-600">{{data()?.spuddate}}</div>
+        <div class="text-gray-600 word-wrap">{{data?.spuddate}}</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">5 AM depth FT</div>
-        <div class="text-gray-600">1000 ft</div>
+        <div class="text-gray-600 word-wrap">1000 ft</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Last casing size</div>
-        <div class="text-gray-600">{{data()?.csgSize}}</div>
+        <div class="text-gray-600 word-wrap">{{data?.csgSize}}</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Rig</div>
-        <div class="text-gray-600">Rig 1</div>
+        <div class="text-gray-600 word-wrap">Rig 1</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Target Date</div>
-        <div class="text-gray-600">2022-01-15</div>
+        <div class="text-gray-600 word-wrap">2022-01-15</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Release Date</div>
-        <div class="text-gray-600">2022-01-20</div>
+        <div class="text-gray-600 word-wrap">2022-01-20</div>
       </div>
     </div>
 
     <div class="grid grid-cols-8 gap-2 mb-2">
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Pre 5 AM depth FT</div>
-        <div class="text-gray-600">900 ft</div>
+        <div class="text-gray-600 word-wrap">900 ft</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Last casing size depth</div>
-        <div class="text-gray-600">800 ft</div>
+        <div class="text-gray-600 word-wrap">800 ft</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Spud days</div>
-        <div class="text-gray-600">{{data()?.spuddays}}</div>
+        <div class="text-gray-600 word-wrap">{{data?.spuddays}}</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">S AM depth FT</div>
-        <div class="text-gray-600">1100 ft</div>
+        <div class="text-gray-600 word-wrap">1100 ft</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Rig Move KPI</div>
-        <div class="text-gray-600">10 days</div>
+        <div class="text-gray-600 word-wrap">10 days</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Well TD date</div>
-        <div class="text-gray-600">2022-01-25</div>
+        <div class="text-gray-600 word-wrap">2022-01-25</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Footage FT.</div>
-        <div class="text-gray-600">{{data()?.footage}}</div>
+        <div class="text-gray-600 word-wrap">{{data?.footage}}</div>
       </div>
 
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">S AM depth FT</div>
-        <div class="text-gray-600">1200 ft</div>
+        <div class="text-gray-600 word-wrap">1200 ft</div>
       </div>
     </div>
   </div>
 </div>
-==
 /* database-information.component.css */
 
 .h-screen {
@@ -910,9 +549,9 @@ export class CasingInfoComponent {
 .rounded {
   border-radius: 0.25rem;
 }
-==
-import { Component, input } from '@angular/core';
-import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+
+import { Component, inject } from '@angular/core';
+import { MiscWellData, WaterWellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
 
 @Component({
   selector: 'app-database-info',
@@ -922,14 +561,17 @@ import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
 })
 export class DatabaseInfoComponent {
 
-  readonly data = input<MiscWellData | null>(null);
+  private readonly wwellDataStore = inject(WaterWellDataStore);
+
+  get data(): MiscWellData | null {
+    return this.wwellDataStore.miscWellData();
+  }
 
 }
-==
 
-== Formation Tops ===
+4. FormationTopsAndCasingComponent
 <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
-  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider well-header">
     Formation Tops
   </div>
 
@@ -937,7 +579,7 @@ export class DatabaseInfoComponent {
     <div class="grid grid-cols-4 gap-2 mb-2">
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Formation</div>
-        <div class="text-gray-600">{{data()?.formation}}</div>
+        <div class="text-gray-600">{{data?.formation}}</div>
       </div>
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Prognosed</div>
@@ -945,7 +587,7 @@ export class DatabaseInfoComponent {
       </div>
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Actual Depth (ft)</div>
-        <div class="text-gray-600">{{data()?.csgDepth}}</div>
+        <div class="text-gray-600">{{data?.csgDepth}}</div>
       </div>
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Difference</div>
@@ -953,14 +595,14 @@ export class DatabaseInfoComponent {
       </div>
       <div class="bg-gray-200 p-2 rounded hover-card">
         <div class="font-bold">Remarks</div>
-        <div class="text-gray-600">{{data()?.stDmrkRmk}}</div>
+        <div class="text-gray-600">{{data?.stDmrkRmk}}</div>
       </div>
     </div>
   </div>
 </div>
-==
-import { Component, input } from '@angular/core';
-import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+
+import { Component, inject } from '@angular/core';
+import { MiscWellData, WaterWellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
 
 @Component({
   selector: 'app-formation-tops-and-casing',
@@ -970,56 +612,65 @@ import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
 })
 export class FormationTopsAndCasingComponent {
 
-  readonly data = input<MiscWellData | null>(null);
+  private readonly wwellDataStore = inject(WaterWellDataStore);
+
+  get data(): MiscWellData | null {
+    return this.wwellDataStore.miscWellData();
+  }
 
   depthDiff(): number {
-    const d = this.data();
+    const d = this.wwellDataStore.miscWellData();
     return (d?.planTvdDpth ?? 0) - (d?.stDmrkDpth ?? 0);
   }
 
 }
 
-=== Operation Summary ===
+5. OperationSummaryComponent
+
 <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
-  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider well-header">
     Summary Of Operation
   </div>
   <div class="grid space-y-1 grid-cols-2 p-4">
     <div class="bg-gray-200 p-2 min-h-12 mr-2 rounded">
       Operation (retrieved from Drill Eye )
     </div>
-    <textarea type="text" class="border-1 border-2 border-gray-200 p-1 rounded-lg" [value]="data()?.ops"></textarea>
+    <textarea type="text" class="border-1 border-2 border-gray-200 p-1 rounded-lg" autoResize rows="1"
+      [value]="data?.ops"></textarea>
 
     <div class="bg-gray-200 p-2 min-h-12 mr-2 rounded">Next Operation</div>
-    <textarea type="text" class="border-1 border-2 border-gray-200 p-1 rounded-lg" [value]="data()?.nextOps"></textarea>
+    <textarea type="text" class="border-1 border-2 border-gray-200 p-1 rounded-lg" autoResize rows="1"
+      [value]="data?.nextOps"></textarea>
   </div>
 </div>
-==
-import { Component, input } from '@angular/core';
-import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+import { Component, inject } from '@angular/core';
+import { MiscWellData, WaterWellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
 import { SHARED_MODULES } from '../../../shared/shared.module';
+import { AutoResizeDirective } from '../../../shared/components/autoresize.directive';
 
 @Component({
   selector: 'app-operation-summary',
-  imports: [...SHARED_MODULES],
+  imports: [...SHARED_MODULES, AutoResizeDirective],
   templateUrl: './operation-summary.component.html',
   styleUrl: './operation-summary.component.scss'
 })
 export class OperationSummaryComponent {
 
-  readonly data = input<MiscWellData | null>(null);
+  private readonly wwellDataStore = inject(WaterWellDataStore);
+
+  get data(): MiscWellData | null {
+    return this.wwellDataStore.miscWellData();
+  }
 
 
 }
-
-== wwell header ==
-
+6. WwellHeaderComponent
 <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white">
-  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider">
-    Well Header: {{ data()?.wellName }}
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider well-header">
+    Well Header: {{ data?.wellName }}
   </div>
 
-  @if (data(); as wellHeader) {
+  @if (data; as wellHeader) {
   <div class="grid grid-cols-3 gap-0 border-collapse">
     <div class="p-3 border-r border-b border-gray-200 bg-gray-50">
       <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">Field</mat-label>
@@ -1052,18 +703,20 @@ export class OperationSummaryComponent {
       <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">Target Depth</mat-label>
       <div class="text-sm font-semibold">{{ wellHeader.depth }} ft</div>
     </div>
-    
+
     <div class="p-3 border-r border-gray-200 bg-gray-50">
       <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">EP Num</mat-label>
       <div class="text-sm font-semibold">{{ wellHeader.epNum }}</div>
     </div>
-    
+
     <div class="p-3 border-r border-gray-200 bg-gray-50">
       <mat-label class="block text-[10px] font-bold text-gray-500 uppercase">Status</mat-label>
       <div class="text-sm font-semibold">
-        <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs">
-          {{ wellHeader.currentStatus }}
+        <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs"
+          *ngIf="(currentStatus$ | async) as status">
+          {{ status }}
         </span>
+        <span *ngIf="!(currentStatus$ | async)">–</span>
       </div>
     </div>
 
@@ -1078,7 +731,6 @@ export class OperationSummaryComponent {
   </div>
   }
 </div>
-===
 .h-screen {
   height: 100vh;
 }
@@ -1159,10 +811,11 @@ export class OperationSummaryComponent {
 .text-gray-600 {
   color: #718096;
 }
-===
-import { Component, input } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { SHARED_MODULES } from '../../../shared/shared.module';
-import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+import { MiscWellData, WaterWellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
+import { Observable } from 'rxjs';
+import { WwellDataService } from '../../../services/wwell-data.service';
 
 @Component({
   selector: 'app-wwell-header',
@@ -1172,247 +825,253 @@ import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
 })
 export class WwellHeaderComponent {
 
-  readonly data = input<MiscWellData | null>(null);
+  private readonly wwellDataStore = inject(WaterWellDataStore);
+  private wwellDataService = inject(WwellDataService);
+
+  get data(): MiscWellData | null {
+    return this.wwellDataStore.miscWellData();
+  }
+
+  readonly currentStatus$: Observable<string> = this.wwellDataService.status$;
 
 }
-==
-== wwell-test ===
+7. WwellTestComponent
 
 <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
-  @if(getFlowType()) {
-  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider flex justify-between">
-    <span class="p-2">Well Test (Flow Test)</span>
-    <!-- <div class="input-field">
-      <p><mat-slide-toggle>Flow type</mat-slide-toggle></p>
-    </div> -->
+  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider well-header">
+    <span class="p-2">Well Test ({{isFlowTest() ? 'Flow Test' : 'Pump Test'}})</span>
   </div>
-  } @else {
-  <div class="bg-yellow-100 font-bold p-2 border-b border-black text-sm uppercase tracking-wider flex justify-between">
-    <span class="p-2">Well Test (Pump Test)</span>
-  </div>
-  }
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
 
-    <div class="space-y-4">
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            Aquifer(Target)
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.aquifer">
-        </div>
+
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Aquifer(Actual)
+        </label>
       </div>
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            Aquifer(Estimate)
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.aquifer">
-        </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.aquifer">
       </div>
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            Temperature(°C)
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.temp">
-        </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Aquifer(Estimate)
+        </label>
       </div>
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            H2S(Target)
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.h2s">
-        </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.aquifer">
       </div>
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            H2S(Estimate)
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.h2s">
-        </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          H2S(Actual)
+        </label>
       </div>
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            TDS(PPM)
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.tds">
-        </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.h2s">
       </div>
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            RPM
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.tds">
-        </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          H2S(Estimate)
+        </label>
       </div>
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            Test Duration(h)
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.duration">
-        </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.h2s">
       </div>
-      <div class="md:flex md:items-center mb-2">
-        <div class="input-field">
-          <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-            Conducted By
-          </label>
-        </div>
-        <div class="md:w-2/3">
-          <input
-            class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-            id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.conductedBy">
-        </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Temperature(°C)
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.temp">
       </div>
     </div>
 
-    @if(getFlowType()) {
-    <ng-container>
-      <div class="space-y-4">
-        <div class="md:flex md:items-center mb-2">
-          <div class="input-field">
-            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-              Test rate(GPM)
-            </label>
-          </div>
-          <div class="md:w-2/3">
-            <input
-              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.rate">
-          </div>
-        </div>
-        <div class="md:flex md:items-center mb-2">
-          <div class="input-field">
-            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-              SIWHP
-            </label>
-          </div>
-          <div class="md:w-2/3">
-            <input
-              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.rate">
-          </div>
-        </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          TDS(PPM)
+        </label>
       </div>
-    </ng-container>
-    } @else {
-    <ng-container>
-      <div class="space-y-4">
-        <div class="md:flex md:items-center mb-2">
-          <div class="input-field">
-            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-              Pump Depth
-            </label>
-          </div>
-          <div class="md:w-2/3">
-            <input
-              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.depth">
-          </div>
-        </div>
-        <div class="md:flex md:items-center mb-2">
-          <div class="input-field">
-            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-              Well Productivity (Target)
-            </label>
-          </div>
-          <div class="md:w-2/3">
-            <input
-              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.productivity">
-          </div>
-        </div>
-        <div class="md:flex md:items-center mb-2">
-          <div class="input-field">
-            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-              Well Productivity (Estimate)
-            </label>
-          </div>
-          <div class="md:w-2/3">
-            <input
-              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.productivity">
-          </div>
-        </div>
-        <div class="md:flex md:items-center mb-2">
-          <div class="input-field">
-            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-              SWL(ft)
-            </label>
-          </div>
-          <div class="md:w-2/3">
-            <input
-              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.swl">
-          </div>
-        </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.tds">
+      </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          RPM
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.tds">
+      </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Test Duration(h)
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.duration">
+      </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Conducted By
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.conductedBy">
+      </div>
+    </div>
 
-        <div class="md:flex md:items-center mb-2">
-          <div class="input-field">
-            <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
-              DWL(ft)
-            </label>
-          </div>
-          <div class="md:w-2/3">
-            <input
-              class="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-              id="inline-full-name" type="text" value="Jane Doe" [value]="data()?.dwl">
-          </div>
-        </div>
+
+    @if(isFlowTest()) {
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Test rate(GPM)
+        </label>
       </div>
-    </ng-container>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.rate">
+      </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          SIWHP
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.rate">
+      </div>
+    </div>
+    } @else {
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Pump Depth
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.depth">
+      </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Well Productivity (Actual)
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.productivity">
+      </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          Well Productivity (Estimate)
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.productivity">
+      </div>
+    </div>
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          SWL(ft)
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.swl">
+      </div>
+    </div>
+
+    <div class="md:flex md:items-center mb-2">
+      <div class="input-field">
+        <label class="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4" for="inline-full-name">
+          DWL(ft)
+        </label>
+      </div>
+      <div class="md:w-2/3">
+        <input
+          class="bg-blue-input bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
+          id="inline-full-name" type="text" value="Jane Doe" [value]="data?.dwl">
+      </div>
+    </div>
     }
+  </div>
+  <div class="flex justify-end p-4 border-t border-gray-200 bg-gray-50">
+    <button mat-raised-button color="primary" class="px-4 py-2 blue-button">
+      Update
+    </button>
   </div>
 
 </div>
-==
+
 .input-field {
     width: 9em;
     max-width: 9em;
     font-size: small;
 }
-==
-import { Component, input } from '@angular/core';
+
+.bg-blue-input{
+        background-color: #2fb9e8;
+        color:white;
+}
+
+.blue-button{
+        background-color: #2fb8e7 !important;
+    color: white !important;
+    font-weight: bold;
+}
+
+import { Component, inject } from '@angular/core';
 import { SHARED_MODULES } from '../../../shared/shared.module';
-import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
+import { MiscWellData, WaterWellDataStore } from '../../../core/stores/wwell-data/wwell-data.store';
 
 @Component({
   selector: 'app-wwell-test',
@@ -1422,18 +1081,16 @@ import { MiscWellData } from '../../../core/stores/wwell-data/wwell-data.store';
 })
 export class WwellTestComponent {
 
-  readonly data = input<MiscWellData | null>(null);
+  private readonly wwellDataStore = inject(WaterWellDataStore);
 
-  getFlowType(): boolean {
-    return this.data()?.flowType === 'Y';
+  get data(): MiscWellData | null {
+    return this.wwellDataStore.miscWellData();
+  }
+
+  isFlowTest(): boolean {
+    return this.wwellDataStore.miscWellData()?.flowType === 'Y';
   }
 }
-
-== 
-
-
-
-
 
 
 
