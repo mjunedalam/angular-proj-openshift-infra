@@ -1,48 +1,36 @@
-
-@use '@angular/material' as mat;
-@use "tailwindcss" as *;
-
-
-//@import "../node_modules/ag-grid-community/styles/ag-grid.css";
-//import "../node_modules/ag-grid-community/styles/ag-theme-alpine.css";
-@include mat.core();
-
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif}
+FROM registry.access.redhat.com/ubi8/nginx-122@sha256:418353eb2f1b267acd9635c5bd006d364fc09837162d192d110c943bc04e72ce
+USER 0
+ADD dist/agwa /tmp/src/
+RUN chown -R 1001:0 /tmp/src
+USER 1001
+RUN /usr/libexec/s2i/assemble
+CMD /usr/libexec/s2i/run
 
 
-/* 
-   Gradient definitions 
-  */
+== error
 
-svg defs linearGradient#mainGradient stop:nth-child(1) { stop-color: #5d6264; }
-svg defs linearGradient#mainGradient stop:nth-child(2) { stop-color: #fff; }
-svg defs linearGradient#mainGradient stop:nth-child(3) { stop-color: #5d6264; }
 
-svg defs linearGradient#complCasingGradient stop { stop-color: #4ca746; }
-
-/* 
-   Grid pattern (used by the liner‑screen component)
- */
- 
-svg defs pattern#gridpattern path {
-  stroke: #333;
-  stroke-width: 2;
-  fill: none;
-}
-
-.agwa-theme-bg-color {
-  background: #5084F0;
-background: linear-gradient(90deg, rgba(80, 132, 240, 1) 44%, rgba(121, 207, 241, 1) 86%);
-}
-
-.hover-card:hover{
-  box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
--webkit-box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
--moz-box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
-transition: 0.3s ease;
-}
-
-.word-wrap{
-  word-wrap: break-word;
-}
+git-clone
+set-parameters
+install
+lint
+test
+build
+buildah
+|
+|
+buildah
+STEP-BUILD-AND-PUSH
+2026-04-20T12:09:21.820941900Z STEP 1/7: FROM registry.access.redhat.com/ubi8/nginx-122@sha256:418353eb2f1b267acd9635c5bd006d364fc09837162d192d110c943bc04e72ce
+2026-04-20T12:09:21.885072012Z Trying to pull registry.access.redhat.com/ubi8/nginx-122@sha256:418353eb2f1b267acd9635c5bd006d364fc09837162d192d110c943bc04e72ce...
+2026-04-20T12:09:26.633743504Z Getting image source signatures
+2026-04-20T12:09:26.633743504Z Checking if image destination supports signatures
+2026-04-20T12:09:26.634401348Z Copying blob sha256:f5b2845a76957da8324fdb70cd2a08bfd50fc3363b3fc0775fa9b05d49d92fff
+2026-04-20T12:09:26.634407654Z Copying blob sha256:f8dd9accf846656f74733ca7c840077b0ac0e92c3ae6a80fe8a520f3e996138b
+2026-04-20T12:09:26.634474757Z Copying blob sha256:77c0e55b6d3d9475197cba421ee43b9333ccde92d583089a5ba2bb87319a569c
+2026-04-20T12:09:55.112342815Z Copying config sha256:8a1211f6257e0287369bb6eaaee3e82a8de9955544a60eeb49254b8a74c8cb30
+2026-04-20T12:09:55.113353656Z Writing manifest to image destination
+2026-04-20T12:09:55.113383624Z Storing signatures
+2026-04-20T12:09:57.605925828Z STEP 2/7: USER 0
+2026-04-20T12:09:57.625791850Z STEP 3/7: ADD dist/agwa /tmp/src/
+2026-04-20T12:09:57.830496581Z Error: building at STEP "ADD dist/agwa /tmp/src/": checking on sources under "/workspace/source": copier: stat: "/dist/agwa": no such file or directory
