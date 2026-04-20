@@ -1,234 +1,447 @@
-
-@use '@angular/material' as mat;
-
-@include mat.core();
-
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif}
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-:root {
-  // App shell backgrounds
-  --bg-app:       #0b1e38;
-  --bg-topbar:    #0d2340;
-  --bg-sidenav:   #0d2340;
-  --bg-content:   #0f3460;
-  --bg-surface:   #ffffff;
-  --bg-card:      #f8fafc;
-
-  // Borders
-  --border:       rgba(148, 163, 184, 0.2);
-  --border-sub:   rgba(148, 163, 184, 0.12);
-
-  // Text
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
-
-  // Accent
-  --accent-muted:   rgba(14, 165, 233, 0.08);
-
-  // Semantic
-  --danger: #dc2626;
-}
-
-
-/* 
-   Gradient definitions 
-  */
-
-svg defs linearGradient#mainGradient stop:nth-child(1) { stop-color: #5d6264; }
-svg defs linearGradient#mainGradient stop:nth-child(2) { stop-color: #fff; }
-svg defs linearGradient#mainGradient stop:nth-child(3) { stop-color: #5d6264; }
-
-svg defs linearGradient#complCasingGradient stop { stop-color: #4ca746; }
-
-/* 
-   Grid pattern (used by the liner‑screen component)
- */
- 
-svg defs pattern#gridpattern path {
-  stroke: #333;
-  stroke-width: 2;
-  fill: none;
-}
-
-.agwa-theme-bg-color {
-  background: #5084F0;
-background: linear-gradient(90deg, rgba(80, 132, 240, 1) 44%, rgba(121, 207, 241, 1) 86%);
-}
-
-.hover-card:hover{
-  box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
--webkit-box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
--moz-box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
-transition: 0.3s ease;
-}
-
-.word-wrap{
-  word-wrap: break-word;
-}
-
-.wells-value{
-  background: #87ceeb;
-  border-color: #38bdf8;
-  color: #0f172a;
-}
-
-.well-header{
-  background: linear-gradient(135deg, #0ea5e9, #0284c7);
-  color: #ffffff;
-  padding: 12px 16px;
-  font-size: 14px;
-  font-weight: 700;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.well-selected{
-  background: #87ceeb !important;
-  border-color: #38bdf8 !important;
-  color: #0f172a !important;
-}
-
-// ── Active-Well shared layout primitives ───────────────────────────────────────
-.aw-section {
-  border: 1px solid #d1d5db;
-  overflow: hidden;
+.active-wwell-page {
+  width: min(100%, 1600px);
+  margin: 0 auto;
+  border: 2px solid #93c5fd;
   background: #fff;
-  margin-top: 4px;
 }
 
-// Tight data-cell grids
-.aw-grid--3 { display: grid; grid-template-columns: repeat(3, 1fr); }
-.aw-grid--4 { display: grid; grid-template-columns: repeat(4, 1fr); }
-.aw-grid--8 { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin-bottom: 3px; }
+// ── Shell ─────────────────────────────────────────────────────────────────────
+.active-wwell-shell {
+  display: flex;
+  align-items: stretch;
+}
 
-.aw-cell {
-  padding: 0.2rem 0.35rem;
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+.active-wwell-sidebar {
+  width: 9.5rem;
+  min-width: 9.5rem;
+  flex: 0 0 9.5rem;
+  background: #f3f4f6;
   border-right: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
-  min-width: 0;
-
-  &--gis { background: #fff3e0; }
-  &--ir  { background: #2563eb; color: #fff; }
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem;
 }
 
-.aw-label {
-  display: block;
-  font-size: 0.6rem;
+.well-list {
+  font-size: 13px;
   font-weight: 700;
-  text-transform: uppercase;
-  color: #6b7280;
-  line-height: 1.2;
-
-  .aw-cell--gis & { color: #c2410c; }
-  .aw-cell--ir  & { color: rgba(255,255,255,.8); }
+  margin-bottom: 4px;
+  padding: 6px 8px;
 }
 
-.aw-value {
-  display: block;
-  font-size: 0.72rem;
+.active-wwell-sidebar__dept {
+  margin-top: auto;
+  padding: 0.5rem 0.25rem 0.25rem;
+  line-height: 1.15;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #1f2937;
-  word-break: break-word;
-
-  .aw-cell--ir & { color: #fff; }
-}
-
-.aw-status-badge {
-  display: inline-block;
-  padding: 0.1rem 0.5rem;
-  border-radius: 99px;
-  background: #dcfce7;
-  color: #15803d;
-  font-size: 0.65rem;
-  font-weight: 700;
-}
-
-// Database-info compact cards
-.aw-db-cell {
-  padding: 0.2rem 0.3rem;
-  background: #e5e5ea;
-  border-radius: 0.2rem;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.aw-db-label {
-  display: block;
-  font-size: 0.58rem;
-  font-weight: 700;
   color: #374151;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.aw-db-value {
+:host ::ng-deep .active-wwell-sidebar .mat-mdc-chip-set {
+  margin: 0;
+}
+:host ::ng-deep .active-wwell-sidebar .mdc-evolution-chip-set__chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+:host ::ng-deep .active-wwell-sidebar .mat-mdc-chip-option {
+  min-height: 1.8rem;
+  border-radius: 0.2rem;
+  justify-content: flex-start;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+// ── Content ───────────────────────────────────────────────────────────────────
+.active-wwell-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.25rem;
+}
+
+.aw-page-header {
+  margin-bottom: 0.25rem;
+}
+
+// ── Two-column grid ────────────────────────────────────────────────────────────
+.active-wwell-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: 0.4rem;
+  align-items: start;
+}
+
+.active-wwell-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// ── Side panel ────────────────────────────────────────────────────────────────
+.active-wwell-sidepanel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lt-orange {
+  background: rgb(134 205 234);
+}
+
+.active-wwell-status-panel {
+  border: 1px solid #000;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  align-content: start;
+}
+
+.active-wwell-stat-box {
+  min-height: 3.1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #000;
+  background: #dfe4e8;
+}
+
+.active-wwell-stat-box mat-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  line-height: 1.1;
+}
+
+.stat-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.avg-rop-box {
+  grid-column: 1 / -1;
+  text-align: center;
+  align-items: center;
+}
+
+// ── Select fields ─────────────────────────────────────────────────────────────
+.active-wwell-select {
+  font-size: 0.88rem;
+  width: 100%;
+}
+
+:host ::ng-deep .active-wwell-select .mat-mdc-form-field-subscript-wrapper { display: none; }
+:host ::ng-deep .active-wwell-select .mat-mdc-text-field-wrapper {
+  min-height: 2.4rem;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  background-color: #fff !important;
+}
+:host ::ng-deep .active-wwell-select .mat-mdc-form-field-infix {
+  min-height: auto;
+  padding-top: 0.55rem;
+  padding-bottom: 0.35rem;
+}
+:host ::ng-deep .active-wwell-select .mat-mdc-select-value-text,
+:host ::ng-deep .active-wwell-select .mat-mdc-floating-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+// ── Drilling remarks ──────────────────────────────────────────────────────────
+.active-wwell-remarks {
   display: block;
-  font-size: 0.68rem;
-  color: #4b5563;
-  word-break: break-word;
+  width: 100%;
+  box-sizing: border-box;
+  height: 4.5rem;
+  resize: none;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 0.35rem 0.4rem;
+  border: none;
+  font-family: inherit;
+  color: #1f2937;
 }
-==
-import { bootstrapApplication } from '@angular/platform-browser';
-import { NavigationCancel, NavigationEnd, NavigationError, Router } from '@angular/router';
-import { filter, firstValueFrom, take } from 'rxjs';
-import { appConfig } from './app/app.config';
-import { AppComponent } from './app/app.component';
-import { LoaderService } from './app/shared/components/global-loader/loader.service';
-import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 
-ModuleRegistry.registerModules([AllCommunityModule]);
+// ── Footer ────────────────────────────────────────────────────────────────────
+.active-wwell-footer {
+  border-top: 1px solid #d1d5db;
+  padding: 0.4rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  background: #f9fafb;
+}
 
-declare global {
-  interface Window {
-    __agwaBootLoader?: {
-      complete: () => void;
-      setProgress: (progress: number) => void;
-    };
+.footer-copy {
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+.footer-legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-legend__title {
+  font-weight: 700;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: #4b5563;
+  margin-right: 0.5rem;
+}
+
+.footer-legend__grid {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 0.3rem 0.75rem;
+}
+
+.footer-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: #4b5563;
+}
+
+.legend-swatch {
+  width: 2rem;
+  height: 0.9rem;
+
+  &--gray   { background: #6b7280; }
+  &--orange { background: #f97316; }
+  &--blue   { background: #60a5fa; }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 1200px) {
+  .active-wwell-grid { grid-template-columns: minmax(0, 1fr) 13rem; }
+}
+
+@media (max-width: 960px) {
+  .active-wwell-shell { flex-direction: column; }
+
+  .active-wwell-sidebar {
+    width: 100%;
+    min-width: 100%;
+    flex-basis: auto;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .active-wwell-grid { grid-template-columns: 1fr; }
+
+  .active-wwell-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
 }
 
-function waitForNextPaint(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  });
+// ── Mat-select panel — solid background fix (CDK overlay, outside component DOM)
+::ng-deep .mat-mdc-select-panel {
+  background: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
 }
 
-bootstrapApplication(AppComponent, appConfig)
-  .then(async (appRef) => {
-    const loader = appRef.injector.get(LoaderService);
-    const appStable = firstValueFrom(
-      appRef.isStable.pipe(
-        filter((isStable) => isStable),
-        take(1),
-      ),
-    );
+::ng-deep .mat-mdc-option {
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+  min-height: 2.4rem !important;
 
-    const router = appRef.injector.get(Router);
-    const navigationDone = router.navigated
-      ? Promise.resolve()
-      : firstValueFrom(
-          router.events.pipe(
-            filter((event) =>
-              event instanceof NavigationEnd ||
-              event instanceof NavigationCancel ||
-              event instanceof NavigationError,
-            ),
-            take(1),
-          ),
-        ).then(() => undefined);
+  &:hover:not(.mdc-list-item--disabled),
+  &.mat-mdc-option-active {
+    background: rgba(14, 165, 233, 0.1) !important;
+  }
+}
+==
+.ci-body {
+  padding: 0.3rem;
+}
 
-    await Promise.all([appStable, navigationDone]);
-    await waitForNextPaint();
+.ci-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
 
-    loader.markAppShellReady();
-  })
-  .catch((err: unknown) =>
-    console.error(err),
-  );
+.aw-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.aw-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+==
+.di-body {
+  padding: 0.3rem;
+}
+
+.di-empty {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+}
+
+.aw-db-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.aw-db-value {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+==
+.ft-body {
+  padding: 0.3rem;
+}
+
+.ft-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.ft-remarks {
+  grid-column: 1 / -1;
+}
+
+.aw-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.aw-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+==
+.ops-grid {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  gap: 0.25rem;
+  padding: 0.35rem;
+}
+
+.ops-label {
+  background: #e5e7eb;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #374151;
+  display: flex;
+  align-items: flex-start;
+  border-radius: 0.15rem;
+}
+
+.ops-textarea {
+  border: 1px solid #e5e7eb;
+  padding: 0.3rem 0.4rem;
+  border-radius: 0.15rem;
+  resize: none;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #1f2937;
+  font-family: inherit;
+  min-height: 4rem;
+
+  &:focus {
+    outline: none;
+    border-color: #93c5fd;
+  }
+}
+==
+.wh-empty {
+  padding: 2.5rem;
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+.aw-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.aw-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.aw-status-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+}
+==
+.wt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 0.3rem;
+}
+
+.wt-field {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.3rem;
+}
+
+.wt-label {
+  flex: 0 0 9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+  text-align: right;
+  line-height: 1.2;
+}
+
+.wt-input {
+  flex: 1;
+  background: #2fb9e8;
+  color: #fff;
+  border: none;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  min-height: 1.8rem;
+  outline: none;
+  min-width: 0;
+}
+
+.wt-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.3rem 0.4rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.wt-update-btn {
+  background-color: #2fb9e8 !important;
+  color: #fff !important;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-height: 1.8rem;
+  line-height: 1;
+}
