@@ -1,6 +1,718 @@
-if (clamped === 0) return '#e53e3e';
-      if (clamped === 100) return '#38a169';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  effect,
+  input,
+  viewChild,
+} from '@angular/core';
+import { select, Selection } from 'd3-selection';
+import { easeCubicInOut } from 'd3-ease';
+import 'd3-transition';
+
+import { WellStore } from '@store/active-wwell/active-wwell.store';
+import { ANIM, computeOverlayDelay, DIAGRAM_LAYOUT, WellboreDiagramData } from 'src/app/core/models/well-design/wellbore-diagram.model';
+import { ICasingIR } from 'src/app/shared/models/wwell/casing-ir.model';
+import { ITopsIR } from 'src/app/shared/models/wwell/tops-ir.model';
+import {
+  buildArrowHeadRight,
+  buildCasingPath,
+  buildOpenHolePath,
+  buildGravelPackUPath,
+  buildScreenHanger,
+  casingGradientId,
+  computeCasingHalfWidth,
+  createDepthScale,
+  openHoleHalfWidth,
+} from 'src/app/shared/utils/wellbore-math.util';
+
+type SvgSel = Selection<SVGSVGElement, unknown, null, undefined>;
+type GSel = Selection<SVGGElement, unknown, null, undefined>;
+type DefsSel = Selection<SVGDefsElement, unknown, null, undefined>;
+
+@Component({
+  selector: 'app-well-bore-view',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './wellbore-view.component.html',
+  styleUrl: './wellbore-view.component.scss',
+})
+export class WellBoreViewComponent {
+  protected readonly store = inject(WellStore);
+  readonly diagramData = input.required<WellboreDiagramData | null>();
+  readonly animTrigger = input.required<number>();
+
+  private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('wellboreSvg');
+
+  private readonly layout = DIAGRAM_LAYOUT;
+  private rootG!: GSel;
+  private defsEl!: DefsSel;
+
+  constructor() {
+    effect(() => {
+      const svgEl = this.svgRef();
+      const data = this.diagramData();
+
+      if (!svgEl?.nativeElement || !data) return;
+
+      // Bootstrap once; redraw on every data/trigger change.
+      if (!this.rootG) {
+        this.bootstrapSvg(svgEl.nativeElement);
+      }
+
+      if (this.rootG) {
+        this.redraw(data);
+      }
+    });
+  }
+
+  private bootstrapSvg(element: SVGSVGElement): void {
+    const { wellboreViewWidth, svgHeight, marginTop } = this.layout;
+    const svg = select(element) as SvgSel;
+
+    svg.attr('width', '100%')
+      .attr('height', '100%')
+      .attr('viewBox', `0 0 ${wellboreViewWidth} ${svgHeight}`)
+      .attr('preserveAspectRatio', 'none');
+
+    this.defsEl = svg.append('defs') as DefsSel;
+    this.addStaticDefs(this.defsEl);
+
+    this.rootG = svg.append('g')
+      .attr('class', 'wellbore-root')
+      .attr('transform', `translate(0,${marginTop})`) as GSel;
+  }
+
+  private redraw(data: WellboreDiagramData): void {
+    if (!this.rootG) return;
+
+    this.rootG.selectAll('*').remove();
+    this.defsEl.selectAll('.dyn-clip').remove();
+
+    const { drawingHeight, geoLineX, casingCenterX } = this.layout;
+    const scale = createDepthScale(data.totalDepth, drawingHeight);
+    const targetAquifer = data.hydrogeology?.estTargetAquifier ?? null;
+
+    // ── Build a strict sequential timeline ─────────────────────────────────
+    const structuralCasings = data.casings.filter(
+      (c: ICasingIR) => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack'
+    );
+
+    const t_casingsStart = 0;
+    const t_casingsDone = computeOverlayDelay(structuralCasings.length);
+    const t_ohStart = t_casingsDone + ANIM.SEQ_GAP;
+    const t_ohDone = t_ohStart + ANIM.OH_DURATION;
+    const t_gravelStart = t_ohDone + ANIM.SEQ_GAP;
+    const t_gravelDone = t_gravelStart + ANIM.GRAVEL_DURATION;
+    const t_hangerStart = t_gravelDone + ANIM.SEQ_GAP;
+    const t_drillStart = 0;
+    const t_labelsStart = t_casingsDone + ANIM.SEQ_GAP;
+    const t_ohLabelStart = t_ohDone + ANIM.SEQ_GAP;
+    const t_waterStart = t_ohLabelStart + ANIM.OVERLAY_FADE + ANIM.SEQ_GAP;
+    const t_notDrilledStart = t_casingsDone + ANIM.SEQ_GAP;
+    const t_tdLabelStart = t_notDrilledStart + ANIM.OVERLAY_FADE + ANIM.SEQ_GAP;
+
+    // ── Draw ───────────────────────────────────────────────────────────────
+    this.drawStaticChrome(geoLineX, casingCenterX);
+    this.drawGeologicTops(data.geologicTops, geoLineX, scale, targetAquifer);
+    this.drawOpenHoleAndScreen(data, casingCenterX, scale, t_ohStart, t_ohDone, t_ohLabelStart);
+    this.drawScreenHanger(data, casingCenterX, scale, t_hangerStart);
+    this.drawCasings(data.casings, casingCenterX, scale, t_casingsStart, t_gravelStart);
+    this.drawCasingLabels(data.casings, casingCenterX, scale, t_labelsStart);
+    this.drawWaterLevel(data, casingCenterX, scale, t_waterStart);
+    this.drawDrillArrow(data, scale, t_drillStart, t_casingsDone);
+
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const ohHW = openHoleHalfWidth(innerHW);
+
+    this.drawNotDrilledZone(data, casingCenterX, scale, t_notDrilledStart, ohHW);
+    this.drawTotalDepthLabel(data.totalDepth, casingCenterX, drawingHeight, t_tdLabelStart);
+  }
+
+  private addStaticDefs(defs: DefsSel): void {
+    this.addLinearGradient(defs, 'mainGradient', [
+      { offset: '0%', color: '#2d3748' },
+      { offset: '40%', color: '#c9d1d9' },
+      { offset: '60%', color: '#e6edf3' },
+      { offset: '100%', color: '#2d3748' },
+    ]);
+    this.addLinearGradient(defs, 'conductorGradient', [
+      { offset: '0%', color: '#1a3a2a' },
+      { offset: '45%', color: '#3fb950' },
+      { offset: '55%', color: '#56d364' },
+      { offset: '100%', color: '#1a3a2a' },
+    ]);
+    this.addLinearGradient(defs, 'linerGradient', [
+      { offset: '0%', color: '#2d3748' },
+      { offset: '40%', color: '#8b949e' },
+      { offset: '60%', color: '#c9d1d9' },
+      { offset: '100%', color: '#2d3748' },
+    ]);
+
+    const grid = defs.append('pattern')
+      .attr('id', 'gridPattern')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 6).attr('height', 6);
+    grid.append('path')
+      .attr('d', 'M6,-4 L6,6 L-4,6')
+      .attr('stroke', '#000000')
+      .attr('stroke-width', 2)
+      .attr('opacity', '1')
+      .attr('fill', 'none');
+
+    const gravelPattern = defs.append('pattern')
+      .attr('id', 'gravelpattern')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 8)
+      .attr('height', 4);
+
+    gravelPattern.append('rect')
+      .attr('x', 0).attr('y', 0)
+      .attr('width', 4).attr('height', 2)
+      .attr('fill', '#1a1a1a').attr('opacity', '0.85');
+
+    gravelPattern.append('rect')
+      .attr('x', 4).attr('y', 2)
+      .attr('width', 4).attr('height', 2)
+      .attr('fill', '#1a1a1a').attr('opacity', '0.85');
+
+    const dashedPattern = defs.append('pattern')
+      .attr('id', 'dashed')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 5).attr('height', 5);
+
+    dashedPattern.append('image')
+      .attr('href', "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMCcgaGVpZ2h0PScxMCc+CiAgPHJlY3Qgd2lkdGg9JzEwJyBoZWlnaHQ9JzEwJyBmaWxsPSd3aGl0ZScgLz4KICA8Y2lyY2xlIGN4PScyLjUnIGN5PScyLjUnIHI9JzIuNScgZmlsbD0nYmxhY2snLz4KPC9zdmc+");
+
+    const addMarker = (id: string, fill: string): void => {
+      defs.append('marker')
+        .attr('id', id)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 5).attr('refY', 0)
+        .attr('markerWidth', 4).attr('markerHeight', 4)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', fill);
+    };
+    addMarker('arrowBlack', 'var(--text-secondary)');
+    addMarker('arrowBlue', '#3CC3FF');
+
+    addMarker('arrowBlue', '#3CC3FF');
+  }
+
+  private addLinearGradient(
+    defs: DefsSel,
+    id: string,
+    stops: { offset: string; color: string }[],
+  ): void {
+    const g = defs.append('linearGradient').attr('id', id);
+    stops.forEach(({ offset, color }) =>
+      g.append('stop').attr('offset', offset).attr('stop-color', color),
+    );
+  }
+
+  private getCasingTier(csg: ICasingIR, casings: ICasingIR[]): number {
+    const structuralCasings = casings.filter(c => c.csgType !== 'Gravel Pack');
+    const idx = structuralCasings.indexOf(csg);
+    return idx === -1 ? 0 : idx;
+  }
+
+  private drawStaticChrome(geoLineX: number, centerX: number): void {
+    this.rootG.append('line')
+      .attr('class', 'ground-line')
+      .attr('x1', geoLineX + 200).attr('x2', centerX + 300)
+      .attr('y1', -3).attr('y2', -3);
+
+    this.rootG.append('text')
+      .attr('class', 'ground-label')
+      .attr('x', centerX).attr('y', -12)
+      .attr('text-anchor', 'middle')
+      .text('Ground Level');
+
+    this.rootG.append('line')
+      .attr('class', 'geo-axis')
+      .attr('x1', geoLineX).attr('x2', geoLineX)
+      .attr('y1', 0).attr('y2', this.layout.drawingHeight);
+
+    this.rootG.append('text')
+      .attr('class', 'column-label')
+      .attr('x', geoLineX).attr('y', -30)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '12px')
+      .call((t) => {
+        t.append('tspan').attr('x', geoLineX).attr('dy', 0).text('Geologic');
+        t.append('tspan').attr('x', geoLineX).attr('dy', 12).text('Horizons (ft bgl)');
+      });
+  }
+
+  private drawGeologicTops(
+    tops: ITopsIR[],
+    geoLineX: number,
+    scale: ReturnType<typeof createDepthScale>,
+    targetAquifer: string | null,
+  ): void {
+    const sorted = [...tops].sort((a, b) => a.planTvdDepth - b.planTvdDepth);
+    sorted.forEach((top, idx) => {
+      const isTarget = !!targetAquifer && top.stLongCd === targetAquifer;
+      const yPx = scale(top.planTvdDepth);
+      const g = this.rootG.append('g')
+        .attr('class', isTarget ? 'geo-top geo-top--target' : 'geo-top')
+        .attr('transform', `translate(0,${yPx})`)
+        .style('opacity', 0);
+
+      if (isTarget) {
+        g.append('rect')
+          .attr('class', 'geo-target-band')
+          .attr('x', geoLineX - 75)
+          .attr('width', 150)
+          .attr('height', 25)
+          .attr('y', -14)
+          .attr('rx', 3);
+      }
+
+      g.append('line')
+        .attr('class', 'geo-tick')
+        .attr('x1', geoLineX - 14).attr('x2', geoLineX + 14)
+        .attr('y1', 0).attr('y2', 0);
+
+      g.append('text')
+        .attr('class', 'geo-depth')
+        .attr('x', geoLineX - 17)
+        .attr('dy', '0.35em')
+        .text(top.planTvdDepth.toLocaleString());
+
+      g.append('text')
+        .attr('class', 'geo-code')
+        .attr('x', geoLineX + 18)
+        .attr('dy', '0.35em')
+        .text(top.stLongCd);
+
+      g.transition()
+        .delay(ANIM.GEO_DELAY + idx * ANIM.GEO_STAGGER)
+        .duration(220)
+        .style('opacity', 1);
+    });
+  }
+
+  private drawCasings(
+    casings: ICasingIR[],
+    centerX: number,
+    scale: ReturnType<typeof createDepthScale>,
+    casingsStart: number,
+    gravelStart: number,
+  ): void {
+    const { baseHalfWidth, halfWidthIncrement, shoeCurveOffset } = this.layout;
+    casings.forEach((csg, i) => {
+      if (csg.csgType === 'Liner') return;
+      const tier = this.getCasingTier(csg, casings);
+      const hw = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+      const bottomPx = scale(csg.csgDepth);
+      const clipId = `dyn-casing-clip-${i}`;
+      const animOrder = casings.length - 1 - i;
+      const delay = animOrder * ANIM.CASING_STAGGER;
+      const clipRadius = csg.csgType === 'Gravel Pack'
+        ? (computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement) - 10) + 20
+        : openHoleHalfWidth(hw) + 20;
+
+      const clipRect = this.defsEl
+        .append('clipPath')
+        .attr('class', 'dyn-clip')
+        .attr('id', clipId)
+        .append('rect')
+        .attr('x', centerX - clipRadius - 15)
+        .attr('y', -5)
+        .attr('width', clipRadius * 2 + 30)
+        .attr('height', 0);
+
+      if (csg.csgType === 'Gravel Pack') {
+        const deepestSolid = casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack');
+        const startDepthPx = deepestSolid ? scale(deepestSolid.csgDepth) : 0;
+        const gravelBottomPx = scale(csg.csgDepth);
+        const innerHW = computeCasingHalfWidth(0, this.layout.baseHalfWidth, this.layout.halfWidthIncrement);
+        const screenHW = innerHW - 10;
+        const annulusWidth = 10;
+        const annulusCenter = screenHW + (annulusWidth / 2);
+        this.rootG.append('path')
+          .attr('class', 'gravelHole')
+          .attr('d', buildGravelPackUPath(centerX, annulusCenter, startDepthPx, gravelBottomPx))
+          .attr('stroke', 'url(#gravelpattern)')
+          .attr('stroke-width', String(annulusWidth))
+          .style('fill', 'none')
+          .attr('clip-path', `url(#${clipId})`);
+        clipRect.transition()
+          .delay(gravelStart)
+          .duration(ANIM.GRAVEL_DURATION)
+          .ease(easeCubicInOut)
+          .attr('height', gravelBottomPx + 20);
+      } else {
+        this.rootG.append('path')
+          .attr('class', 'casing')
+          .attr('d', buildCasingPath(centerX, hw, 0, bottomPx, shoeCurveOffset))
+          .attr('clip-path', `url(#${clipId})`)
+          .attr('fill', `url(#${casingGradientId(csg.csgType)})`)
+          .attr('stroke', '#1e293b')
+          .attr('stroke-width', '5')
+          .style('opacity', csg.csgType === 'Conductor' ? 0.92 : 0.65);
+        clipRect.transition()
+          .delay(casingsStart + delay)
+          .duration(ANIM.CASING_DURATION)
+          .ease(easeCubicInOut)
+          .attr('height', bottomPx + shoeCurveOffset + 20);
+      }
+    });
+  }
+
+  private drawCasingLabels(
+    casings: ICasingIR[],
+    centerX: number,
+    scale: ReturnType<typeof createDepthScale>,
+    labelsStart: number,
+  ): void {
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    casings.forEach((csg) => {
+      if (csg.csgType === 'Liner') return;
+      const tier = this.getCasingTier(csg, casings);
+      const hw = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+      const shoePx = scale(csg.csgDepth);
+      let labelYPx = shoePx;
+      if (csg.csgType === 'Gravel Pack') {
+        labelYPx = scale(csg.csgDepth);
+      }
+      const rEdge = csg.csgType === 'Gravel Pack'
+        ? centerX + (computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement) - 10)
+        : centerX + hw;
+      const lEnd = rEdge + 22;
+      const labelX = lEnd + 8;
+      const lg = this.rootG.append('g')
+        .attr('class', 'casing-label')
+        .style('opacity', 0);
+      lg.append('line')
+        .attr('class', 'casing-label__line')
+        .attr('x1', rEdge).attr('x2', lEnd)
+        .attr('y1', labelYPx).attr('y2', labelYPx);
+      lg.append('path')
+        .attr('class', 'casing-label__arrow')
+        .attr('d', buildArrowHeadRight(lEnd, labelYPx, 6));
+      if (csg.csgType === 'Gravel Pack') {
+        lg.append('text')
+          .attr('class', 'casing-label__primary')
+          .attr('x', labelX).attr('y', labelYPx + 4)
+          .text(csg.csgRemarks || 'Gravel Pack');
+      } else {
+        lg.append('text')
+          .attr('class', 'casing-label__primary')
+          .attr('x', labelX).attr('y', shoePx + 4)
+          .text(`${csg.csgSize}" ${csg.csgType} @ ${csg.csgDepth.toLocaleString()}`);
+        if (csg.csgRemarks) {
+          lg.append('text')
+            .attr('class', 'casing-label__secondary')
+            .attr('x', labelX).attr('y', shoePx + 17)
+            .text(`(${csg.csgRemarks})`);
+        }
+        this.rootG.append('text')
+          .attr('class', 'casing-size-inner')
+          .attr('x', centerX).attr('y', shoePx)
+          .attr('text-anchor', 'middle')
+          .style('opacity', 0)
+          .text(`${csg.csgSize}"`)
+          .transition().delay(labelsStart).duration(250).style('opacity', 1);
+      }
+      lg.transition().delay(labelsStart).duration(300).ease(easeCubicInOut).style('opacity', 1);
+    });
+  }
+
+  private drawWaterLevel(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, waterStart: number): void {
+    if (!data.hydrogeology) return;
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const wPx = scale(data.hydrogeology.estStaticWaterLevel);
+    const widestCsg = data.casings[data.casings.length - 1];
+    const tier = widestCsg ? this.getCasingTier(widestCsg, data.casings) : 0;
+    const innerHW = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+    const lR = centerX + innerHW + 10;
+    const lL = centerX - innerHW - 10;
+    const label = data.hydrogeology.flowType === 'Y' ? 'Flowing (SIWHP: 50 PSI)' : `Static WL: ${data.hydrogeology.estStaticWaterLevel.toLocaleString()} ft`;
+    const wg = this.rootG.append('g').attr('class', 'water-level').style('opacity', 0);
+    wg.append('line').attr('class', 'water-line').attr('x1', lL).attr('x2', lR).attr('y1', wPx).attr('y2', wPx);
+    wg.append('path').attr('class', 'water-arrow').attr('d', `M${lL} ${wPx - 5} L${lL - 10} ${wPx} L${lL} ${wPx + 5} Z`);
+    wg.append('text').attr('class', 'water-label').attr('x', lR - 430).attr('y', wPx + 4).text(label);
+    wg.transition().delay(waterStart).duration(ANIM.OVERLAY_FADE).ease(easeCubicInOut).style('opacity', 1);
+  }
+
+  private drawOpenHoleAndScreen(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, ohStart: number, ohDone: number, ohLabelStart: number): void {
+    if (!data.casings.length) return;
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const ohHW = openHoleHalfWidth(innerHW);
+    const screenHW = innerHW - 10;
+    const deepestSolid = data.casings.find((c: ICasingIR) => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
+    const liner = data.casings.find((c: ICasingIR) => c.csgType === 'Liner');
+    const shoePx = scale(deepestSolid.csgDepth);
+    const tdPx = scale(data.totalDepth);
+    const screenBottomPx = liner ? scale(liner.csgDepth) : (tdPx - 15);
+    const clipId = 'dyn-oh-clip';
+    const clipRect = this.defsEl.append('clipPath').attr('class', 'dyn-clip').attr('id', clipId).append('rect')
+      .attr('x', centerX - ohHW - 15).attr('y', shoePx - 5).attr('width', ohHW * 2 + 30).attr('height', 0);
+    this.rootG.append('path').attr('class', 'open-hole').attr('d', buildOpenHolePath(centerX, ohHW, shoePx, tdPx)).attr('clip-path', `url(#${clipId})`);
+    this.rootG.append('path').attr('class', 'liner-screen').attr('d', buildOpenHolePath(centerX, screenHW, shoePx, screenBottomPx)).attr('clip-path', `url(#${clipId})`);
+    const ohLY = shoePx + (tdPx - shoePx) * 0.2;
+    const ohLG = this.rootG.append('g').attr('class', 'open-hole-label').style('opacity', 0);
+    ohLG.append('line').attr('class', 'oh-label-line').attr('x1', centerX - ohHW).attr('x2', centerX - ohHW - 28).attr('y1', ohLY).attr('y2', ohLY);
+    ohLG.append('path').attr('class', 'oh-label-arrow').attr('d', `M${centerX - ohHW - 28} ${ohLY - 5} L${centerX - ohHW - 36} ${ohLY} L${centerX - ohHW - 28} ${ohLY + 5} Z`);
+    ohLG.append('text').attr('class', 'open-hole-text').attr('x', centerX - ohHW - 40).attr('y', ohLY + 4).attr('text-anchor', 'end').text('8 1/2" Open Hole');
+    const screenLabel = (liner && liner.csgRemarks) ? liner.csgRemarks : `+/- ${(liner ? (liner.csgDepth - deepestSolid.csgDepth) : (data.totalDepth - deepestSolid.csgDepth)).toLocaleString()} ft of Screen`;
+    const scrLG = this.rootG.append('g').attr('class', 'screen-label').style('opacity', 0);
+    scrLG.append('line').attr('class', 'screen-label-line').attr('x1', centerX + screenHW).attr('x2', centerX + screenHW + 28).attr('y1', screenBottomPx).attr('y2', screenBottomPx);
+    scrLG.append('path').attr('d', buildArrowHeadRight(centerX + screenHW + 28, screenBottomPx, 6));
+    scrLG.append('text').attr('class', 'screen-label-text').attr('x', centerX + screenHW + 34).attr('y', screenBottomPx + 4).text(screenLabel);
+    clipRect.transition().delay(ohStart).duration(ANIM.OH_DURATION).ease(easeCubicInOut).attr('height', tdPx - shoePx + 20);
+    ohLG.transition().delay(ohLabelStart).duration(ANIM.OVERLAY_FADE).ease(easeCubicInOut).style('opacity', 1);
+    scrLG.transition().delay(ohLabelStart + ANIM.OVERLAY_FADE + ANIM.SEQ_GAP).duration(ANIM.OVERLAY_FADE).ease(easeCubicInOut).style('opacity', 1);
+  }
+
+  private drawScreenHanger(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, hangerStart: number): void {
+    if (!data.casings.length) return;
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const screenHW = innerHW - 10;
+    const deepestSolid = data.casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
+    const shoePx = scale(deepestSolid.csgDepth);
+    const { left: hangerLeft, right: hangerRight } = buildScreenHanger(centerX, shoePx + 6, screenHW);
+    const hangerG = this.rootG.append('g').attr('class', 'screen-hangers').style('opacity', 0);
+    hangerG.append('path').attr('class', 'screen-hanger').attr('stroke', '#1e293b').attr('stroke-width', '1').attr('fill', '#1e293b').attr('d', hangerLeft);
+    hangerG.append('path').attr('class', 'screen-hanger').attr('stroke', '#1e293b').attr('stroke-width', '1').attr('fill', '#1e293b').attr('d', hangerRight);
+    hangerG.transition().delay(hangerStart).duration(ANIM.HANGER_DURATION).ease(easeCubicInOut).style('opacity', 1);
+  }
+
+  private drawDrillArrow(data: WellboreDiagramData, scale: ReturnType<typeof createDepthScale>, drillStart: number, t_casingsDone: number): void {
+    const arrowCx = this.layout.depthArrowX;
+    const shaftHW = 4;
+    const headH = 14;
+    const headHW = 9;
+    const duration = t_casingsDone - drillStart;
+    const totalPx = scale(data.totalDepth);
+    const currPx = scale(data.currentDepth);
+    const points = data.mudCirculation;
+    const circColour = (pct: number): string => {
+      const clamped = Math.max(0, Math.min(100, pct));
+      if (clamped === 0) return '#e53e3e';
+      if (clamped === 100) return '#4ca746';
       // orange (30) → yellow (55) for 1–99
       const t = (clamped - 1) / 98;
       const hue = 30 + t * 25;
       return `hsl(${hue.toFixed(1)}, 90%, 50%)`;
+    };
+    const arrowG = this.rootG.append('g').attr('class', 'depth-arrow-group');
+    const clipId = `arrow-clip-${Date.now()}`;
+    this.defsEl.append('clipPath').attr('class', 'dyn-clip').attr('id', clipId).append('rect')
+      .attr('x', arrowCx - headHW - 4).attr('y', -4).attr('width', (headHW + 4) * 2).attr('height', 0)
+      .transition().delay(drillStart).duration(duration).ease(easeCubicInOut).attr('height', totalPx + 4);
+    const shaftG = arrowG.append('g').attr('clip-path', `url(#${clipId})`);
+    const maxCircDepth = points.length ? Math.max(...points.map(p => p.depth)) : 0;
+    const effectiveDepth = Math.max(data.currentDepth, maxCircDepth);
+    const effectivePx = scale(effectiveDepth);
+    const shaftMaxPx = totalPx - headH;
+    const cappedEffectivePx = Math.min(effectivePx, shaftMaxPx);
+    if (points.length && effectivePx > 0) {
+      const gradId = `circ-grad-${Date.now()}`;
+      const grad = this.defsEl.append('linearGradient').attr('class', 'dyn-clip').attr('id', gradId).attr('gradientUnits', 'userSpaceOnUse').attr('x1', arrowCx).attr('y1', 0).attr('x2', arrowCx).attr('y2', cappedEffectivePx);
+      const segs: { topPx: number; botPx: number; pct: number; topDepth: number; botDepth: number }[] = [];
+      for (let i = 0; i < points.length; i++) {
+        const topDepth = i === 0 ? 0 : points[i - 1].depth;
+        const botDepth = points[i].depth;
+        if (topDepth < botDepth) segs.push({ topPx: scale(topDepth), botPx: scale(botDepth), pct: points[i].pct, topDepth, botDepth });
+      }
+      segs.forEach((seg, idx) => {
+        const col = circColour(seg.pct);
+        const topPct = (seg.topPx / effectivePx) * 100;
+        const botPct = (seg.botPx / effectivePx) * 100;
+        grad.append('stop').attr('offset', `${topPct.toFixed(4)}%`).attr('stop-color', col);
+        const nextCol = idx + 1 < segs.length ? circColour(segs[idx + 1].pct) : col;
+        grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', col);
+        if (nextCol !== col) grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', nextCol);
+      });
+      shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', 0).attr('width', shaftHW * 2).attr('height', cappedEffectivePx).attr('fill', `url(#${gradId})`);
+      shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', 0).attr('width', shaftHW).attr('height', cappedEffectivePx).attr('fill', 'rgba(255,255,255,0.10)').attr('pointer-events', 'none');
+      segs.forEach(seg => {
+        const fill = circColour(seg.pct);
+        const segH = Math.max(1, seg.botPx - seg.topPx);
+        const midY = seg.topPx + segH / 2;
+        const ttipX = arrowCx + shaftHW + 10;
+        const ttipG = arrowG.append('g').attr('class', 'circ-tooltip').style('opacity', 0).style('pointer-events', 'none');
+        ttipG.append('rect').attr('x', ttipX).attr('y', midY - 29).attr('width', 220).attr('height', 58).attr('rx', 8).attr('fill', '#0f172a').attr('stroke', fill).attr('stroke-width', 2).attr('opacity', 0.97);
+        ttipG.append('circle').attr('cx', ttipX + 16).attr('cy', midY - 7).attr('r', 6).attr('fill', fill);
+        ttipG.append('text').attr('x', ttipX + 28).attr('y', midY - 3).attr('font-size', '13').attr('font-family', 'DM Sans, sans-serif').attr('font-weight', '600').attr('fill', '#e2e8f0').text(`${seg.topDepth.toLocaleString()} – ${seg.botDepth.toLocaleString()} ft`);
+        ttipG.append('text').attr('x', ttipX + 16).attr('y', midY + 18).attr('font-size', '14.5').attr('font-family', 'DM Sans, sans-serif').attr('font-weight', '800').attr('fill', fill).text(`Circulation: ${seg.pct}%`);
+        shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', seg.topPx).attr('width', shaftHW * 2).attr('height', segH).attr('fill', 'transparent').attr('class', 'mud-circ-seg').on('mouseenter', () => ttipG.transition().duration(100).style('opacity', 1)).on('mouseleave', () => ttipG.transition().duration(100).style('opacity', 0));
+      });
+    } else {
+      shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', 0).attr('width', shaftHW * 2).attr('height', Math.min(currPx, shaftMaxPx)).attr('fill', 'var(--accent)');
+    }
+    if (cappedEffectivePx < shaftMaxPx) {
+      shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', cappedEffectivePx).attr('width', shaftHW * 2).attr('height', shaftMaxPx - cappedEffectivePx).attr('fill', '#1e293b');
+    }
+    const headG = shaftG.append('g').attr('class', 'depth-arrow-head-g');
+    headG.append('path').attr('class', 'depth-arrow-head').attr('d', `M${arrowCx - headHW},${totalPx - headH} L${arrowCx},${totalPx} L${arrowCx + headHW},${totalPx - headH} Z`);
+  }
+
+  private drawNotDrilledZone(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, start: number, ohHW: number): void {
+    const estTargetDepth = data.totalDepth;
+    const currentDepth = data.currentDepth;
+    const undrilledFt = estTargetDepth - currentDepth;
+
+    // Only draw if there is undrilled section remaining
+    if (undrilledFt <= 1) return;
+
+    const topPx = scale(currentDepth);
+    const bottomPx = scale(estTargetDepth);
+    const height = bottomPx - topPx;
+    const width = ohHW * 2 + 160; // +80 units each side
+    const lx = centerX - ohHW - 80;
+    const midY = topPx + height / 2;
+
+    const ndg = this.rootG.append('g')
+      .attr('class', 'not-drilled-zone')
+      .style('opacity', 0);
+
+    // Dark semi-transparent soft red overlay for the entire section
+    ndg.append('rect')
+      .attr('x', lx)
+      .attr('y', topPx)
+      .attr('width', width)
+      .attr('height', height)
+      .attr('fill', 'rgba(239, 68, 68, 0.12)') // Soft light red
+      .attr('stroke', 'rgba(239, 68, 68, 0.3)') // Matching light red stroke
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '8,4');
+
+    // Central "NOT DRILLED" label
+    ndg.append('text')
+      .attr('class', 'not-drilled-label')
+      .attr('x', centerX)
+      .attr('y', midY - 6)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#fbbf24') // yellow-400
+      .style('font-size', '14px')
+      .style('font-weight', '800')
+      .style('letter-spacing', '0.15em')
+      .text('NOT DRILLED');
+
+    // Footage remaining label
+    ndg.append('text')
+      .attr('class', 'not-drilled-footage')
+      .attr('x', centerX)
+      .attr('y', midY + 12)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#fca5a5') // light red-300
+      .style('font-size', '11px')
+      .style('font-weight', '600')
+      .text(`REMAINING: ${undrilledFt.toLocaleString()} FT`);
+
+    ndg.transition()
+      .delay(start)
+      .duration(ANIM.OVERLAY_FADE)
+      .style('opacity', 1);
+  }
+
+  private drawTotalDepthLabel(td: number, centerX: number, drawingHeight: number, start: number): void {
+    const g = this.rootG.append('g').attr('class', 'td-label').style('opacity', 0);
+    g.append('text').attr('class', 'total-depth-main').attr('x', centerX).attr('y', drawingHeight + 35).attr('text-anchor', 'middle').text(`TOTAL DEPTH: ${td.toLocaleString()} FT`);
+    g.transition().delay(start).duration(ANIM.OVERLAY_FADE).style('opacity', 1);
+  }
+}
+==
+:host {
+  display: block;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.wellbore-svg {
+  display: block;
+  background: transparent;
+}
+
+
+
+:host ::ng-deep {
+
+
+  .ground-line   { stroke: #b94a12; stroke-width: 2.5; stroke-linecap: round; opacity: 0.9; }
+  .ground-label  { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; fill: #b94a12; text-transform: uppercase; opacity: 0.85; }
+  .geo-axis      { stroke: #000; stroke-width: 1.5; opacity: 1; }
+  .column-label  { font-family: 'DM Sans', sans-serif; font-size: 11px; fill: var(--accent); font-weight: 700; opacity: 0.9; }
+  .geo-tick      { stroke: #000; stroke-width: 1.5; opacity: 1; }
+  .geo-depth     { font-size: 18px; font-weight: 800;  text-anchor: end; }
+  .geo-code      { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 800; fill: var(--text-primary); letter-spacing: 0.05em; }
+
+  .geo-target-band  { fill: rgb(35 135 232 / 60%);  }
+  .geo-tick--target { stroke: #d97706; stroke-width: 2.5; }
+  .geo-depth--target{ font-size: 12px; font-weight: 700; fill: #d97706; text-anchor: end; }
+  .geo-code--target { font-size: 14px; font-weight: 900; fill: #d97706; }
+
+  .casing            { stroke-linecap: round; }
+  .casing-label__line   { stroke: var(--text-muted); stroke-width: 1; opacity: 0.75; }
+  .casing-label__arrow  { fill: var(--text-muted); opacity: 0.75; }
+  .casing-label__primary {
+     font-size: 15px; font-weight: 800;
+     
+  }
+  .casing-label__secondary {
+    font-size: 14.5px; font-weight: 500;
+     font-style: italic;
+  }
+  .casing-size-inner {
+    font-size: 17px; font-weight: 600;
+    opacity: 0.70;
+  }
+
+  .water-line  { stroke: #0ea5e9; stroke-width: 1.8; stroke-dasharray: 7,4; opacity: 0.8; }
+  .water-arrow { fill: #0ea5e9; stroke: #0ea5e9; opacity: 0.8; }
+  .water-label {  font-size: 14.5px;  font-weight: 900; fill: #0ea5e9;}
+
+  .open-hole        { stroke: var(--text-secondary); stroke-width: 1.6; fill: none; stroke-dasharray: 5,3; opacity: 0.55; }
+  .oh-label-line    { stroke: var(--text-muted); stroke-width: 1; opacity: 0.65; }
+  .oh-label-arrow   { fill: var(--text-muted); opacity: 0.65; }
+  .open-hole-text   { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 900;  }
+
+  .liner-screen     { stroke: var(--text-secondary); stroke-width: 1.8; fill: url(#gridPattern); opacity: 0.72; }
+  .screen-hanger    { opacity: 0.78; }
+  .screen-label-line{ stroke: var(--text-muted); stroke-width: 1; opacity: 0.65; }
+  .screen-label-text{ font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 800;  }
+
+  .gravelHole { opacity: 0.65; }
+
+  .depth-arrow-group {
+    .mud-circ-seg {
+      cursor: crosshair;
+      rect { transition: filter 0.15s; }
+      &:hover rect:first-child { filter: brightness(1.35) saturate(1.2); }
+    }
+  }
+
+  .depth-arrow-head {
+    fill: var(--accent);
+    filter: drop-shadow(0 0 4px var(--accent));
+  }
+
+  .depth-arrow-head-g circle {
+    filter: blur(2px);
+  }
+
+  .circ-tooltip {
+    pointer-events: none;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  }
+
+  .total-depth-main {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 800;
+    fill: var(--accent); letter-spacing: 0.05em; opacity: 0.9;
+  }
+
+}
+==
+
+
