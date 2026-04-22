@@ -1,447 +1,563 @@
-.active-wwell-page {
-  width: min(100%, 1600px);
-  margin: 0 auto;
-  border: 2px solid #93c5fd;
-  background: #fff;
-}
-
-// ── Shell ─────────────────────────────────────────────────────────────────────
-.active-wwell-shell {
-  display: flex;
-  align-items: stretch;
-}
-
-// ── Sidebar ───────────────────────────────────────────────────────────────────
-.active-wwell-sidebar {
-  width: 9.5rem;
-  min-width: 9.5rem;
-  flex: 0 0 9.5rem;
-  background: #f3f4f6;
-  border-right: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.25rem;
-}
-
-.well-list {
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 4px;
-  padding: 6px 8px;
-}
-
-.active-wwell-sidebar__dept {
-  margin-top: auto;
-  padding: 0.5rem 0.25rem 0.25rem;
-  line-height: 1.15;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #374151;
-}
-
-:host ::ng-deep .active-wwell-sidebar .mat-mdc-chip-set {
-  margin: 0;
-}
-:host ::ng-deep .active-wwell-sidebar .mdc-evolution-chip-set__chips {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-:host ::ng-deep .active-wwell-sidebar .mat-mdc-chip-option {
-  min-height: 1.8rem;
-  border-radius: 0.2rem;
-  justify-content: flex-start;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-// ── Content ───────────────────────────────────────────────────────────────────
-.active-wwell-content {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 0.25rem;
-}
-
-.aw-page-header {
-  margin-bottom: 0.25rem;
-}
-
-// ── Two-column grid ────────────────────────────────────────────────────────────
-.active-wwell-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 15rem;
-  gap: 0.4rem;
-  align-items: start;
-}
-
-.active-wwell-main {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-// ── Side panel ────────────────────────────────────────────────────────────────
-.active-wwell-sidepanel {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.lt-orange {
-  background: rgb(134 205 234);
-}
-
-.active-wwell-status-panel {
-  border: 1px solid #000;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
-  padding: 0.35rem;
-  align-content: start;
-}
-
-.active-wwell-stat-box {
-  min-height: 3.1rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.15rem;
-  padding: 0.3rem 0.4rem;
-  border: 1px solid #000;
-  background: #dfe4e8;
-}
-
-.active-wwell-stat-box mat-label {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #334155;
-  line-height: 1.1;
-}
-
-.stat-value {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.avg-rop-box {
-  grid-column: 1 / -1;
-  text-align: center;
-  align-items: center;
-}
-
-// ── Select fields ─────────────────────────────────────────────────────────────
-.active-wwell-select {
-  font-size: 0.88rem;
-  width: 100%;
-}
-
-:host ::ng-deep .active-wwell-select .mat-mdc-form-field-subscript-wrapper { display: none; }
-:host ::ng-deep .active-wwell-select .mat-mdc-text-field-wrapper {
-  min-height: 2.4rem;
-  padding-left: 0.4rem;
-  padding-right: 0.4rem;
-  background-color: #fff !important;
-}
-:host ::ng-deep .active-wwell-select .mat-mdc-form-field-infix {
-  min-height: auto;
-  padding-top: 0.55rem;
-  padding-bottom: 0.35rem;
-}
-:host ::ng-deep .active-wwell-select .mat-mdc-select-value-text,
-:host ::ng-deep .active-wwell-select .mat-mdc-floating-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-// ── Drilling remarks ──────────────────────────────────────────────────────────
-.active-wwell-remarks {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  height: 4.5rem;
-  resize: none;
-  font-size: 0.84rem;
-  font-weight: 600;
-  line-height: 1.3;
-  padding: 0.35rem 0.4rem;
-  border: none;
-  font-family: inherit;
-  color: #1f2937;
-}
-
-// ── Footer ────────────────────────────────────────────────────────────────────
-.active-wwell-footer {
-  border-top: 1px solid #d1d5db;
-  padding: 0.4rem 0.75rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  background: #f9fafb;
-}
-
-.footer-copy {
-  font-size: 0.7rem;
-  color: #9ca3af;
-}
-
-.footer-legend {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.footer-legend__title {
-  font-weight: 700;
-  font-style: italic;
-  font-size: 0.8rem;
-  color: #4b5563;
-  margin-right: 0.5rem;
-}
-
-.footer-legend__grid {
-  display: grid;
-  grid-template-columns: repeat(2, auto);
-  gap: 0.3rem 0.75rem;
-}
-
-.footer-legend__item {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.72rem;
-  color: #4b5563;
-}
-
-.legend-swatch {
-  width: 2rem;
-  height: 0.9rem;
-
-  &--gray   { background: #6b7280; }
-  &--orange { background: #f97316; }
-  &--blue   { background: #60a5fa; }
-}
-
-// ── Responsive ────────────────────────────────────────────────────────────────
-@media (max-width: 1200px) {
-  .active-wwell-grid { grid-template-columns: minmax(0, 1fr) 13rem; }
-}
-
-@media (max-width: 960px) {
-  .active-wwell-shell { flex-direction: column; }
-
-  .active-wwell-sidebar {
-    width: 100%;
-    min-width: 100%;
-    flex-basis: auto;
-    border-right: none;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .active-wwell-grid { grid-template-columns: 1fr; }
-
-  .active-wwell-footer {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-}
-
-// ── Mat-select panel — solid background fix (CDK overlay, outside component DOM)
-::ng-deep .mat-mdc-select-panel {
-  background: #ffffff !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
-}
-
-::ng-deep .mat-mdc-option {
-  font-size: 0.88rem !important;
-  font-weight: 600 !important;
-  color: #1f2937 !important;
-  min-height: 2.4rem !important;
-
-  &:hover:not(.mdc-list-item--disabled),
-  &.mat-mdc-option-active {
-    background: rgba(14, 165, 233, 0.1) !important;
-  }
-}
-==
-.ci-body {
-  padding: 0.3rem;
-}
-
-.ci-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 3px;
-}
-
-.aw-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.aw-value {
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-==
-.di-body {
-  padding: 0.3rem;
-}
-
-.di-empty {
-  color: #9ca3af;
-  font-style: italic;
-  font-size: 0.85rem;
-  padding: 0.5rem;
-}
-
-.aw-db-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.aw-db-value {
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-==
-.ft-body {
-  padding: 0.3rem;
-}
-
-.ft-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 3px;
-}
-
-.ft-remarks {
-  grid-column: 1 / -1;
-}
-
-.aw-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.aw-value {
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-==
-.ops-grid {
-  display: grid;
-  grid-template-columns: 10rem 1fr;
-  gap: 0.25rem;
-  padding: 0.35rem;
-}
-
-.ops-label {
-  background: #e5e7eb;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #374151;
-  display: flex;
-  align-items: flex-start;
-  border-radius: 0.15rem;
-}
-
-.ops-textarea {
-  border: 1px solid #e5e7eb;
-  padding: 0.3rem 0.4rem;
-  border-radius: 0.15rem;
-  resize: none;
-  font-size: 0.84rem;
-  font-weight: 600;
-  line-height: 1.3;
-  color: #1f2937;
-  font-family: inherit;
-  min-height: 4rem;
-
-  &:focus {
-    outline: none;
-    border-color: #93c5fd;
-  }
-}
-==
-.wh-empty {
-  padding: 2.5rem;
-  text-align: center;
-  color: #9ca3af;
-  font-style: italic;
-  font-size: 0.85rem;
-}
-
-.aw-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.aw-value {
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-
-.aw-status-badge {
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.15rem 0.6rem;
-}
-==
-.wt-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  padding: 0.3rem;
-}
-
-.wt-field {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 0.3rem;
-}
-
-.wt-label {
-  flex: 0 0 9rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #374151;
-  text-align: right;
-  line-height: 1.2;
-}
-
-.wt-input {
-  flex: 1;
-  background: #2fb9e8;
-  color: #fff;
-  border: none;
-  padding: 0.28rem 0.4rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  min-height: 1.8rem;
-  outline: none;
-  min-width: 0;
-}
-
-.wt-footer {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0.3rem 0.4rem;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-}
-
-.wt-update-btn {
-  background-color: #2fb9e8 !important;
-  color: #fff !important;
-  font-size: 0.7rem;
-  font-weight: 700;
-  min-height: 1.8rem;
-  line-height: 1;
-}
+[
+    {
+        "RIG_ACTIVITY": [
+            {
+                "drlgOpTypCd": "NEW",
+                "wDrlgTypeDesc": "NEW WELL",
+                "wWellTypeDesc": "WATER SUPPLY",
+                "biNum": "1514",
+                "biNumDesc": "EXPLORATION UNCONVENTIONAL GAS (INCLUDING BI34)",
+                "wellName": "JLMN-843",
+                "spuddate": "04/13/2024@0500",
+                "wRigCd": "SP-105",
+                "wDrlgLocDesc": "80 KM AFTER ARAR BRIDGE TAKE RIGHT, SKID ROAD 50 KM.",
+                "welltype": "WATER SUPPLY",
+                "wDrlgTrgtDay": 50,
+                "wDrlgEndDt": "05/31/2024"
+            }
+        ],
+        "WELL_MASTER": [
+            {
+                "well": "JLMN-843",
+                "offshore": "Onshore",
+                "utmNorth": 3521012,
+                "utmEast": 594743,
+                "lon": 40.0010322,
+                "lat": 31.8203475
+            }
+        ],
+        "RIG_IDENTIFICATION": [
+            {
+                "rigname": "SP-105",
+                "code": "SP-105",
+                "rigHeight": 20
+            }
+        ],
+        "CONTACT": [
+            {
+                "rigContNum": "+8821677712248",
+                "description": "THURAYA"
+            },
+            {
+                "rigContNum": "5763184",
+                "description": "RIG FORMAN VSAT"
+            },
+            {
+                "rigContNum": "0135779621",
+                "description": "CONTRACTOR/CLERK VSAT"
+            }
+        ],
+        "DRLG_OP_STATUS": [
+            {
+                "epANum": 98415,
+                "wActDt": "2024-05-08T00:00:00",
+                "wPrsntDpth": 3190,
+                "wCsgBotDpth": 2020,
+                "wCsgOdSz": "13 3/8",
+                "wDpthChgDis": 26,
+                "wDrlgEngName": "Zia, Yassar Kamal",
+                "wFmanName": "Dhafeeri, Yousif Monazel",
+                "wMudCircPc": "100",
+                "wPrevDpth": 3164,
+                "wSpudOprDay": 25,
+                "wOpRmk": "DRILL 12-1/4\" HOLE TO CP, CHC, POOH TO 13-3/8\" CSG SHOE  PUMPING-OUT, CONT. POOH TO SURFACE ,RIH, CHC, REAMING. ",
+                "wDrlgSmryRmk": null,
+                "wDrlgSuptName": "Khaldi, Falah Ali",
+                "wLnrOdSz": null,
+                "wLnrBotDpth": null,
+                "nxt24HrPlanRmk": "REAMING TO BTM, CHC, WIPER TRIP, CHC, POOH TO SURFACE, RUN 9-5/8\" LINER. ",
+                "fuelTypCd": "DSEL",
+                "fuelDayRem": null,
+                "fuelShipStatus": null,
+                "fuelTrckOnJob": null,
+                "fuelTrckIdle": null,
+                "spuddays": 25,
+                "bopdate": "05/01/2024",
+                "footage": 26,
+                "targetDepth": 5020
+            }
+        ],
+        "DRLG_FM_TOPS": [
+            {
+                "epANum": 98415,
+                "wActDt": "2024-05-08T00:00:00",
+                "stLongCd": "JILH",
+                "wStDmrkDpth": 690,
+                "wStDmrkRmk": null
+            },
+            {
+                "epANum": 98415,
+                "wActDt": "2024-05-08T00:00:00",
+                "stLongCd": "SUDR",
+                "wStDmrkDpth": 1010,
+                "wStDmrkRmk": null
+            },
+            {
+                "epANum": 98415,
+                "wActDt": "2024-05-08T00:00:00",
+                "stLongCd": "JUBH",
+                "wStDmrkDpth": 1220,
+                "wStDmrkRmk": null
+            },
+            {
+                "epANum": 98415,
+                "wActDt": "2024-05-08T00:00:00",
+                "stLongCd": "JAUF",
+                "wStDmrkDpth": 1995,
+                "wStDmrkRmk": null
+            }
+        ],
+        "DRLG_FD_TDAY": [
+            {
+                "footage": 26
+            }
+        ],
+        "ROP_DATA": [
+            {
+                "rop": 13
+            }
+        ],
+        "NEXT_2_WELL_ACTIVITY": [
+            {
+                "nextWellActivity": "MRUZ-801",
+                "nextLocation": 98892,
+                "nextBiNum": "3300"
+            }
+        ],
+        "NEW_TARGET_DAYS": [
+            {
+                "targetDays": 49
+            }
+        ],
+        "actualRm": 14,
+        "kpiRm": 14.34,
+        "rigMoveDays": -0.34,
+        "DRLG_OP_SMRY": [
+            {
+                "wOpCd": "D",
+                "wEvntTime": "0500",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "ROTARY DRILL 12-1/4\" HOLE W/ 88 PCF INHIBITED PHPA POLYMER MUD (100 % CIRC. RETURN).\n** WASH UP AND REAM DOWN THREE TIMES EVERY CONNECTION.\n** SWEEP HOLE W/ 30 BBL'S HVP EVERY CONNECTION.\n** INCREASED MUD WEIGHT GRADUALLY TO 90 PCF WHILE DRILLING .",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3164,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T05:00:00",
+                "toTm": "0700"
+            },
+            {
+                "wOpCd": "CIRC",
+                "wEvntTime": "0700",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "PUMP 2 X 50 BBLS HI-VIS, CHC UNTIL SHAKER CLEAN.\n- GOC CONFIRMED CSG POINT @ 3,190' RKB.\n- FLOW CHECK, OK.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T07:00:00",
+                "toTm": "0930"
+            },
+            {
+                "wOpCd": "TO",
+                "wEvntTime": "0930",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "HPJSM, POOH W/ 12-1/4\" BHA. TO 2790' RKB, HAD TIGHT HOLE @ THIS DEPTH, WORKED ON SAME W/ 30 KLB'S . NO PROGRESS.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T09:30:00",
+                "toTm": "1100"
+            },
+            {
+                "wOpCd": "TO",
+                "wEvntTime": "1100",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "HPJSM, M/U KELLY & WORKED ON TIGHT HOLE WHILE PUMPING-OUT FROM 2790 ' TO 2667', WORKED ON SAME, TILL PASS FREELY.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T11:00:00",
+                "toTm": "1230"
+            },
+            {
+                "wOpCd": "TO",
+                "wEvntTime": "1230",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "CONT. POOH W/ 12-1/4\" BHA. TO 2473' RKB, HAD TIGHT HOLE @ THIS DEPTH, WORKED ON SAME W/ 30 KLB'S . NO PROGRESS.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T12:30:00",
+                "toTm": "1330"
+            },
+            {
+                "wOpCd": "TO",
+                "wEvntTime": "1330",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "HPJSM, M/U KELLY & WORKED ON TIGHT HOLE WHILE PUMPING-OUT FROM 2473 ' TO 2020', WORKED ON SAME, TILL PASS FREELY.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T13:30:00",
+                "toTm": "1730"
+            },
+            {
+                "wOpCd": "CIRC",
+                "wEvntTime": "1730",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "PUMP 50 BBLS HI-VIS, CHC UNTIL SHAKER CLEAN.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T17:30:00",
+                "toTm": "1830"
+            },
+            {
+                "wOpCd": "TO",
+                "wEvntTime": "1830",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "CONT. POOH OVER PULL -/+ 15KLB'S INSIDE 13-3/8 CSG. TO 1820'.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T18:30:00",
+                "toTm": "2000"
+            },
+            {
+                "wOpCd": "CIRC",
+                "wEvntTime": "2000",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "HPJSM, M/U KELLY & PUMP 50 BBLS HI-VIS, CHC UNTIL SHAKER CLEAN.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T20:00:00",
+                "toTm": "2130"
+            },
+            {
+                "wOpCd": "TO",
+                "wEvntTime": "2130",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "CONT. POOH WITH 12.25'' DRILLING BHA TO SURFACE, TO CHECK BIT & REAMERS FOUND BIT AND REAMER IS BALLING & CLEAN SAME.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T21:30:00",
+                "toTm": "2330"
+            },
+            {
+                "wOpCd": "TI",
+                "wEvntTime": "2330",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "HPJSM, RIH W/ 12-1/4\" BHA TO 13-3/8\" CSG SHOE.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-07T23:30:00",
+                "toTm": "0130"
+            },
+            {
+                "wOpCd": "CIRC",
+                "wEvntTime": "0130",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "M/U KELLY & PUMP 50 BBLS HI-VIS, CHC UNTIL SHAKER CLEAN.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-08T01:30:00",
+                "toTm": "0230"
+            },
+            {
+                "wOpCd": "TI",
+                "wEvntTime": "0230",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "CONT. RIH W/12-1/4\" BHA TO 2777' RKB GOT OBSTRUCTION @ THIS DEPTH",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-08T02:30:00",
+                "toTm": "0330"
+            },
+            {
+                "wOpCd": "RW",
+                "wEvntTime": "0330",
+                "wHolSz": "12 1/4",
+                "wOpRmk": "HPJSM, M/U KELLY & REAMING DOWN 12-1/4\" HOLE W/ 90 PCF INHIBITED PHPA POLYMER MUD, (100% CIRC. RETRUN),FROM (2777' TO BTM......ONGOING AT REPORT TIME.\n** INCREASED MUD WEIGHT GRADUALLY TO 94 PCF TO STABILIZE THE HOLE.",
+                "holSecTypCd": "12 1/4",
+                "wActvDrlgFlg": "N",
+                "wMajOpCd": "DRLG",
+                "wHoleStaDpth": 3190,
+                "wHoleEndDpth": 3190,
+                "wDrlgOpDttm": "2024-05-08T03:30:00",
+                "toTm": "0500"
+            }
+        ],
+        "EXAD_GWD_IR_HEADER": [
+            {
+                "dtRemarks": "Provide AramcoLink on-site to pick casing points and formation tops remotely.",
+                "mudRemarks": "Customize Mudlogging Services are required in this well from surface to TD.",
+                "loggingRemarks": "Run ZDL/CN/GR logs from total depth to 100 ft above the 9-5/8; liner shoe. Continue CN/GR to surface."
+            }
+        ],
+        "EXAD_GWD_IR_TOPS": [
+            {
+                "stLongCd": "JUBH",
+                "planTvdDepth": 1205,
+                "planSsDepth": 1272
+            },
+            {
+                "stLongCd": "JAUF",
+                "planTvdDepth": 2195,
+                "planSsDepth": 282
+            },
+            {
+                "stLongCd": "QASR",
+                "planTvdDepth": 3140,
+                "planSsDepth": -663
+            },
+            {
+                "stLongCd": "TWLF",
+                "planTvdDepth": 3410,
+                "planSsDepth": -933
+            }
+        ],
+        "EXAD_GWD_IR_CASING": [
+            {
+                "csgSize": "30",
+                "csgType": "Conductor",
+                "csgDepth": 100,
+                "csgRemarks": null
+            },
+            {
+                "csgSize": "24",
+                "csgType": "Casing",
+                "csgDepth": 700,
+                "csgRemarks": null
+            },
+            {
+                "csgSize": "18 5/8",
+                "csgType": "Casing",
+                "csgDepth": 1530,
+                "csgRemarks": null
+            },
+            {
+                "csgSize": "13 3/8",
+                "csgType": "Casing",
+                "csgDepth": 2220,
+                "csgRemarks": "+/ 25 ft into JAUF"
+            },
+            {
+                "csgSize": "9 5/8",
+                "csgType": "Liner",
+                "csgDepth": 3430,
+                "csgRemarks": "+/- 20 ft into TWLF"
+            }
+        ],
+        "EXAD_GWD_IR_HYDROGEOLOGY": [
+            {
+                "flowType": "N",
+                "estTargetAquifier": "TWLF",
+                "estStaticWaterLevel": 800,
+                "estWaterQuality": 4000,
+                "estProductivity": 500,
+                "estH2s": "NO"
+            }
+        ],
+        "EXAD_GWD_IR_WATER": [
+            {
+                "offsetWaterWell": "JLMN_822",
+                "distance": 15.4,
+                "direction": "SE",
+                "aquifer": "TWLF",
+                "td": 5230,
+                "flowRate": 929,
+                "rpm": 1900,
+                "staticWaterLevel": 680,
+                "specificCapacity": 14.8,
+                "drawDown": 62.6,
+                "fieldTds": 4600,
+                "h2s": 0,
+                "testDuration": 80
+            },
+            {
+                "offsetWaterWell": "JLMN_808",
+                "distance": 22.4,
+                "direction": "SW",
+                "aquifer": "TWLF",
+                "td": 4045,
+                "flowRate": 630,
+                "rpm": 1800,
+                "staticWaterLevel": 876.4,
+                "specificCapacity": 29.2,
+                "drawDown": 21.6,
+                "fieldTds": 1200,
+                "h2s": 1,
+                "testDuration": 60
+            }
+        ],
+        "EXAD_RCD_PREWAP": [
+            {
+                "surfaceElevation": 2477,
+                "estTargetDepth": 5000,
+                "targetFormation": "TWLF",
+                "supportedBusiness": "JLMN-90"
+            }
+        ],
+        "MUD_CIRC": [
+            {
+                "wPrsntDpth": 105,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 105
+            },
+            {
+                "wPrsntDpth": 120,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 15
+            },
+            {
+                "wPrsntDpth": 210,
+                "wMudCircPc": "80",
+                "wDpthChgDis": 90
+            },
+            {
+                "wPrsntDpth": 328,
+                "wMudCircPc": "90",
+                "wDpthChgDis": 118
+            },
+            {
+                "wPrsntDpth": 468,
+                "wMudCircPc": "90",
+                "wDpthChgDis": 140
+            },
+            {
+                "wPrsntDpth": 619,
+                "wMudCircPc": "95",
+                "wDpthChgDis": 151
+            },
+            {
+                "wPrsntDpth": 744,
+                "wMudCircPc": "95",
+                "wDpthChgDis": 125
+            },
+            {
+                "wPrsntDpth": 983,
+                "wMudCircPc": "90",
+                "wDpthChgDis": 239
+            },
+            {
+                "wPrsntDpth": 1273,
+                "wMudCircPc": "95",
+                "wDpthChgDis": 290
+            },
+            {
+                "wPrsntDpth": 1480,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 207
+            },
+            {
+                "wPrsntDpth": 1550,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 70
+            },
+            {
+                "wPrsntDpth": 1645,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 95
+            },
+            {
+                "wPrsntDpth": 1930,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 285
+            },
+            {
+                "wPrsntDpth": 2020,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 90
+            },
+            {
+                "wPrsntDpth": 2045,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 25
+            },
+            {
+                "wPrsntDpth": 2276,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 231
+            },
+            {
+                "wPrsntDpth": 2535,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 259
+            },
+            {
+                "wPrsntDpth": 2735,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 200
+            },
+            {
+                "wPrsntDpth": 2925,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 190
+            },
+            {
+                "wPrsntDpth": 3164,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 239
+            },
+            {
+                "wPrsntDpth": 3190,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 26
+            },
+            {
+                "wPrsntDpth": 3487,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 297
+            },
+            {
+                "wPrsntDpth": 3765,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 278
+            },
+            {
+                "wPrsntDpth": 4115,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 350
+            },
+            {
+                "wPrsntDpth": 4355,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 240
+            },
+            {
+                "wPrsntDpth": 4539,
+                "wMudCircPc": "100",
+                "wDpthChgDis": 184
+            }
+        ]
+    }
+]
