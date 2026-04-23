@@ -1,96 +1,826 @@
-import { Injectable, signal } from '@angular/core';
+<div class="report-shell">
+  <div class="report-header">
+    <div class="report-header__bar">
+      <span class="report-header__title">Daily Drilling Operations Summary</span>
+    </div>
+  </div>
 
-export type NotificationType = 'error' | 'info';
-export const DEFAULT_NOTIFICATION_DURATION_MS = 6000;
+  <div class="report-toolbar">
+    <div class="date-picker-section">
+      <label class="date-picker-label" for="report-date-input">Date:</label>
+      <input
+        id="report-date-input"
+        type="date"
+        class="date-picker-input"
+        [ngModel]="selectedDateString"
+        (ngModelChange)="onDateChange($event)"
+        [max]="maxDateString"
+        aria-label="Select report date"
+      />
+    </div>
 
-export interface Notification {
-  id: number;
-  type: NotificationType;
-  message: string;
+    <button
+      type="button"
+      (click)="sendEmail()"
+      class="email-btn"
+      aria-label="Email report to me"
+    >
+      <span class="email-btn__shimmer"></span>
+      <span class="email-btn__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="2" y="4" width="20" height="16" rx="3"/>
+          <path d="m2 7 10 7 10-7"/>
+        </svg>
+      </span>
+      <span class="email-btn__label">Email To Me</span>
+      <span class="email-btn__arrow" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 8h10M9 4l4 4-4 4"/>
+        </svg>
+      </span>
+    </button>
+  </div>
+
+  @if (store.isLoading()) {
+    <mat-progress-bar mode="indeterminate" class="report-loading-bar" />
+  }
+
+  <div id="report-content" class="report-content">
+    @if (pageMessage()) {
+      <div class="report-empty">
+        <p>{{ pageMessage() }}</p>
+      </div>
+    } @else if (hasError()) {
+      <div class="report-error">
+        <p>Error ({{ statusCode() }}): {{ errorMessage() }}</p>
+      </div>
+    } @else {
+      <!-- Water Well Test Results grid -->
+      @if (waterWelltestResult().length) {
+      <section class="report-section">
+        <div class="report-section__heading">
+          <span class="report-section__title">Water Well Test Results</span>
+        </div>
+        <div class="report-grid">
+          @for (result of waterWelltestResult(); track result.wellName) {
+            <div class="report-card report-card--test">
+              <div class="card-header card-header--green">
+                <span class="card-header__name">{{ result.wellName || 'Unknown' }}</span>
+                <span class="card-header__badge">Test Result</span>
+              </div>
+              <table class="card-table">
+                <tbody>
+                  <tr>
+                    <td class="card-table__label">Aquifer</td>
+                    <td class="card-table__value" [class.missing]="!result.trgtRsvrCd">{{ result.trgtRsvrCd || 'Missing' }}</td>
+                    <td class="card-table__label">Test Rate (GPM)</td>
+                    <td class="card-table__value" [class.missing]="!result.testRate">{{ result.testRate || 'Missing' }}</td>
+                  </tr>
+                  <tr>
+                    <td class="card-table__label">RPM</td>
+                    <td class="card-table__value" [class.missing]="!result.rPM">{{ result.rPM || '0' }}</td>
+                    <td class="card-table__label">H2S (PPM)</td>
+                    <td class="card-table__value" [class.missing]="!result.h2sPPM">{{ result.h2sPPM || 'Missing' }}</td>
+                  </tr>
+                  <tr>
+                    <td class="card-table__label">Temperature (°C)</td>
+                    <td class="card-table__value" [class.missing]="!result.temperature">{{ result.temperature || 'Missing' }}</td>
+                    <td class="card-table__label">Well Productivity (GPM/ft)</td>
+                    <td class="card-table__value" [class.missing]="!result.wellProductivity">{{ result.wellProductivity || 'Missing' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+      }
+
+      <!-- Daily Drilling Summary grid -->
+      <div class="report-grid">
+        @for (report of morningReport(); track report.epANum) {
+          <div class="report-card report-card--summary">
+
+            <div class="card-header card-header--blue">
+              <div class="card-header__left">
+                <span class="card-header__name">{{ report.wGnrName }}</span>
+                <span class="card-header__rig">{{ report.wRigCd }}</span>
+              </div>
+              <input
+                class="card-header__status-input"
+                placeholder="Rig status"
+                [ngModel]="report.rigStatus"
+                (ngModelChange)="store.updateRigStatus(report.epANum, $event)"
+                name="rigStatus"
+              />
+            </div>
+
+            <table class="card-table">
+              <tbody>
+                <tr>
+                  <td class="card-table__label">Target Aquifer</td>
+                  <td class="card-table__value" [class.missing]="!report.trgtRsvrCd" [class.present]="report.trgtRsvrCd">
+                    {{ report.trgtRsvrCd || 'Missing' }}
+                  </td>
+                  <td class="card-table__label">Current Formation</td>
+                  <td class="card-table__value" [class.missing]="!report.stLongCd" [class.present]="report.stLongCd">
+                    {{ report.stLongCd || 'NA' }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="card-table__label">Current Depth (ft)</td>
+                  <td class="card-table__value" [class.missing]="!report.wPrsntDpth" [class.present]="report.wPrsntDpth">
+                    {{ report.wPrsntDpth || 'Missing' }}
+                  </td>
+                  <td class="card-table__label">Planned Total Depth (ft)</td>
+                  <td class="card-table__value" [class.missing]="!report.plLtrlEndDpth" [class.present]="report.plLtrlEndDpth">
+                    {{ report.plLtrlEndDpth || 'Missing' }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="card-table__label">Footage (ft)</td>
+                  <td class="card-table__value" [class.missing]="!report.wDpthChgDis" [class.present]="report.wDpthChgDis">
+                    {{ report.wDpthChgDis || 'Missing' }}
+                  </td>
+                  <td class="card-table__label">Supportings</td>
+                  <td class="card-table__value" [class.missing]="!report.supportings" [class.present]="report.supportings">
+                    {{ report.supportings || 'Missing' }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="card-table__label">Operation</td>
+                  <td class="card-table__value card-table__value--op" colspan="3" [class.present]="report.wOpRmk">
+                    {{ report.wOpRmk || 'XXXX' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+          </div>
+        }
+      </div>
+
+      <!-- Map -->
+      <section class="report-map-section">
+        <div class="map-container">
+          <app-wwellmap #wwellMap></app-wwellmap>
+        </div>
+        <div class="map-legend">
+          <div class="map-legend__item">
+            <span class="map-legend__dot map-legend__dot--wasi"></span>
+            <span class="map-legend__text">WASI</span>
+          </div>
+          <div class="map-legend__item">
+            <span class="map-legend__dot map-legend__dot--ownership"></span>
+            <span class="map-legend__text">WELLS OWNERSHIP</span>
+          </div>
+          <div class="map-legend__item">
+            <span class="map-legend__dot map-legend__dot--aquifer"></span>
+            <span class="map-legend__text">Target Aquifer</span>
+          </div>
+          <div class="map-legend__item">
+            <span class="map-legend__dot map-legend__dot--active"></span>
+            <span class="map-legend__text">Active Well</span>
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+</div>
+
+==
+
+:host {
+  --report-bg: var(--bg-surface);
+  --report-border: var(--border);
+  --report-border-strong: rgba(148, 163, 184, 0.26);
+  --report-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+  --report-text: var(--text-primary);
+  --report-muted: var(--text-secondary);
+  --report-panel: color-mix(in srgb, var(--bg-card) 88%, white 12%);
+  --report-header-start: #4ec4f0;
+  --report-header-end: #3b82f6;
+  --report-green-start: #37b700;
+  --report-green-end: #178b00;
+  --report-blue-start: #2fb0e2;
+  --report-blue-end: #147ec5;
+  --report-summary-start: #2241bf;
+  --report-summary-end: #0f73ff;
+  --report-value-bg: color-mix(in srgb, var(--bg-surface) 92%, white 8%);
+  --wasi-color: #3b82f6;
+  --ownership-color: #10b981;
+  --aquifer-color: #f59e0b;
+  --active-well-color: #ef4444;
+
+  display: block;
+  padding: 2rem 1rem 3rem;
+  background: var(--bg-app);
 }
 
-export interface NotificationOptions {
-  durationMs?: number;
+.report-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1rem 1rem 2rem;
+  border: 1px solid var(--report-border);
+  border-radius: 24px;
+  background: var(--report-bg);
+  box-shadow: var(--report-shadow);
+  color: var(--report-text);
 }
 
-@Injectable({ providedIn: 'root' })
-export class NotificationService {
-  readonly notifications = signal<Notification[]>([]);
-  readonly defaultDurationMs = signal(DEFAULT_NOTIFICATION_DURATION_MS);
+.report-header {
+  margin-bottom: 1.25rem;
+}
 
-  private nextId = 0;
+.report-header__bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.4rem;
+  border: 1px solid color-mix(in srgb, var(--report-header-end) 28%, white 20%);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--report-header-start), var(--report-header-end));
+}
 
-  show(
-    message: string,
-    type: NotificationType = 'info',
-    options?: NotificationOptions,
-  ): void {
-    const id = ++this.nextId;
-    this.notifications.update(list => [...list, { id, type, message }]);
-    const durationMs = Math.max(1000, options?.durationMs ?? this.defaultDurationMs());
-    setTimeout(() => this.dismiss(id), durationMs);
+.report-header__title {
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.report-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.date-picker-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.date-picker-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.date-picker-input {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-inner);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  min-width: 140px;
+  appearance: none;
+
+  &:hover {
+    border-color: var(--accent-hover);
+    background: var(--accent-muted);
+    box-shadow: var(--shadow-sm);
   }
 
-  setDefaultDuration(durationMs: number): void {
-    this.defaultDurationMs.set(Math.max(1000, Math.floor(durationMs)));
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    box-shadow: 0 0 0 3px var(--accent-muted);
   }
 
-  error(message: string, options?: NotificationOptions): void {
-    this.show(message, 'error', options);
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.9;
+    width: 24px;
+    height: 24px;
+    filter: brightness(0.6);
+  }
+}
+
+.report-loading-bar {
+  position: fixed;
+  top: 62px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 99;
+  --mdc-linear-progress-track-height: 3px;
+  --mdc-linear-progress-active-indicator-height: 3px;
+  --mdc-linear-progress-track-color: transparent;
+  --mdc-linear-progress-active-indicator-color: transparent;
+}
+
+:host ::ng-deep .report-loading-bar .mdc-linear-progress__bar-inner {
+  border-top: none !important;
+  height: 4px;
+  background: linear-gradient(to right, #3b82f6, #22c55e);
+}
+
+.email-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 1.1rem 0.55rem 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+
+  &:hover {
+    background: var(--bg-surface);
+    border-color: var(--accent);
+    color: var(--accent);
+
+    .email-btn__arrow { transform: translateX(3px); }
   }
 
-  info(message: string, options?: NotificationOptions): void {
-    this.show(message, 'info', options);
+  &:active { transform: scale(0.97); }
+}
+
+.email-btn__icon,
+.email-btn__arrow {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.email-btn__icon svg { width: 15px; height: 15px; }
+
+.email-btn__label { white-space: nowrap; }
+
+.email-btn__arrow {
+  opacity: 0.7;
+  transition: transform 180ms ease;
+  svg { width: 13px; height: 13px; }
+}
+
+.report-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.report-error {
+  padding: 0.95rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--danger) 10%, var(--report-bg));
+  color: var(--danger);
+}
+
+.report-empty {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent-muted) 72%, var(--report-bg));
+  color: var(--report-text);
+  text-align: center;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.report-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.report-section__heading {
+  display: flex;
+  justify-content: center;
+  padding: 0.3rem 0 0.1rem;
+}
+
+.report-section__title {
+  color: var(--report-muted);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: 1px solid var(--report-border-strong);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.report-card {
+  overflow: hidden;
+  border: 1px solid var(--report-border-strong);
+  border-radius: 0;
+  background: var(--bg-card);
+  margin-right: -1px;
+  margin-bottom: -1px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+
+  &--blue {
+    background: linear-gradient(90deg, var(--report-summary-start), var(--report-summary-end));
   }
 
-  dismiss(id: number): void {
-    this.notifications.update(list => list.filter(n => n.id !== id));
+  &--green {
+    background: linear-gradient(90deg, var(--report-green-start), var(--report-green-end));
   }
+}
+
+.card-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.card-header__name {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-header__rig {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.card-header__badge {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+}
+
+.card-header__status-input {
+  width: 150px;
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+
+  &::placeholder { color: rgba(255, 255, 255, 0.7); }
+  &:focus { outline: none; background: rgba(255, 255, 255, 0.22); }
+}
+
+.card-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  tbody tr {
+    border-bottom: 1px solid var(--report-border);
+
+    &:last-child { border-bottom: none; }
+
+    &:hover .card-table__value {
+      background: color-mix(in srgb, var(--bg-card) 92%, var(--accent) 8%);
+    }
+  }
+}
+
+.card-table__label {
+  width: 22%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(90deg, var(--report-blue-start), var(--report-blue-end));
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  border-right: 2px solid rgba(255, 255, 255, 0.18);
+  vertical-align: middle;
+  white-space: nowrap;
+
+  .report-card--test & {
+    background: linear-gradient(90deg, var(--report-green-start), var(--report-green-end));
+  }
+}
+
+.card-table__value {
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  color: var(--report-text);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  transition: background 180ms ease;
+
+  &.missing {
+    color: var(--danger);
+    font-style: italic;
+    opacity: 0.85;
+  }
+  &.present { color: var(--accent); }
+
+  &--op {
+    text-align: left;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.55;
+    color: var(--text-primary);
+  }
+}
+
+.report-map-section {
+  margin-top: 0.5rem;
+  border: 1px solid var(--report-border-strong);
+  border-radius: 16px;
+  background: var(--report-panel);
+  overflow: hidden;
+}
+
+.map-container {
+  width: 100%;
+  min-height: 450px;
+  background: var(--report-bg);
+}
+
+:host ::ng-deep app-wwellmap {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 450px;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--report-border);
+  background: color-mix(in srgb, var(--report-value-bg) 96%, var(--accent) 4%);
+}
+
+.map-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.map-legend__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+
+  &--wasi      { background: var(--wasi-color); }
+  &--ownership { background: var(--ownership-color); }
+  &--aquifer   { background: var(--aquifer-color); }
+  &--active    { background: var(--active-well-color); border-radius: 50%; }
+}
+
+.map-legend__text {
+  color: var(--report-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 640px) {
+  :host { padding: 1rem 0.5rem 2rem; }
+
+  .report-shell { padding: 0.8rem; border-radius: 16px; }
+
+  .report-header__title { font-size: 0.95rem; }
+
+  .map-container { min-height: 300px; }
+
+  :host ::ng-deep app-wwellmap { min-height: 300px; }
+
+  .map-legend { flex-direction: column; gap: 0.5rem; }
 }
 ==
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, map, timeout } from 'rxjs';
-import { IWellData } from '@models/well-design/well-data.model';
-import { ApiResponse } from 'src/app/shared/models/wwell/api-response.model';
-import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
-import { NotificationService } from '@shared/components/notification/notification.service';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  Injector,
+  OnInit,
+  OnDestroy,
+  signal,
+  ViewChild,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
+import { MatCardModule } from '@angular/material/card';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 
-const CONNECTION_TIMEOUT_MS = 5000;
+import { AuthStore } from 'src/app/features/auth/store/auth.store';
+import { EmailStore } from 'src/app/core/store/email/email.store';
+import { DrillingDataStore } from '@store/drilling-data/drilling-data.store';
+import { EmailService } from '@services/email/email.service';
+import { DEFAULT_NOTIFICATION_DURATION_MS } from '@shared/components/notification/notification.service';
+import { WwellmapComponent } from '../wwell-map/wwell-map.component';
+import { formatDateForInput, getTodayAtMidnight, parseDateFromInput } from 'src/app/shared/utils/date.util';
 
-@Injectable({ providedIn: 'root' })
-export class DrillingDataService {
-    private readonly http = inject(HttpClient);
-    private readonly extConfigService = inject(ExternalConfigService);
-    private readonly notify = inject(NotificationService);
+const MORNING_REPORT_NOTIFICATION_DURATION_MS = 12000;
 
-    private get apiUrl(): string {
-        try {
-            return this.extConfigService.settings.drillingEyeServiceUrl ?? '';
-        } catch {
-            return '';
-        }
+@Component({
+  selector: 'app-morningreport',
+  standalone: true,
+  imports: [
+    WwellmapComponent,
+    FormsModule,
+    MatCardModule,
+    MatProgressBarModule,
+  ],
+  templateUrl: './morning-report.component.html',
+  styleUrl: './morning-report.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class MorningReportComponent implements OnInit, OnDestroy {
+  @ViewChild('wwellMap') protected wwellMap!: WwellmapComponent;
+
+  protected readonly store = inject(DrillingDataStore);
+  private readonly authStore = inject(AuthStore);
+  private readonly emailStore = inject(EmailStore);
+  private readonly emailService = inject(EmailService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly morningReport = this.store.morningReport;
+  protected readonly hasError = this.store.hasError;
+  protected readonly errorMessage = this.store.errorMessage;
+  protected readonly waterWelltestResult = this.store.waterWelltestResult;
+  protected readonly statusCode = this.store.statusCode;
+  protected readonly pageMessage = computed(() => {
+    if (this.hasError() || this.store.isLoading()) {
+      return null;
     }
 
-    private get localFallback(): Observable<IWellData[]> {
-        return this.http.get<ApiResponse<IWellData>>('/assets/data/data.json').pipe(map(res => res.data));
+    return this.morningReport().length === 0
+      ? (this.hasDateQueryParam() ? 'Data is not available for this date' : 'Data is not available for the given date')
+      : null;
+  });
+
+  protected readonly maxDateString = formatDateForInput(getTodayAtMidnight());
+  protected selectedDateString = this.maxDateString;
+
+  private readonly urlSyncReady = signal(false);
+  private readonly hasDateQueryParam = signal(false);
+
+  constructor() {
+    effect(() => {
+      if (!this.urlSyncReady()) {
+        return;
+      }
+
+      const date = formatDateForInput(this.store.selectedDate());
+
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {
+          date,
+          epANum: null,
+        },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }, { injector: this.injector });
+  }
+
+  ngOnInit(): void {
+    this.store.setNotificationDuration(MORNING_REPORT_NOTIFICATION_DURATION_MS);
+
+    this.applyDateFromQueryParams(this.route.snapshot.queryParamMap, true);
+    this.urlSyncReady.set(true);
+
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => this.applyDateFromQueryParams(params));
+
+    this.store.loadWaterWellTestResults();
+  }
+
+  ngOnDestroy(): void {
+    this.store.setNotificationDuration(DEFAULT_NOTIFICATION_DURATION_MS);
+  }
+
+  protected onDateChange(value: string): void {
+    if (!value) return;
+
+    const selectedDate = parseDateFromInput(value);
+    if (Number.isNaN(selectedDate.getTime()) || selectedDate > getTodayAtMidnight()) {
+      return;
     }
 
-    getDrillingData(date: string): Observable<IWellData[]> {
-        if (!this.apiUrl) {
-            this.notify.error('Connected to local data - service unavailable.');
-            return this.localFallback;
-        }
+    this.selectedDateString = value;
+    this.hasDateQueryParam.set(true);
+    this.urlSyncReady.set(true);
+    this.store.setDate(value, { autoSelectFirst: true });
+  }
 
-        return this.http
-            .get<ApiResponse<IWellData>>(`${this.apiUrl}/drilling-eye?date=${date}`)
-            .pipe(
-                timeout(CONNECTION_TIMEOUT_MS),
-                map(res => res.data),
-                catchError(() => {
-                    this.notify.error('Connected to local data - service unavailable.');
-                    return this.localFallback;
-                }),
-            );
+  protected async sendEmail(): Promise<void> {
+    try {
+      const recipientEmail = this.authStore.userEmail();
+
+      if (!recipientEmail) {
+        this.showError('Unable to determine the logged-in user email.');
+        return;
+      }
+
+      const morningReport = this.morningReport();
+      const mapData = await this.wwellMap.captureMapAsBase64();
+      const waterWelltestResults = this.waterWelltestResult();
+      const emailRequest = this.emailService.buildEmailRequest(
+        morningReport,
+        mapData!,
+        recipientEmail,
+        waterWelltestResults,
+      );
+      this.emailStore.sendEmail(emailRequest);
+
+      // this.snackBar.open('Email sent successfully!', 'Dismiss', {
+      //   duration: 3000,
+      //   panelClass: ['bg-green-500', 'text-white']
+      // });
+
+    } catch {
+      this.showError('Failed to send email. Please try again.');
     }
+  }
+
+  protected downloadReport(): void {
+    this.wwellMap.saveMapImage();
+  }
+
+  private showError(message: string): void {
+    this.store.setUiError(message);
+    console.error(message);
+  }
+
+  private normalizeDateParam(value: string | null): string {
+    if (!value) {
+      return this.maxDateString;
+    }
+
+    const parsed = parseDateFromInput(value);
+
+    if (Number.isNaN(parsed.getTime()) || parsed > getTodayAtMidnight()) {
+      return this.maxDateString;
+    }
+
+    return value;
+  }
+
+  private applyDateFromQueryParams(params: ParamMap, forceLoad = false): void {
+    const requestedDate = this.normalizeDateParam(params.get('date'));
+    const currentDate = formatDateForInput(this.store.selectedDate());
+
+    this.selectedDateString = requestedDate;
+    this.hasDateQueryParam.set(params.has('date'));
+
+    if (!forceLoad && requestedDate === currentDate) {
+      return;
+    }
+
+    this.store.loadMorningReportData(requestedDate, {
+      autoSelectFirst: true,
+    });
+  }
 }
