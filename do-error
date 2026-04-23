@@ -1,826 +1,772 @@
-<div class="report-shell">
-  <div class="report-header">
-    <div class="report-header__bar">
-      <span class="report-header__title">Daily Drilling Operations Summary</span>
+@let d = store.miscWellData();
+
+@if (d) {
+  <div class="misc-card">
+    <div class="misc-grid">
+      <!-- ROW 1: Well Name | Targeted Aquifer -->
+      <div class="cell cell--well-name">
+        <span class="cell__label">Well Name</span>
+        <div class="cell__name">{{ d.wellName }}</div>
+        <div class="cell__sub">{{ d.targetDesc }}</div>
+      </div>
+
+      <div class="cell cell--aquifer">
+        <span class="cell__label cell__label--dark">Targeted<br />Aquifer</span>
+        <img
+          class="size-8"
+          src="assets/images/agwa-logo.svg"
+          alt="AGWA"
+          style="width: 20px"
+        />
+        <div class="aquifer-name">{{ d.targetedAquifer }}</div>
+      </div>
+
+      <!-- ROW 2: Current Status | Days -->
+      <div class="cell cell--status">
+        <div class="status-left">
+          <span class="cell__label cell__label--dark">Current Status</span>
+          <div class="status-value">Test Status</div>
+        </div>
+        <div class="status-gear">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+            />
+          </svg>
+        </div>
+      </div>
+
+      <div class="cell cell--days">
+        <div class="days-cal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+        </div>
+        <div>
+          <div class="cell__label-light">Days</div>
+          <div class="days-value">
+            {{ d.daysSinceSpud | number: "1.2-2" }}/{{ d.targetDays }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: ROP | BI Supporting -->
+      <div class="cell cell--rop">
+        <div class="depth-labels">
+          <div class="rop-value">{{ d.rop | number }}</div>
+          <div class="cell__label-light">ROP</div>
+        </div>
+        <div class="feet-icon">
+          <mat-icon>speed</mat-icon>
+        </div>
+      </div>
+
+      <div class="cell cell--bi">
+        <div class="bi-num">BI{{ d.biNum }}</div>
+        <div class="bi-label">Supporting</div>
+        <div class="bi-well">Well {{ d.supportingWell }}</div>
+      </div>
+
+      <!-- ROW 4: Feet drilled | Previous Well -->
+      <div class="cell cell--feet">
+        <div class="feet-left">
+          <div class="feet-value">{{ d.feetDrilledToday | number }}</div>
+          <div class="cell__label-light">Feet</div>
+        </div>
+        <div class="feet-icon">
+          <svg
+            viewBox="0 0 40 40"
+            fill="none"
+            stroke="white"
+            stroke-width="1.8"
+          >
+            <path
+              d="M20 5v15M13 13l7 7 7-7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M5 25c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
+              opacity="0.6"
+            />
+            <path
+              d="M5 32c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
+              opacity="0.4"
+            />
+          </svg>
+        </div>
+      </div>
+
+      <div class="cell cell--prev">
+        <div class="cell__label-light">Previous Well</div>
+        <div class="well-name-val">{{ d.previousWell }}</div>
+      </div>
+
+      <!-- ROW 5: Current Depth + Rig Move | Next Well -->
+      <div class="stack-cell">
+        <div class="cell cell--depth">
+          <div class="depth-labels">
+            <div class="cell__label-light">Current</div>
+            <div class="cell__label-light">Depth</div>
+          </div>
+          <div class="depth-value">{{ d.currentDepth | number }}</div>
+        </div>
+
+        <div class="cell cell--next-kpi">
+          <div class="next-kpi__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M7 7h10" stroke-linecap="round" />
+              <path d="M7 12h6" stroke-linecap="round" />
+              <path d="M17 12l3 3-3 3" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M17 17H7" stroke-linecap="round" />
+            </svg>
+          </div>
+
+          <div class="next-kpi__content">
+            <div class="cell__label-light">Rig Move</div>
+            <div
+              class="next-kpi__days"
+              [class.next-kpi__days--positive]="rigMoveTone(d.rigMoveDays) === 'positive'"
+              [class.next-kpi__days--negative]="rigMoveTone(d.rigMoveDays) === 'negative'"
+            >
+              {{ d.rigMoveDays | number: '1.2-2' }}
+            </div>
+
+            <div class="next-kpi__stat">
+              <span class="next-kpi__stat-label">Actual RM / KPI RM</span>
+              <span class="next-kpi__stat-value">
+                {{ d.actualRm | number: '1.0-2' }}/{{ d.kpiRm | number: '1.0-2' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cell cell--next">
+        <div class="cell__label-light">Next Well</div>
+        <div class="well-name-val">{{ d.nextWell }}</div>
+      </div>
+
+      <!-- ROW 6: Operation Summary (full width) -->
+      <div class="cell cell--op-summary">
+        <div class="op-header">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+            />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+          <span class="op-header__label">Operation Summary</span>
+        </div>
+        <div class="op-text">{{ d.operationSummary }}</div>
+      </div>
+
+      <!-- ROW 7: Next 24 Hr Operation (full width) -->
+      <div class="cell cell--next24">
+        <div class="op-header">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span class="op-header__label">Next 24 Hr Operation</span>
+        </div>
+        <div class="op-text">{{ d.next24HrOperation }}</div>
+      </div>
     </div>
   </div>
-
-  <div class="report-toolbar">
-    <div class="date-picker-section">
-      <label class="date-picker-label" for="report-date-input">Date:</label>
-      <input
-        id="report-date-input"
-        type="date"
-        class="date-picker-input"
-        [ngModel]="selectedDateString"
-        (ngModelChange)="onDateChange($event)"
-        [max]="maxDateString"
-        aria-label="Select report date"
-      />
-    </div>
-
-    <button
-      type="button"
-      (click)="sendEmail()"
-      class="email-btn"
-      aria-label="Email report to me"
-    >
-      <span class="email-btn__shimmer"></span>
-      <span class="email-btn__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <rect x="2" y="4" width="20" height="16" rx="3"/>
-          <path d="m2 7 10 7 10-7"/>
-        </svg>
-      </span>
-      <span class="email-btn__label">Email To Me</span>
-      <span class="email-btn__arrow" aria-hidden="true">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 8h10M9 4l4 4-4 4"/>
-        </svg>
-      </span>
-    </button>
-  </div>
-
-  @if (store.isLoading()) {
-    <mat-progress-bar mode="indeterminate" class="report-loading-bar" />
-  }
-
-  <div id="report-content" class="report-content">
-    @if (pageMessage()) {
-      <div class="report-empty">
-        <p>{{ pageMessage() }}</p>
-      </div>
-    } @else if (hasError()) {
-      <div class="report-error">
-        <p>Error ({{ statusCode() }}): {{ errorMessage() }}</p>
-      </div>
-    } @else {
-      <!-- Water Well Test Results grid -->
-      @if (waterWelltestResult().length) {
-      <section class="report-section">
-        <div class="report-section__heading">
-          <span class="report-section__title">Water Well Test Results</span>
-        </div>
-        <div class="report-grid">
-          @for (result of waterWelltestResult(); track result.wellName) {
-            <div class="report-card report-card--test">
-              <div class="card-header card-header--green">
-                <span class="card-header__name">{{ result.wellName || 'Unknown' }}</span>
-                <span class="card-header__badge">Test Result</span>
-              </div>
-              <table class="card-table">
-                <tbody>
-                  <tr>
-                    <td class="card-table__label">Aquifer</td>
-                    <td class="card-table__value" [class.missing]="!result.trgtRsvrCd">{{ result.trgtRsvrCd || 'Missing' }}</td>
-                    <td class="card-table__label">Test Rate (GPM)</td>
-                    <td class="card-table__value" [class.missing]="!result.testRate">{{ result.testRate || 'Missing' }}</td>
-                  </tr>
-                  <tr>
-                    <td class="card-table__label">RPM</td>
-                    <td class="card-table__value" [class.missing]="!result.rPM">{{ result.rPM || '0' }}</td>
-                    <td class="card-table__label">H2S (PPM)</td>
-                    <td class="card-table__value" [class.missing]="!result.h2sPPM">{{ result.h2sPPM || 'Missing' }}</td>
-                  </tr>
-                  <tr>
-                    <td class="card-table__label">Temperature (°C)</td>
-                    <td class="card-table__value" [class.missing]="!result.temperature">{{ result.temperature || 'Missing' }}</td>
-                    <td class="card-table__label">Well Productivity (GPM/ft)</td>
-                    <td class="card-table__value" [class.missing]="!result.wellProductivity">{{ result.wellProductivity || 'Missing' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          }
-        </div>
-      </section>
-      }
-
-      <!-- Daily Drilling Summary grid -->
-      <div class="report-grid">
-        @for (report of morningReport(); track report.epANum) {
-          <div class="report-card report-card--summary">
-
-            <div class="card-header card-header--blue">
-              <div class="card-header__left">
-                <span class="card-header__name">{{ report.wGnrName }}</span>
-                <span class="card-header__rig">{{ report.wRigCd }}</span>
-              </div>
-              <input
-                class="card-header__status-input"
-                placeholder="Rig status"
-                [ngModel]="report.rigStatus"
-                (ngModelChange)="store.updateRigStatus(report.epANum, $event)"
-                name="rigStatus"
-              />
-            </div>
-
-            <table class="card-table">
-              <tbody>
-                <tr>
-                  <td class="card-table__label">Target Aquifer</td>
-                  <td class="card-table__value" [class.missing]="!report.trgtRsvrCd" [class.present]="report.trgtRsvrCd">
-                    {{ report.trgtRsvrCd || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Current Formation</td>
-                  <td class="card-table__value" [class.missing]="!report.stLongCd" [class.present]="report.stLongCd">
-                    {{ report.stLongCd || 'NA' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Current Depth (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.wPrsntDpth" [class.present]="report.wPrsntDpth">
-                    {{ report.wPrsntDpth || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Planned Total Depth (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.plLtrlEndDpth" [class.present]="report.plLtrlEndDpth">
-                    {{ report.plLtrlEndDpth || 'Missing' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Footage (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.wDpthChgDis" [class.present]="report.wDpthChgDis">
-                    {{ report.wDpthChgDis || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Supportings</td>
-                  <td class="card-table__value" [class.missing]="!report.supportings" [class.present]="report.supportings">
-                    {{ report.supportings || 'Missing' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Operation</td>
-                  <td class="card-table__value card-table__value--op" colspan="3" [class.present]="report.wOpRmk">
-                    {{ report.wOpRmk || 'XXXX' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-          </div>
-        }
-      </div>
-
-      <!-- Map -->
-      <section class="report-map-section">
-        <div class="map-container">
-          <app-wwellmap #wwellMap></app-wwellmap>
-        </div>
-        <div class="map-legend">
-          <div class="map-legend__item">
-            <span class="map-legend__dot map-legend__dot--wasi"></span>
-            <span class="map-legend__text">WASI</span>
-          </div>
-          <div class="map-legend__item">
-            <span class="map-legend__dot map-legend__dot--ownership"></span>
-            <span class="map-legend__text">WELLS OWNERSHIP</span>
-          </div>
-          <div class="map-legend__item">
-            <span class="map-legend__dot map-legend__dot--aquifer"></span>
-            <span class="map-legend__text">Target Aquifer</span>
-          </div>
-          <div class="map-legend__item">
-            <span class="map-legend__dot map-legend__dot--active"></span>
-            <span class="map-legend__text">Active Well</span>
-          </div>
-        </div>
-      </section>
-    }
-  </div>
-</div>
-
-==
-
-:host {
-  --report-bg: var(--bg-surface);
-  --report-border: var(--border);
-  --report-border-strong: rgba(148, 163, 184, 0.26);
-  --report-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
-  --report-text: var(--text-primary);
-  --report-muted: var(--text-secondary);
-  --report-panel: color-mix(in srgb, var(--bg-card) 88%, white 12%);
-  --report-header-start: #4ec4f0;
-  --report-header-end: #3b82f6;
-  --report-green-start: #37b700;
-  --report-green-end: #178b00;
-  --report-blue-start: #2fb0e2;
-  --report-blue-end: #147ec5;
-  --report-summary-start: #2241bf;
-  --report-summary-end: #0f73ff;
-  --report-value-bg: color-mix(in srgb, var(--bg-surface) 92%, white 8%);
-  --wasi-color: #3b82f6;
-  --ownership-color: #10b981;
-  --aquifer-color: #f59e0b;
-  --active-well-color: #ef4444;
-
-  display: block;
-  padding: 2rem 1rem 3rem;
-  background: var(--bg-app);
+}
+===
+// ── Outer card wrapper ─────────────────────────────────────────────────────────
+.misc-card {
+  padding: 10px;
+  height: 100%;
+  box-sizing: border-box;
+  container-type: inline-size;
+  container-name: misc;
+  font-family: var(--font-sans);
 }
 
-.report-shell {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 1rem 1rem 2rem;
-  border: 1px solid var(--report-border);
-  border-radius: 24px;
-  background: var(--report-bg);
-  box-shadow: var(--report-shadow);
-  color: var(--report-text);
-}
-
-.report-header {
-  margin-bottom: 1.25rem;
-}
-
-.report-header__bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 3.4rem;
-  border: 1px solid color-mix(in srgb, var(--report-header-end) 28%, white 20%);
-  border-radius: 16px;
-  background: linear-gradient(180deg, var(--report-header-start), var(--report-header-end));
-}
-
-.report-header__title {
-  color: #fff;
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.report-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-}
-
-.date-picker-section {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.date-picker-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.date-picker-input {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-inner);
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
-  min-width: 140px;
-  appearance: none;
-
-  &:hover {
-    border-color: var(--accent-hover);
-    background: var(--accent-muted);
-    box-shadow: var(--shadow-sm);
-  }
-
-  &:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: var(--accent-muted);
-    box-shadow: 0 0 0 3px var(--accent-muted);
-  }
-
-  &::-webkit-calendar-picker-indicator {
-    cursor: pointer;
-    opacity: 0.9;
-    width: 24px;
-    height: 24px;
-    filter: brightness(0.6);
-  }
-}
-
-.report-loading-bar {
-  position: fixed;
-  top: 62px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  z-index: 99;
-  --mdc-linear-progress-track-height: 3px;
-  --mdc-linear-progress-active-indicator-height: 3px;
-  --mdc-linear-progress-track-color: transparent;
-  --mdc-linear-progress-active-indicator-color: transparent;
-}
-
-:host ::ng-deep .report-loading-bar .mdc-linear-progress__bar-inner {
-  border-top: none !important;
-  height: 4px;
-  background: linear-gradient(to right, #3b82f6, #22c55e);
-}
-
-.email-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.55rem 1.1rem 0.55rem 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  border-radius: 10px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
-  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
-
-  &:hover {
-    background: var(--bg-surface);
-    border-color: var(--accent);
-    color: var(--accent);
-
-    .email-btn__arrow { transform: translateX(3px); }
-  }
-
-  &:active { transform: scale(0.97); }
-}
-
-.email-btn__icon,
-.email-btn__arrow {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.email-btn__icon svg { width: 15px; height: 15px; }
-
-.email-btn__label { white-space: nowrap; }
-
-.email-btn__arrow {
-  opacity: 0.7;
-  transition: transform 180ms ease;
-  svg { width: 13px; height: 13px; }
-}
-
-.report-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.15rem;
-}
-
-.report-error {
-  padding: 0.95rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--danger) 10%, var(--report-bg));
-  color: var(--danger);
-}
-
-.report-empty {
-  padding: 1.1rem 1.2rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--accent-muted) 72%, var(--report-bg));
-  color: var(--report-text);
-  text-align: center;
-  font-size: 0.98rem;
-  font-weight: 600;
-}
-
-.report-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.report-section__heading {
-  display: flex;
-  justify-content: center;
-  padding: 0.3rem 0 0.1rem;
-}
-
-.report-section__title {
-  color: var(--report-muted);
-  font-size: 1.25rem;
-  font-weight: 700;
-  text-align: center;
-}
-
-.report-grid {
+// ── 2-column grid ─────────────────────────────────────────────────────────────
+.misc-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-  border: 1px solid var(--report-border-strong);
-  border-radius: 14px;
-  overflow: hidden;
+  grid-template-columns: 1.25fr 1fr;
+  gap: clamp(4px, 1.5cqi, 10px);
+  width: 100%;
 }
 
-.report-card {
-  overflow: hidden;
-  border: 1px solid var(--report-border-strong);
-  border-radius: 0;
-  background: var(--bg-card);
-  margin-right: -1px;
-  margin-bottom: -1px;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.65rem 0.85rem;
-
-  &--blue {
-    background: linear-gradient(90deg, var(--report-summary-start), var(--report-summary-end));
-  }
-
-  &--green {
-    background: linear-gradient(90deg, var(--report-green-start), var(--report-green-end));
-  }
-}
-
-.card-header__left {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+.stack-cell {
+  display: grid;
+  gap: clamp(4px, 1.5cqi, 10px);
   min-width: 0;
 }
 
-.card-header__name {
+// ── Base cell ─────────────────────────────────────────────────────────────────
+.cell {
+  border-radius: clamp(8px, 2.5cqi, 14px);
+  padding: clamp(8px, 2.2cqi, 16px) clamp(10px, 2.8cqi, 18px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border);
+  min-height: clamp(52px, 14cqi, 80px);
+}
+
+// ── Cell color variants ────────────────────────────────────────────────────────
+
+.cell--well-name {
+  background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
+  border: none;
   color: #fff;
-  font-size: 1.25rem;
+  min-height: clamp(64px, 18cqi, 90px);
+}
+
+.cell--aquifer {
+  background: var(--bg-card, #fff);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(4px, 1.5cqi, 10px);
+  padding: clamp(6px, 2cqi, 12px) clamp(8px, 2.5cqi, 14px);
+}
+
+.cell--status {
+  background: var(--bg-card, #fff);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(4px, 1.5cqi, 10px);
+}
+
+.cell--days {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(4px, 1.5cqi, 10px);
+}
+
+.cell--gauges {
+  background: var(--bg-card, #fff);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  gap: clamp(4px, 1.5cqi, 10px);
+  padding: clamp(6px, 2cqi, 14px) clamp(4px, 1.5cqi, 12px);
+}
+
+.cell--bi {
+  background: linear-gradient(135deg, #2563eb 0%, #22d3ee 100%);
+  border: none;
+  color: #fff;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  gap: clamp(1px, 0.5cqi, 3px);
+}
+
+.cell--feet {
+  background: linear-gradient(135deg, #0ea5e9 0%, #22d3ee 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cell--prev {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+  border: none;
+  color: #fff;
+}
+
+.cell--depth {
+  background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(6px, 2cqi, 14px);
+}
+
+.cell--next {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+  border: none;
+  color: #fff;
+}
+
+.cell--next-kpi {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(4px, 1.5cqi, 10px);
+}
+
+// ── Text helpers ───────────────────────────────────────────────────────────────
+
+.cell__label {
+  font-size: clamp(12px, 2.6cqi, 13px);
   font-weight: 800;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: clamp(3px, 0.6cqi, 6px);
+  line-height: 1.35;
   white-space: nowrap;
+}
+
+.cell__label--dark {
+  color: #475569;
+  font-size: clamp(12px, 2.6cqi, 13px);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.cell__label-light {
+  font-size: clamp(12px, 2.6cqi, 13px);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: clamp(2px, 0.5cqi, 4px);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.cell__name {
+  font-size: clamp(17px, 4.4cqi, 24px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.25;
+  margin-bottom: clamp(2px, 0.5cqi, 4px);
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.card-header__rig {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.card-header__badge {
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.14);
-  flex-shrink: 0;
-}
-
-.card-header__status-input {
-  width: 150px;
-  flex-shrink: 0;
-  padding: 5px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.13);
-  color: #fff;
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  text-align: center;
-
-  &::placeholder { color: rgba(255, 255, 255, 0.7); }
-  &:focus { outline: none; background: rgba(255, 255, 255, 0.22); }
-}
-
-.card-table {
-  width: 100%;
-  border-collapse: collapse;
-
-  tbody tr {
-    border-bottom: 1px solid var(--report-border);
-
-    &:last-child { border-bottom: none; }
-
-    &:hover .card-table__value {
-      background: color-mix(in srgb, var(--bg-card) 92%, var(--accent) 8%);
-    }
-  }
-}
-
-.card-table__label {
-  width: 22%;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(90deg, var(--report-blue-start), var(--report-blue-end));
-  color: #fff;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  border-right: 2px solid rgba(255, 255, 255, 0.18);
-  vertical-align: middle;
   white-space: nowrap;
+}
 
-  .report-card--test & {
-    background: linear-gradient(90deg, var(--report-green-start), var(--report-green-end));
+.cell__sub {
+  font-size: clamp(13px, 2.9cqi, 15px);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+// ── Aquifer cell ───────────────────────────────────────────────────────────────
+.aquifer-drop {
+  width: clamp(24px, 7cqi, 42px);
+  height: clamp(24px, 7cqi, 42px);
+  flex-shrink: 0;
+}
+
+.aquifer-name {
+  font-size: clamp(15px, 3.4cqi, 19px);
+  font-weight: 800;
+  color: #1e3a8a;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+// ── Status cell ────────────────────────────────────────────────────────────────
+.status-left {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.8cqi, 5px);
+  min-width: 0;
+}
+
+.status-value {
+  font-size: clamp(16px, 3.4cqi, 19px);
+  font-weight: 800;
+  color: #0ea5e9;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.status-gear {
+  width: clamp(28px, 8cqi, 42px);
+  height: clamp(28px, 8cqi, 42px);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+
+  svg {
+    width: clamp(14px, 4cqi, 22px);
+    height: clamp(14px, 4cqi, 22px);
   }
 }
 
-.card-table__value {
-  padding: 0.75rem 1rem;
-  background: var(--bg-card);
-  color: var(--report-text);
-  font-size: 1rem;
-  font-weight: 700;
-  text-align: center;
-  vertical-align: middle;
-  transition: background 180ms ease;
+// ── Days cell ──────────────────────────────────────────────────────────────────
+.days-cal {
+  width: clamp(26px, 7cqi, 38px);
+  height: clamp(26px, 7cqi, 38px);
+  border-radius: clamp(6px, 1.5cqi, 10px);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 
-  &.missing {
-    color: var(--danger);
-    font-style: italic;
+  svg {
+    width: clamp(14px, 3.5cqi, 22px);
+    height: clamp(14px, 3.5cqi, 22px);
+  }
+}
+
+.days-value {
+  font-size: clamp(18px, 3.8cqi, 21px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+// ── Gauge internals ────────────────────────────────────────────────────────────
+.gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(3px, 1cqi, 7px);
+}
+
+.gauge__label {
+  font-size: clamp(11px, 2.4cqi, 12px);
+  font-weight: 800;
+  color: #475569;
+  text-align: center;
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.gauge__ring {
+  width: clamp(38px, 11cqi, 58px);
+  height: clamp(38px, 11cqi, 58px);
+  border-radius: 50%;
+  border: clamp(2px, 0.6cqi, 3px) solid #0ea5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(18px, 4.2cqi, 24px);
+  font-weight: 800;
+  color: #1e3a8a;
+  box-shadow: inset 0 0 0 4px rgba(14, 165, 233, 0.1),
+              0 0 0 1px rgba(14, 165, 233, 0.15);
+  background: #fff;
+}
+
+// ── BI cell ────────────────────────────────────────────────────────────────────
+.bi-num {
+  font-size: clamp(20px, 5cqi, 26px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.08;
+}
+
+.bi-label {
+  font-size: clamp(11px, 2.4cqi, 12px);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bi-well {
+  font-size: clamp(13px, 3.2cqi, 15px);
+  font-weight: 700;
+  color: #fff;
+  margin-top: 2px;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+// ── Feet cell ──────────────────────────────────────────────────────────────────
+.feet-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.feet-value {
+  font-size: clamp(22px, 5.5cqi, 30px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.05;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.feet-icon {
+  flex-shrink: 0;
+
+  svg {
+    width: clamp(28px, 8cqi, 44px);
+    height: clamp(28px, 8cqi, 44px);
     opacity: 0.85;
   }
-  &.present { color: var(--accent); }
-
-  &--op {
-    text-align: left;
-    font-size: 0.95rem;
-    font-weight: 600;
-    line-height: 1.55;
-    color: var(--text-primary);
-  }
 }
 
-.report-map-section {
-  margin-top: 0.5rem;
-  border: 1px solid var(--report-border-strong);
-  border-radius: 16px;
-  background: var(--report-panel);
-  overflow: hidden;
-}
-
-.map-container {
-  width: 100%;
-  min-height: 450px;
-  background: var(--report-bg);
-}
-
-:host ::ng-deep app-wwellmap {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 450px;
-}
-
-.map-legend {
+// ── Depth cell ─────────────────────────────────────────────────────────────────
+.depth-labels {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-  padding: 0.75rem 1.25rem;
-  border-top: 1px solid var(--report-border);
-  background: color-mix(in srgb, var(--report-value-bg) 96%, var(--accent) 4%);
+  flex-direction: column;
+  flex-shrink: 0;
 }
 
-.map-legend__item {
-  display: inline-flex;
+.depth-value {
+  font-size: clamp(24px, 6.1cqi, 34px);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.next-kpi__icon {
+  width: clamp(26px, 7cqi, 38px);
+  height: clamp(26px, 7cqi, 38px);
+  border-radius: clamp(6px, 1.5cqi, 10px);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-}
-
-.map-legend__dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  justify-content: center;
   flex-shrink: 0;
 
-  &--wasi      { background: var(--wasi-color); }
-  &--ownership { background: var(--ownership-color); }
-  &--aquifer   { background: var(--aquifer-color); }
-  &--active    { background: var(--active-well-color); border-radius: 50%; }
+  svg {
+    width: clamp(14px, 3.5cqi, 22px);
+    height: clamp(14px, 3.5cqi, 22px);
+  }
 }
 
-.map-legend__text {
-  color: var(--report-text);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+.next-kpi__content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
-@media (max-width: 640px) {
-  :host { padding: 1rem 0.5rem 2rem; }
+.next-kpi__days {
+  font-size: clamp(18px, 3.8cqi, 21px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-top: 2px;
+  white-space: nowrap;
+}
 
-  .report-shell { padding: 0.8rem; border-radius: 16px; }
+.next-kpi__days--positive {
+  color: #bbf7d0;
+}
 
-  .report-header__title { font-size: 0.95rem; }
+.next-kpi__days--negative {
+  color: #fecaca;
+}
 
-  .map-container { min-height: 300px; }
+.next-kpi__stats {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.8cqi, 14px);
+  margin-top: clamp(3px, 0.8cqi, 6px);
+  flex-wrap: wrap;
+}
 
-  :host ::ng-deep app-wwellmap { min-height: 300px; }
+.next-kpi__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
-  .map-legend { flex-direction: column; gap: 0.5rem; }
+.next-kpi__stat-label {
+  font-size: clamp(10px, 2.2cqi, 11px);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.78);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.next-kpi__stat-value {
+  font-size: clamp(13px, 2.8cqi, 15px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+}
+
+// ── Previous / Next well text ─────────────────────────────────────────────────
+.well-name-val {
+  font-size: clamp(14px, 3.6cqi, 18px);
+  font-weight: 800;
+  color: #fff;
+  margin-top: 4px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+// ── ROP cell ───────────────────────────────────────────────────────────────────
+.cell--rop {
+  background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rop-value {
+  font-size: clamp(18px, 4.2cqi, 24px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.feet-icon mat-icon {
+  font-size: clamp(28px, 8cqi, 44px);
+  width: clamp(28px, 8cqi, 44px);
+  height: clamp(28px, 8cqi, 44px);
+  color: #fff;
+  opacity: 0.85;
+}
+
+// ── Operation summary & Next 24 Hr (full-width) ───────────────────────────────
+.cell--op-summary {
+  grid-column: 1 / -1;
+  background: var(--bg-card, #fff);
+  min-height: clamp(48px, 14cqi, 70px);
+  gap: clamp(3px, 1cqi, 7px);
+}
+
+.cell--next24 {
+  grid-column: 1 / -1;
+  background: var(--bg-surface, #f1f5f9);
+  min-height: clamp(48px, 14cqi, 70px);
+  gap: clamp(3px, 1cqi, 7px);
+  border: 1px solid var(--border);
+}
+
+.op-header {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 1.2cqi, 7px);
+
+  svg {
+    width: clamp(11px, 2.8cqi, 15px);
+    height: clamp(11px, 2.8cqi, 15px);
+    flex-shrink: 0;
+    color: #0ea5e9;
+  }
+}
+
+.op-header__label {
+  font-size: clamp(12px, 2.6cqi, 13px);
+  font-weight: 800;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.op-text {
+  font-size: clamp(14px, 3cqi, 16px);
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  line-height: 1.6;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 ==
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  DestroyRef,
-  effect,
-  inject,
-  Injector,
-  OnInit,
-  OnDestroy,
-  signal,
-  ViewChild,
-} from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { ActivatedRoute, ParamMap, Router } from '@angular/router';
-
-import { AuthStore } from 'src/app/features/auth/store/auth.store';
-import { EmailStore } from 'src/app/core/store/email/email.store';
+/**
+ * MiscPresWellDataComponent — SMART
+ * Reads store.miscWellData() directly.
+ * No @Input needed.
+ */
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { DrillingDataStore } from '@store/drilling-data/drilling-data.store';
-import { EmailService } from '@services/email/email.service';
-import { DEFAULT_NOTIFICATION_DURATION_MS } from '@shared/components/notification/notification.service';
-import { WwellmapComponent } from '../wwell-map/wwell-map.component';
-import { formatDateForInput, getTodayAtMidnight, parseDateFromInput } from 'src/app/shared/utils/date.util';
-
-const MORNING_REPORT_NOTIFICATION_DURATION_MS = 12000;
 
 @Component({
-  selector: 'app-morningreport',
+  selector: 'app-misc-pres-well-data',
   standalone: true,
-  imports: [
-    WwellmapComponent,
-    FormsModule,
-    MatCardModule,
-    MatProgressBarModule,
-  ],
-  templateUrl: './morning-report.component.html',
-  styleUrl: './morning-report.component.scss',
+  imports: [DecimalPipe, MatIconModule],
+  templateUrl: './misc-pres-well-data.component.html',
+  styleUrl:    './misc-pres-well-data.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MorningReportComponent implements OnInit, OnDestroy {
-  @ViewChild('wwellMap') protected wwellMap!: WwellmapComponent;
-
+export class MiscPresWellDataComponent {
   protected readonly store = inject(DrillingDataStore);
-  private readonly authStore = inject(AuthStore);
-  private readonly emailStore = inject(EmailStore);
-  private readonly emailService = inject(EmailService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly injector = inject(Injector);
-  private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly morningReport = this.store.morningReport;
-  protected readonly hasError = this.store.hasError;
-  protected readonly errorMessage = this.store.errorMessage;
-  protected readonly waterWelltestResult = this.store.waterWelltestResult;
-  protected readonly statusCode = this.store.statusCode;
-  protected readonly pageMessage = computed(() => {
-    if (this.hasError() || this.store.isLoading()) {
-      return null;
+  protected rigMoveTone(value: number | null): 'positive' | 'negative' | 'neutral' {
+    if (value == null) {
+      return 'neutral';
     }
 
-    return this.morningReport().length === 0
-      ? (this.hasDateQueryParam() ? 'Data is not available for this date' : 'Data is not available for the given date')
-      : null;
-  });
-
-  protected readonly maxDateString = formatDateForInput(getTodayAtMidnight());
-  protected selectedDateString = this.maxDateString;
-
-  private readonly urlSyncReady = signal(false);
-  private readonly hasDateQueryParam = signal(false);
-
-  constructor() {
-    effect(() => {
-      if (!this.urlSyncReady()) {
-        return;
-      }
-
-      const date = formatDateForInput(this.store.selectedDate());
-
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: {
-          date,
-          epANum: null,
-        },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
-    }, { injector: this.injector });
-  }
-
-  ngOnInit(): void {
-    this.store.setNotificationDuration(MORNING_REPORT_NOTIFICATION_DURATION_MS);
-
-    this.applyDateFromQueryParams(this.route.snapshot.queryParamMap, true);
-    this.urlSyncReady.set(true);
-
-    this.route.queryParamMap
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((params) => this.applyDateFromQueryParams(params));
-
-    this.store.loadWaterWellTestResults();
-  }
-
-  ngOnDestroy(): void {
-    this.store.setNotificationDuration(DEFAULT_NOTIFICATION_DURATION_MS);
-  }
-
-  protected onDateChange(value: string): void {
-    if (!value) return;
-
-    const selectedDate = parseDateFromInput(value);
-    if (Number.isNaN(selectedDate.getTime()) || selectedDate > getTodayAtMidnight()) {
-      return;
-    }
-
-    this.selectedDateString = value;
-    this.hasDateQueryParam.set(true);
-    this.urlSyncReady.set(true);
-    this.store.setDate(value, { autoSelectFirst: true });
-  }
-
-  protected async sendEmail(): Promise<void> {
-    try {
-      const recipientEmail = this.authStore.userEmail();
-
-      if (!recipientEmail) {
-        this.showError('Unable to determine the logged-in user email.');
-        return;
-      }
-
-      const morningReport = this.morningReport();
-      const mapData = await this.wwellMap.captureMapAsBase64();
-      const waterWelltestResults = this.waterWelltestResult();
-      const emailRequest = this.emailService.buildEmailRequest(
-        morningReport,
-        mapData!,
-        recipientEmail,
-        waterWelltestResults,
-      );
-      this.emailStore.sendEmail(emailRequest);
-
-      // this.snackBar.open('Email sent successfully!', 'Dismiss', {
-      //   duration: 3000,
-      //   panelClass: ['bg-green-500', 'text-white']
-      // });
-
-    } catch {
-      this.showError('Failed to send email. Please try again.');
-    }
-  }
-
-  protected downloadReport(): void {
-    this.wwellMap.saveMapImage();
-  }
-
-  private showError(message: string): void {
-    this.store.setUiError(message);
-    console.error(message);
-  }
-
-  private normalizeDateParam(value: string | null): string {
-    if (!value) {
-      return this.maxDateString;
-    }
-
-    const parsed = parseDateFromInput(value);
-
-    if (Number.isNaN(parsed.getTime()) || parsed > getTodayAtMidnight()) {
-      return this.maxDateString;
-    }
-
-    return value;
-  }
-
-  private applyDateFromQueryParams(params: ParamMap, forceLoad = false): void {
-    const requestedDate = this.normalizeDateParam(params.get('date'));
-    const currentDate = formatDateForInput(this.store.selectedDate());
-
-    this.selectedDateString = requestedDate;
-    this.hasDateQueryParam.set(params.has('date'));
-
-    if (!forceLoad && requestedDate === currentDate) {
-      return;
-    }
-
-    this.store.loadMorningReportData(requestedDate, {
-      autoSelectFirst: true,
-    });
+    return value < 0 ? 'positive' : 'negative';
   }
 }
