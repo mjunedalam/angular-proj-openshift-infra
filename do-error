@@ -1,38 +1,96 @@
-2026-04-21 10:14:21,736 SEVERE [com.ara.eas.dai.ser.DrillingEyeService] (executor-thread-16) Failed to parse DrillingEye data: com.fasterxml.jackson.databind.JsonMappingException: Unexpected character ('}' (code 125)): expected a value
- at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 5294] (through reference chain: java.util.ArrayList[0])
-	at com.fasterxml.jackson.databind.JsonMappingException.wrapWithPath(JsonMappingException.java:401)
-	at com.fasterxml.jackson.databind.JsonMappingException.wrapWithPath(JsonMappingException.java:372)
-	at com.fasterxml.jackson.databind.deser.std.CollectionDeserializer._deserializeFromArray(CollectionDeserializer.java:381)
-	at com.fasterxml.jackson.databind.deser.std.CollectionDeserializer.deserialize(CollectionDeserializer.java:246)
-	at com.fasterxml.jackson.databind.deser.std.CollectionDeserializer.deserialize(CollectionDeserializer.java:30)
-	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:342)
-	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4917)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3860)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3843)
-	at com.aramco.easd.dailyoperations.services.DrillingEyeService.loadDrillingDataByEpANum(DrillingEyeService.java:48)
-	at com.aramco.easd.dailyoperations.services.DrillingEyeService_ClientProxy.loadDrillingDataByEpANum(Unknown Source)
-	at com.aramco.easd.dailyoperations.resources.DrillingEyeResource.getDrillingEyeDataByEPNum(DrillingEyeResource.java:27)
-	at com.aramco.easd.dailyoperations.resources.DrillingEyeResource$quarkusrestinvoker$getDrillingEyeDataByEPNum_5eb8ad5eeb68b78eb3b2de0e72b4f8ca560da4da.invoke(Unknown Source)
-	at org.jboss.resteasy.reactive.server.handlers.InvocationHandler.handle(InvocationHandler.java:29)
-	at io.quarkus.resteasy.reactive.server.runtime.QuarkusResteasyReactiveRequestContext.invokeHandler(QuarkusResteasyReactiveRequestContext.java:141)
-	at org.jboss.resteasy.reactive.common.core.AbstractResteasyReactiveContext.run(AbstractResteasyReactiveContext.java:147)
-	at io.quarkus.vertx.core.runtime.VertxCoreRecorder$15.runWith(VertxCoreRecorder.java:638)
-	at org.jboss.threads.EnhancedQueueExecutor$Task.doRunWith(EnhancedQueueExecutor.java:2675)
-	at org.jboss.threads.EnhancedQueueExecutor$Task.run(EnhancedQueueExecutor.java:2654)
-	at org.jboss.threads.EnhancedQueueExecutor.runThreadBody(EnhancedQueueExecutor.java:1627)
-	at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1594)
-	at org.jboss.threads.DelegatingRunnable.run(DelegatingRunnable.java:11)
-	at org.jboss.threads.ThreadLocalResettingRunnable.run(ThreadLocalResettingRunnable.java:11)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base/java.lang.Thread.run(Thread.java:1583)
-Caused by: com.fasterxml.jackson.core.JsonParseException: Unexpected character ('}' (code 125)): expected a value
- at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 5294]
-	at com.fasterxml.jackson.core.JsonParser._constructReadException(JsonParser.java:2660)
-	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportUnexpectedChar(ParserMinimalBase.java:741)
-	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser.nextToken(ReaderBasedJsonParser.java:740)
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer._deserializeUsingPropertyBased(BeanDeserializer.java:432)
-	at com.fasterxml.jackson.databind.deser.BeanDeserializerBase.deserializeFromObjectUsingNonDefault(BeanDeserializerBase.java:1497)
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserializeFromObject(BeanDeserializer.java:348)
-	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserialize(BeanDeserializer.java:185)
-	at com.fasterxml.jackson.databind.deser.std.CollectionDeserializer._deserializeFromArray(CollectionDeserializer.java:361)
-	... 22 more
+import { Injectable, signal } from '@angular/core';
+
+export type NotificationType = 'error' | 'info';
+export const DEFAULT_NOTIFICATION_DURATION_MS = 6000;
+
+export interface Notification {
+  id: number;
+  type: NotificationType;
+  message: string;
+}
+
+export interface NotificationOptions {
+  durationMs?: number;
+}
+
+@Injectable({ providedIn: 'root' })
+export class NotificationService {
+  readonly notifications = signal<Notification[]>([]);
+  readonly defaultDurationMs = signal(DEFAULT_NOTIFICATION_DURATION_MS);
+
+  private nextId = 0;
+
+  show(
+    message: string,
+    type: NotificationType = 'info',
+    options?: NotificationOptions,
+  ): void {
+    const id = ++this.nextId;
+    this.notifications.update(list => [...list, { id, type, message }]);
+    const durationMs = Math.max(1000, options?.durationMs ?? this.defaultDurationMs());
+    setTimeout(() => this.dismiss(id), durationMs);
+  }
+
+  setDefaultDuration(durationMs: number): void {
+    this.defaultDurationMs.set(Math.max(1000, Math.floor(durationMs)));
+  }
+
+  error(message: string, options?: NotificationOptions): void {
+    this.show(message, 'error', options);
+  }
+
+  info(message: string, options?: NotificationOptions): void {
+    this.show(message, 'info', options);
+  }
+
+  dismiss(id: number): void {
+    this.notifications.update(list => list.filter(n => n.id !== id));
+  }
+}
+==
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, catchError, map, timeout } from 'rxjs';
+import { IWellData } from '@models/well-design/well-data.model';
+import { ApiResponse } from 'src/app/shared/models/wwell/api-response.model';
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
+import { NotificationService } from '@shared/components/notification/notification.service';
+
+const CONNECTION_TIMEOUT_MS = 5000;
+
+@Injectable({ providedIn: 'root' })
+export class DrillingDataService {
+    private readonly http = inject(HttpClient);
+    private readonly extConfigService = inject(ExternalConfigService);
+    private readonly notify = inject(NotificationService);
+
+    private get apiUrl(): string {
+        try {
+            return this.extConfigService.settings.drillingEyeServiceUrl ?? '';
+        } catch {
+            return '';
+        }
+    }
+
+    private get localFallback(): Observable<IWellData[]> {
+        return this.http.get<ApiResponse<IWellData>>('/assets/data/data.json').pipe(map(res => res.data));
+    }
+
+    getDrillingData(date: string): Observable<IWellData[]> {
+        if (!this.apiUrl) {
+            this.notify.error('Connected to local data - service unavailable.');
+            return this.localFallback;
+        }
+
+        return this.http
+            .get<ApiResponse<IWellData>>(`${this.apiUrl}/drilling-eye?date=${date}`)
+            .pipe(
+                timeout(CONNECTION_TIMEOUT_MS),
+                map(res => res.data),
+                catchError(() => {
+                    this.notify.error('Connected to local data - service unavailable.');
+                    return this.localFallback;
+                }),
+            );
+    }
+}
