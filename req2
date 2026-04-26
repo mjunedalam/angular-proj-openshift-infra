@@ -22,6 +22,7 @@ import { IWellData } from '@models/well-design/well-data.model';
 import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
 import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
 import { MAX_WIDTH, STYLE, WWell } from 'src/app/shared/models/config/agwa-map.config';
+import { EsriMapService } from 'src/app/core/services/esri-map.service';
 
 const WWELL_MAP_BOOT_TASK = 'arcgis-map';
 
@@ -49,6 +50,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     private readonly drillingDataService: DrillingDataService,
     private readonly loader: LoaderService,
     private readonly extConfigService: ExternalConfigService,
+    private readonly esriMapService: EsriMapService,
   ) {
     effect(() => {
       this.wwells();
@@ -119,6 +121,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
       import('@arcgis/core/views/MapView'),
     ]);
 
+    await this.esriMapService.authenticateUserForMapAccess(); // comment this line to bypass map auth
     esriConfig.portalUrl = this.extConfigService.settings.esriUrl;
 
     const itemId = new URL(this.extConfigService.settings.webMapItemUrl).searchParams.get('id') ?? '';
