@@ -1,399 +1,139 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { UploadFileItem } from '@models/active-wwell/active-wwell-view.model';
-import { DrillingDataStore } from '@store/drilling-data/drilling-data.store';
-import { WellDocsStore } from 'src/app/features/presentation/active-wwell-docs-viewer/well-docs.store';
-import { formatDateForInput } from 'src/app/shared/utils/date.util';
-import { FilePreviewDialogComponent } from './file-preview-dialog/file-preview-dialog.component';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, throwError, timeout } from 'rxjs';
+import { WellDoc } from '@models/well-design/well-docs.model';
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
 
-@Component({
-  selector: 'app-file-upload',
-  standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, MatProgressSpinnerModule],
-  templateUrl: './file-upload.component.html',
-  styleUrl: './file-upload.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class FileUploadComponent {
-  private readonly dialog = inject(MatDialog);
-  private readonly store = inject(DrillingDataStore);
-  protected readonly docsStore = inject(WellDocsStore);
+const CONNECTION_TIMEOUT_MS = 5000;
 
-  protected readonly files = signal<UploadFileItem[]>([]);
+@Injectable({ providedIn: 'root' })
+export class PresDocsService {
+  private readonly http = inject(HttpClient);
+  private readonly extConfigService = inject(ExternalConfigService);
 
-  protected onFileChange(event: Event): void {
-    const input = event.target as HTMLInputElement | null;
-    const selected = Array.from(input?.files ?? []);
-
-    if (!selected.length) return;
-
-    this.files.update((existing) => [
-      ...existing,
-      ...selected.map((file, index) => ({
-        file,
-        id: `${file.name}-${file.size}-${existing.length + index}`,
-      })),
-    ]);
-
-    if (input) input.value = '';
-  }
-
-  protected previewFile(file: File): void {
-    this.dialog.open(FilePreviewDialogComponent, {
-      data: file,
-      width: '760px',
-      height: '560px',
-      panelClass: 'file-preview-panel',
-      autoFocus: false,
-    });
-  }
-
-  protected removeFile(id: string): void {
-    this.files.update((items) => items.filter((item) => item.id !== id));
-  }
-
-  protected submitUpload(): void {
-    const epANum = this.store.selectedEpANum();
-    const date = formatDateForInput(this.store.selectedDate());
-    if (epANum == null || !this.files().length) return;
-
-    const rawFiles = this.files().map(item => item.file);
-    this.docsStore.uploadDocs({ files: rawFiles, epANum, date });
-    this.files.set([]);
-  }
-
-  protected fileSizeLabel(size: number): string {
-    if (size < 1024) return `${size} B`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-  }
-
-  protected fileIcon(file: File): string {
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const mime = file.type.toLowerCase();
-
-    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-      return 'image';
+  private get apiUrl(): string {
+    try {
+      return this.extConfigService.settings.presDocsServiceUrl ?? '';
+    } catch {
+      return '';
     }
-    if (mime === 'application/pdf' || ext === 'pdf') return 'picture_as_pdf';
-    if (['doc', 'docx'].includes(ext)) return 'article';
-    return 'insert_drive_file';
+  }
+
+  uploadDocs(files: File[], epANum: number, date: string): Observable<void> {
+    if (!this.apiUrl) {
+      return throwError(() => new Error('Well documents service unavailable.'));
+    }
+
+    const formData = new FormData();
+    formData.append('epANum', String(epANum));
+    formData.append('date', date);
+    files.forEach(f => formData.append('files', f, f.name));
+
+    return this.http
+      .post<void>(`${this.apiUrl}/well-pres-docs/upload`, formData)
+      .pipe(timeout(CONNECTION_TIMEOUT_MS));
+  }
+
+  getDocs(epANum: number, date: string): Observable<WellDoc[]> {
+    if (!this.apiUrl) {
+      return throwError(() => new Error('Well documents service unavailable.'));
+    }
+
+    const params = new HttpParams()
+      .set('epANum', epANum)
+      .set('date', date);
+
+    return this.http
+      .get<WellDoc[]>(`${this.apiUrl}/well-pres-docs`, { params })
+      .pipe(timeout(CONNECTION_TIMEOUT_MS));
   }
 }
 ==
-<div class="upload-card">
-  <div class="upload-card__header well-header">
-    <mat-icon class="upload-card__header-icon">attach_file</mat-icon>
-    <span>File Uploader</span>
-  </div>
+import { computed, inject } from '@angular/core';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { tapResponse } from '@ngrx/operators';
+import { pipe, switchMap, tap } from 'rxjs';
 
-  <div class="upload-card__body">
-    <label class="dropzone">
-      <input type="file" multiple class="dropzone__input" (change)="onFileChange($event)"
-             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
-      <mat-icon class="dropzone__icon">cloud_upload</mat-icon>
-      <span class="dropzone__title">Click to upload or drag & drop</span>
-      <span class="dropzone__hint">PDF, DOC, DOCX, JPG, PNG</span>
-    </label>
+import { WellDoc, WellDocsState } from '@models/well-design/well-docs.model';
+import { PresDocsService } from '@services/pres-docs.service';
+import { NotificationService } from '@shared/components/notification/notification.service';
+import { DUMMY_DOCS, initialWellDocsState } from './well-docs.state';
+import { selectCategories, selectDocsByCategory, selectTotalDocCount } from './well-docs.selectors';
+import { WellDocsActions, WellDocsEvents, LoadDocsPayload, UploadDocsPayload } from './well-docs.actions';
 
-    @if (files().length) {
-      <ul class="file-list">
-        @for (item of files(); track item.id) {
-          <li class="file-row">
-            <mat-icon class="file-row__type-icon">{{ fileIcon(item.file) }}</mat-icon>
-            <div class="file-row__info">
-              <span class="file-row__name" [title]="item.file.name">{{ item.file.name }}</span>
-              <span class="file-row__size">{{ fileSizeLabel(item.file.size) }}</span>
-            </div>
-            <div class="file-row__actions">
-              <button mat-icon-button class="action-btn action-btn--view"
-                      matTooltip="Preview"
-                      (click)="previewFile(item.file)"
-                      aria-label="Preview file">
-                <mat-icon>visibility</mat-icon>
-              </button>
-              <button mat-icon-button class="action-btn action-btn--delete"
-                      matTooltip="Remove"
-                      (click)="removeFile(item.id)"
-                      aria-label="Remove file"
-                      [disabled]="docsStore.uploading()">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
-          </li>
-        }
-      </ul>
+export const WellDocsStore = signalStore(
+  { providedIn: 'root' },
 
-      <div class="upload-actions">
-        <button mat-flat-button color="primary" class="upload-submit-btn"
-                (click)="submitUpload()"
-                [disabled]="docsStore.uploading()">
-          @if (docsStore.uploading()) {
-            <mat-spinner diameter="18" class="upload-spinner"></mat-spinner>
-            <span>Uploading…</span>
-          } @else {
-            <ng-container>
-              <mat-icon>upload</mat-icon>
-              <span>Upload Documents</span>
-            </ng-container>
-          }
-        </button>
-      </div>
-    } @else {
-      <p class="empty-state">No files attached.</p>
-    }
-  </div>
-</div>
-==
-RM
-  &.cell--kpi-positive {
-    background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
-  }
+  withState<WellDocsState>(initialWellDocsState),
 
-  &.cell--kpi-negative {
-    background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
-  }
-===
-@let d = store.miscWellData();
+  withComputed(({ docs }) => ({
+    docsByCategory: computed(() => selectDocsByCategory(docs())),
+    categories:     computed(() => selectCategories(docs())),
+    totalCount:     computed(() => selectTotalDocCount(docs())),
+  })),
 
-@if (d) {
-  <div class="misc-card">
-    <div class="misc-grid">
-      <!-- ROW 1: (Well Name + Spud Date stacked) | Targeted Aquifer -->
-      <div class="stack-cell">
-        <div class="cell cell--well-name">
-          <span class="cell__label">Well Name</span>
-          <div class="cell__name">{{ d.wellName }}</div>
-          <div class="cell__sub">{{ d.rigName }}</div>
-        </div>
+  withMethods((store, svc = inject(PresDocsService), notify = inject(NotificationService)) => ({
+    loadDocs: rxMethod<LoadDocsPayload>(
+      pipe(
+        tap(() => patchState(store, { loading: true, error: null })),
+        switchMap(({ epANum, date }) =>
+          svc.getDocs(epANum, date).pipe(
+            tapResponse({
+              next: (docs: WellDoc[]) =>
+                patchState(store, {
+                  docs: docs.length > 0 ? docs : DUMMY_DOCS,
+                  loading: false,
+                }),
+              error: (err: unknown) => {
+                const msg = err instanceof Error ? err.message : 'Failed to load documents';
+                patchState(store, { docs: DUMMY_DOCS, loading: false, error: msg });
+                notify.error(msg);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
 
-        <div class="cell cell--spud">
-          <div class="spud-icon">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              stroke-width="2"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
-          </div>
-          <div>
-            <div class="cell__label-light">Spud Date</div>
-            <div class="spud-value">{{ formatSpudDate(d.spudDate) }}</div>
-          </div>
-        </div>
-      </div>
+    uploadDocs: rxMethod<UploadDocsPayload>(
+      pipe(
+        tap(() => patchState(store, { uploading: true, error: null })),
+        switchMap(({ files, epANum, date }) =>
+          svc.uploadDocs(files, epANum, date).pipe(
+            tapResponse({
+              next: () => {
+                notify.info('Documents uploaded successfully.');
+                svc.getDocs(epANum, date).subscribe({
+                  next: docs =>
+                    patchState(store, { docs: docs.length > 0 ? docs : DUMMY_DOCS, uploading: false }),
+                  error: () =>
+                    patchState(store, { uploading: false }),
+                });
+              },
+              error: (err: unknown) => {
+                const msg = err instanceof Error ? err.message : 'Upload failed';
+                patchState(store, { uploading: false, error: msg });
+                notify.error(msg);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
 
-      <div class="cell cell--aquifer">
-        <span class="cell__label cell__label--dark">Targeted<br />Aquifer</span>
-        <img
-          class="size-8"
-          src="assets/images/agwa-logo.svg"
-          alt="AGWA"
-          style="width: 20px"
-        />
-        <div class="aquifer-name">{{ d.targetedAquifer }}</div>
-      </div>
+    openViewer(doc: WellDoc): void {
+      patchState(store, { selectedDoc: doc, viewerOpen: true });
+    },
 
-      <!-- ROW 2: Current Status | Days -->
-      <div class="cell cell--status">
-        <div class="status-left">
-          <span class="cell__label cell__label--dark">Current Status</span>
-          <div class="status-value">{{ d.currentStatus }}</div>
-        </div>
-        <div class="status-gear">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
-            />
-          </svg>
-        </div>
-      </div>
+    closeViewer(): void {
+      patchState(store, { selectedDoc: null, viewerOpen: false });
+    },
 
-      <div class="cell cell--days">
-        <div class="days-cal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <path d="M16 2v4M8 2v4M3 10h18" />
-          </svg>
-        </div>
-        <div>
-          <div class="cell__label-light">Days</div>
-          <div class="days-value">
-            {{ d.daysSinceSpud | number: "1.2-2" }}/{{ d.targetDays }}
-          </div>
-        </div>
-      </div>
+    clearDocs(): void {
+      patchState(store, initialWellDocsState);
+    },
+  })),
+);
 
-      <!-- ROW 3: ROP | BI Supporting -->
-      <div class="cell cell--rop">
-        <div class="depth-labels">
-          <div class="rop-value">{{ d.rop | number }}</div>
-          <div class="cell__label-light">ROP</div>
-        </div>
-        <div class="feet-icon">
-          <mat-icon>speed</mat-icon>
-        </div>
-      </div>
-
-      <div class="cell cell--bi">
-        <div class="bi-num">BI{{ d.biNum }}</div>
-        <div class="bi-label">Supporting</div>
-        <div class="bi-well">Well {{ d.supportingWell }}</div>
-      </div>
-
-      <!-- ROW 4: Feet drilled | Previous Well -->
-      <div class="cell cell--feet">
-        <div class="feet-left">
-          <div class="feet-value">{{ d.feetDrilledToday | number }}</div>
-          <div class="cell__label-light">Feet</div>
-        </div>
-        <div class="feet-icon">
-          <svg
-            viewBox="0 0 40 40"
-            fill="none"
-            stroke="white"
-            stroke-width="1.8"
-          >
-            <path
-              d="M20 5v15M13 13l7 7 7-7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M5 25c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
-              opacity="0.6"
-            />
-            <path
-              d="M5 32c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
-              opacity="0.4"
-            />
-          </svg>
-        </div>
-      </div>
-
-      <div class="cell cell--prev">
-        <div class="cell__label-light">Previous Well</div>
-        <div class="well-name-val">{{ d.previousWell }}</div>
-      </div>
-
-      <!-- ROW 5: Current Depth + Rig Move | Next Well -->
-      <div class="stack-cell">
-        <div class="cell cell--depth">
-          <div class="depth-labels">
-            <div class="cell__label-light">Current</div>
-            <div class="cell__label-light">Depth</div>
-          </div>
-          <div class="depth-value">{{ d.currentDepth | number }}</div>
-        </div>
-
-        <div class="cell cell--next-kpi">
-          <div class="next-kpi__icon">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              stroke-width="2"
-            >
-              <path d="M7 7h10" stroke-linecap="round" />
-              <path d="M7 12h6" stroke-linecap="round" />
-              <path
-                d="M17 12l3 3-3 3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path d="M17 17H7" stroke-linecap="round" />
-            </svg>
-          </div>
-
-          <div class="next-kpi__content">
-            <div class="cell__label-light">Rig Move</div>
-            <div class="next-kpi__stat">
-              <span class="next-kpi__stat-label">Actual / KPI</span>
-              <span class="next-kpi__stat-value">
-                <span
-                  [class.next-kpi__days--positive]="rigMoveTone(d.rigMoveDays) === 'positive'"
-                  [class.next-kpi__days--negative]="rigMoveTone(d.rigMoveDays) === 'negative'"
-                >{{ d.actualRm | number: "1.0-2" }}</span>/{{ d.kpiRm | number: "1.0-2" }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="cell cell--next">
-        <div class="cell__label-light">Next Well</div>
-        <div class="well-name-val">{{ d.nextWell }}</div>
-      </div>
-
-      <!-- ROW 6: Operation Summary (full width) -->
-      <div class="cell cell--op-summary">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-            />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-            <polyline points="10 9 9 9 8 9" />
-          </svg>
-          <span class="op-header__label">Operation Summary</span>
-        </div>
-        <div class="op-text">{{ d.operationSummary }}</div>
-      </div>
-
-      <!-- ROW 7: Next 24 Hr Operation (full width) -->
-      <div class="cell cell--next24">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span class="op-header__label">Next 24 Hr Operation</span>
-        </div>
-        <div class="op-text">{{ d.next24HrOperation }}</div>
-      </div>
-      <!-- ROW 7: Drilling Summary Remark -->
-      <div class="cell cell--next24">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span class="op-header__label">Next 24 Hr Operation</span>
-        </div>
-        <div class="op-text">{{ d.drlgSmryRmk }}</div>
-      </div>
-    </div>
-  </div>
-}
+export { WellDocsActions, WellDocsEvents };
