@@ -1,1 +1,212 @@
 https://eccenterprisegis.enp.aramco.com.sa/arcgis/home/item.html?id=c177620bd7744a22b6e7e0d98c33d18a
+import { isPlatformBrowser } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  ElementRef,
+  Inject,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+  ViewChild,
+} from '@angular/core';
+import Graphic from '@arcgis/core/Graphic';
+import Point from '@arcgis/core/geometry/Point';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import { MatCardModule } from '@angular/material/card';
+import { Subject, takeUntil } from 'rxjs';
+import { DrillingDataService } from 'src/app/core/services/drilling-data.service';
+import { IWellData } from '@models/well-design/well-data.model';
+import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
+import { MAX_WIDTH, STYLE, WWell } from 'src/app/shared/models/config/agwa-map.config';
+
+const WWELL_MAP_BOOT_TASK = 'arcgis-map';
+
+@Component({
+  selector: 'app-wwellmap',
+  standalone: true,
+  imports: [MatCardModule],
+  templateUrl: './wwell-map.component.html',
+  styleUrl: './wwell-map.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class WwellmapComponent implements OnInit, OnDestroy {
+  @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
+  private mapView?: __esri.MapView;
+
+  protected readonly wwells = signal<WWell[]>([]);
+  protected readonly errorMessage = signal<string | null>(null);
+  protected readonly mapReady = signal<boolean>(false);
+
+  private readonly destroy$ = new Subject<void>();
+  private bootTaskRegistered = false;
+
+  constructor(
+    @Inject(PLATFORM_ID) private readonly platformId: object,
+    private readonly drillingDataService: DrillingDataService,
+    private readonly loader: LoaderService,
+    private readonly extConfigService: ExternalConfigService,
+  ) {
+    effect(() => {
+      this.wwells();
+      if (!this.mapReady()) return;
+      const layer = this.mapView?.map?.layers.find((l) => l.id === 'well-coords') as GraphicsLayer | undefined;
+      if (!layer) return;
+      this.drawWellCoordinates(layer).catch((e) => console.error('drawWellCoordinates failed', e));
+    });
+  }
+
+  ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.registerBootTask();
+    this.fetchWellData();
+    this.initMap().catch((e) => {
+      console.error('initMap error', e);
+      this.errorMessage.set('Map could not be initialized');
+      this.resolveBootTask();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.mapView?.destroy();
+    this.resolveBootTask();
+  }
+
+  private fetchWellData(): void {
+    this.drillingDataService
+      .getDrillingData('')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data: IWellData[]) => this.buildWellSignal(data),
+        error: (err: unknown) => {
+          console.error('Failed to fetch well data', err);
+          this.errorMessage.set('Unable to load well data.');
+        },
+      });
+  }
+
+  private buildWellSignal(data: IWellData[]): void {
+    const wells: WWell[] = data
+      .map((r) => {
+        const wm = r.WELL_MASTER?.[0];
+        const ra = r.RIG_ACTIVITY?.[0];
+        return {
+          wwellId: wm?.well ?? ra?.wellName ?? 'N/A',
+          lat: wm?.lat ?? 0,
+          lng: wm?.lon ?? 0,
+          location: ra?.welltype ?? 'N/A',
+          label: ra?.biNum ?? 'N/A',
+        };
+      })
+      .filter((w) => w.lat !== 0 && w.lng !== 0);
+
+    this.wwells.set(wells);
+  }
+
+  private async initMap(): Promise<void> {
+    const [
+      { default: esriConfig },
+      { default: WebMap },
+      { default: MapViewMod },
+    ] = await Promise.all([
+      import('@arcgis/core/config'),
+      import('@arcgis/core/WebMap'),
+      import('@arcgis/core/views/MapView'),
+    ]);
+
+    esriConfig.portalUrl = this.extConfigService.settings.esriUrl;
+
+    const itemId = new URL(this.extConfigService.settings.webMapItemUrl).searchParams.get('id') ?? '';
+    const webMap = new WebMap({ portalItem: { id: itemId } });
+
+    this.mapView = new MapViewMod({
+      container: this.mapViewEl?.nativeElement,
+      map: webMap,
+    });
+
+    await this.mapView.when();
+
+    webMap.add(new GraphicsLayer({ id: 'well-coords' }));
+
+    this.mapReady.set(true);
+    this.resolveBootTask();
+  }
+
+  private async drawWellCoordinates(layer: GraphicsLayer): Promise<void> {
+    layer.removeAll();
+    const { default: PictureMarkerSymbol } = await import('@arcgis/core/symbols/PictureMarkerSymbol');
+
+    const graphics = this.wwells().map(
+      (well) =>
+        new Graphic({
+          geometry: new Point({ latitude: well.lat, longitude: well.lng }),
+          symbol: new PictureMarkerSymbol({
+            url: STYLE.markerIcon,
+            width: STYLE.markerSize,
+            height: STYLE.markerSize,
+          }),
+          attributes: { wwellId: well.wwellId, location: well.location },
+        }),
+    );
+
+    layer.addMany(graphics);
+  }
+
+  async captureMapAsBase64(): Promise<string | undefined> {
+    return this.getScreenshotBase64();
+  }
+
+  async saveMapImage(): Promise<void> {
+    const base64 = await this.captureMapAsBase64();
+    this.downloadBase64(base64, 'water-wells-map.png');
+  }
+
+  private async getScreenshotBase64(): Promise<string> {
+    const screenshot = await this.mapView!.takeScreenshot({ format: 'png', quality: 1 });
+    const [, rawBase64] = screenshot.dataUrl.split(',');
+    if (!rawBase64) throw new Error('Failed to extract Base-64 payload');
+
+    const img = new Image();
+    img.src = `data:image/png;base64,${rawBase64}`;
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+    });
+
+    const scale = Math.min(1, MAX_WIDTH / img.width);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    await new Promise((r) => setTimeout(r, 300));
+
+    const [, resizedBase64] = canvas.toDataURL('image/jpeg', 1).split(',');
+    return resizedBase64;
+  }
+
+  private downloadBase64(base64: string | undefined, fileName: string): void {
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${base64}`;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  private registerBootTask(): void {
+    if (this.bootTaskRegistered) return;
+    this.bootTaskRegistered = true;
+    this.loader.registerBootTask(WWELL_MAP_BOOT_TASK);
+  }
+
+  private resolveBootTask(): void {
+    if (!this.bootTaskRegistered) return;
+    this.bootTaskRegistered = false;
+    this.loader.resolveBootTask(WWELL_MAP_BOOT_TASK);
+  }
+}
