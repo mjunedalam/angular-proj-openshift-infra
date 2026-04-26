@@ -1,1 +1,46 @@
 
+import { inject, Injectable } from '@angular/core';
+import esriConfig from "@arcgis/core/config.js";
+import esriId from "@arcgis/core/identity/IdentityManager";
+import OAuthInfo from "@arcgis/core/identity/OAuthInfo";
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
+
+@Injectable({
+    providedIn: 'root'
+})
+export class EsriMapService {
+
+    private extAppConfigService = inject(ExternalConfigService);
+
+    async authenticateUserForMapAccess(popup = false) {
+
+        const portalUrl = `${this.extAppConfigService.settings.esriServiceUrl}`
+        esriConfig.portalUrl = portalUrl;
+        const info = new OAuthInfo({
+            appId: `${this.extAppConfigService.settings.appId}`,
+            portalUrl,
+            popup
+        });
+
+        esriId.registerOAuthInfos([info]);
+        const url = `${portalUrl}/sharing`;
+
+        try {
+            const credentials = await esriId.checkSignInStatus(url);
+            return credentials;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+            try {
+                const credential = await esriId.getCredential(url);
+                return credential;
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (popupError) {
+                return Promise.reject(new Error("Popup authentication failed or was canceled."));
+            }
+        }
+    }
+
+    destroyEsriMapCredentials() {
+        esriId.destroyCredentials();
+    }
+}
