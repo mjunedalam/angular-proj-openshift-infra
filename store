@@ -1,846 +1,563 @@
-
-import { computed, inject } from '@angular/core';
+import { DrillingDataStore } from '@core/store/drilling-data/drilling-data.store';
+import { isPlatformBrowser } from '@angular/common';
 import {
-    patchState,
-    signalStore,
-    withComputed,
-    withHooks,
-    withMethods,
-    withState,
-} from '@ngrx/signals';
-import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { tapResponse } from '@ngrx/operators';
-import { delay, map, pipe, switchMap, tap } from 'rxjs';
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  ElementRef,
 
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-import { WellboreDiagramData } from '../../../models/well-design/wellbore-diagram.model';
-import { WellLogsIndicators } from '../../../models/well-design/well-logs-indicators.model';
-import { MorningReport } from '../../../models/morining-report.model';
-import { WellName } from '../../../models/well-design/well-name.model';
-import { WwellDataService } from '../../../services/wwell-data.service';
-import { MoriningReportService } from '../../../services/morining-report.service';
+  inject,
 
-import { WellActions, WellEvents } from './well.actions';
+  Inject,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+  ViewChild,
+} from '@angular/core';
+import Graphic from '@arcgis/core/Graphic';
+import { watch as reactiveWatch, watch } from '@arcgis/core/core/reactiveUtils';
+import Point from '@arcgis/core/geometry/Point';
+import Polyline from '@arcgis/core/geometry/Polyline';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import MapImageLayer from '@arcgis/core/layers/MapImageLayer';
+import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
+import TextSymbol from '@arcgis/core/symbols/TextSymbol';
+import { MatCardModule } from '@angular/material/card';
+import { Subject, takeUntil } from 'rxjs';
+import { MorningReport } from 'src/app/core/models/morning-report/morning-report.model';
+import { MorningReportService } from 'src/app/core/services/morning-report.service';
+import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
 import {
-    PAGE_SIZE,
-    uniqueByWellName,
-    selectTotalPages,
-    selectPagedWellNames,
-    selectHasPrevPage,
-    selectHasNextPage,
-    selectTotalDepth,
-    selectDiagramData,
-    selectMiscWellData,
-    selectPickedFormations,
-    selectOffsetWells,
-    selectWellLogsIndicators,
-    selectWellTestResults,
-} from './well.selectors';
-import { formatDateForInput } from '../../../utils/date.util';
+  bottomPolygonTemplate,
+  lineSymbol,
+  locationTextSymbol,
+  MAP_BOUNDS,
+  MAP_CONFIG,
+  MAX_WIDTH,
+  STYLE,
+  tilesMap,
+  topPolygonTemplate,
+  WWell,
+  wwellIdTextSymbol,
+} from 'src/app/shared/models/config/agwa-map.config';
+import { createLegendLayer, findNonOverlappingPosition, translatePolygon } from 'src/app/shared/utils/wwell-placement-utils';
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
+import WebMap from '@arcgis/core/WebMap';
+import esriConfig from "@arcgis/core/config.js";
+import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
+import MapView from '@arcgis/core/views/MapView';
+import { EsriMapService } from '@core/services/esri-map.service';
 
-const MIN_LOADER_DELAY = 800;
+const WWELL_MAP_BOOT_TASK = 'arcgis-map';
+@Component({
+  selector: 'app-active-wwell-map',
+  standalone: true,
+  imports: [MatCardModule],
+  templateUrl: './active-wwell-map.component.html',
+  styleUrl: './active-wwell-map.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class ActiveWwellMapComponent implements OnInit, OnDestroy {
+  protected readonly store = inject(DrillingDataStore);
 
-const EXPECTED_KEYS: (keyof IWellData)[] = [
-    'WELL_MASTER', 'RIG_ACTIVITY', 'DRLG_OP_STATUS', 'DRLG_FD_TDAY',
-    'DRLG_FM_TOPS', 'NEW_TARGET_DAYS', 'NEXT_2_WELL_ACTIVITY', 'EXAD_RCD_PREWAP',
-    'EXAD_GWD_IR_CASING', 'EXAD_GWD_IR_TOPS', 'EXAD_GWD_IR_HYDROGEOLOGY',
-    'EXAD_GWD_IR_WATER', 'EXAD_GWD_IR_HEADER', 'WATER_WELL_TEST_OUTCOME',
-];
 
-function logMissingKeys(data: IWellData, epANum: number): void {
-    const missing = EXPECTED_KEYS.filter(k => data[k] == null);
-    const empty = EXPECTED_KEYS.filter(k => Array.isArray(data[k]) && (data[k] as unknown[]).length === 0);
-    if (missing.length) console.warn(`[${WellEvents.wellDetailsLoaded}] epANum=${epANum} missing:`, missing);
-    if (empty.length) console.info(`[${WellEvents.wellDetailsLoaded}] epANum=${epANum} empty:`, empty);
-    if (!missing.length && !empty.length) console.log(`[${WellEvents.wellDetailsLoaded}] epANum=${epANum} ✓`);
-}
+  @ViewChild('presMapViewNode', { static: true }) private mapViewEl?: ElementRef;
+  private mapView?: __esri.MapView;
 
-export interface MiscWellData {
-    readonly wellName: string;
-    readonly targetDesc: string;
-    readonly targetedAquifer: string;
-    readonly currentStatus: string;
-    readonly daysSinceSpud: number;
-    readonly targetDays: number;
-    readonly biNum: string;
-    readonly supportingWell: string;
-    readonly feetDrilledToday: number;
-    readonly previousWell: string;
-    readonly currentDepth: number;
-    readonly nextWell: string;
-    readonly footage: number;
-    readonly operationSummary: string;
-    readonly next24HrOperation: string;
-}
+  protected readonly wwells = signal<WWell[]>([]);
+  protected readonly errorMessage = signal<string | null>(null);
+  protected readonly mapReady = signal<boolean>(false);
+  private readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
 
-export interface PickedFormationTops {
-    readonly formation: string;
-    readonly depth: number;
-    readonly remarks: string;
-}
+  private placedBubbles: { x: number; y: number; radius: number }[] = [];
+  private readonly destroy$ = new Subject<void>();
+  private stationaryWatchHandle?: __esri.WatchHandle;
+  private legendLayer: GraphicsLayer | undefined;
+  private bootTaskRegistered = false;
 
-export interface OffsetWaterWells {
-    readonly wellName: string;
-    readonly aquifer: string;
-    readonly tds: number;
-    readonly rpm: number;
-    readonly h2s: number;
-    readonly distance: number;
-    readonly productivity: number;
-    readonly rate: number;
-}
+  constructor(
+    @Inject(PLATFORM_ID) private readonly platformId: object,
+    private readonly morningService: MorningReportService,
+    private readonly extConfigService: ExternalConfigService,
+    private readonly loader: LoaderService,
+  ) {
+    effect(() => {
+      this.wwells();          // reactive read
+      if (!this.mapReady()) return;        // map not ready yet
+      const wwellLayer = this.getLayerById('WWell-icons') as GraphicsLayer;
+      if (!wwellLayer) return;
+      this.drawWWellIcons(wwellLayer).catch(e =>
+        console.error('drawWWellIcons failed', e)
+      );
+    });
+    effect(() => {
+      this.wwells();                 // creates a dependency on the data
+      const bubbleLayer = this.bubbleLayerReady(); // creates a dependency on the layer
+      if (!bubbleLayer) return;                    // layer not ready yet
+      // Synchronous layout – no await inside the effect
+      this.layoutBubbles(bubbleLayer);
+    });
+  }
 
-export interface WellTestResult {
-    readonly wellName: string;
-    readonly testType: string;
-    readonly aquifer: string;
-    readonly rpm: number;
-    readonly flowRate: number;
-    readonly temperature: number;
-    readonly tds: number;
-    readonly productivity: number;
-    readonly h2s: number;
-}
+  ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.registerBootTask();
+    this.fetchMorningReports();
+  }
 
-interface WellState {
-    readonly wellNames: WellName[];
-    readonly selectedEpANum: number | null;
-    readonly selectedDate: Date;
-    readonly wellDetails: IWellData | null;
-    readonly loading: boolean;
-    readonly error: string | null;
-    readonly animationTrigger: number;
-    readonly wellNamesPage: number;
-}
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.stationaryWatchHandle?.remove();
+    this.mapView?.destroy();
+    this.resolveBootTask();
+  }
 
-const initialState: WellState = {
-    wellNames: [],
-    selectedEpANum: null,
-    selectedDate: new Date(),
-    wellDetails: null,
-    loading: false,
-    error: null,
-    animationTrigger: 0,
-    wellNamesPage: 0,
-};
+  private fetchMorningReports(): void {
+    this.errorMessage.set(null);
+    this.morningService
+      .getMorningReportForKSA()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data: MorningReport[]) => {
+          this.buildWWellSignal(data);
+          this.initMap().catch((e) => {
+            console.error('initMap error', e);
+            this.resolveBootTask();
+          });
+        },
+        error: (err) => {
+          console.error('Failed to fetch morning report', err);
+          this.errorMessage.set('Unable to load well data.');
+          this.resolveBootTask();
+        },
+      });
+  }
 
-export const WellStore = signalStore(
-    { providedIn: 'root' },
-    withState<WellState>(initialState),
+  private buildWWellSignal(data: MorningReport[]): void {
+    const safeNum = (s?: string | null): number => {
+      const n = Number.parseFloat(s ?? '');
+      return Number.isNaN(n) ? 0 : n;
+    };
 
-    withComputed(({ wellDetails, wellNames, wellNamesPage }) => {
-        const unique = computed(() => uniqueByWellName(wellNames()));
-        return {
-            uniqueWellNames: unique,
-            totalPages: computed(() => selectTotalPages(unique())),
-            pagedWellNames: computed(() => selectPagedWellNames(unique(), wellNamesPage())),
-            hasPrevPage: computed(() => selectHasPrevPage(wellNamesPage())),
-            hasNextPage: computed(() => selectHasNextPage(unique(), wellNamesPage())),
-            isLoaded: computed(() => wellDetails() !== null),
-            totalDepth: computed(() => selectTotalDepth(wellDetails())),
-            diagramData: computed((): WellboreDiagramData | null => selectDiagramData(wellDetails())),
-            miscWellData: computed((): MiscWellData | null => selectMiscWellData(wellDetails())),
-            pickedFormations: computed((): PickedFormationTops[] => selectPickedFormations(wellDetails())),
-            offsetWells: computed((): OffsetWaterWells[] => selectOffsetWells(wellDetails())),
-            wellsLogsIndicators: computed((): WellLogsIndicators | null => selectWellLogsIndicators(wellDetails())),
-            wellTestResults: computed((): WellTestResult[] => selectWellTestResults(wellDetails())),
-        };
-    }),
+    const wells: WWell[] = data
+      .map((r) => ({
+        wwellId: r.wGnrName ?? 'N/A',
+        lat: safeNum(r.racEstDdLatCord),
+        lng: safeNum(r.racEstDdLonCord),
+        location: r.trgtRsvrCd ?? 'N/A',
+        label: r.biNum ?? 'N/A',
+      }))
+      .filter((w) => w.lat !== 0 && w.lng !== 0);
 
-    withMethods((
-        store,
-        wellDataService = inject(WwellDataService),
-        morningReportService = inject(MoriningReportService),
-    ) => {
-        function firstOnPage(pageIdx: number): WellName | undefined {
-            return store.uniqueWellNames()[pageIdx * PAGE_SIZE];
+    this.wwells.set(wells);
+  }
+
+  private getLayerById(id: string): GraphicsLayer | undefined {
+    return this.mapView?.map?.layers.find((l) => l.id === id) as
+      | GraphicsLayer
+      | undefined;
+  }
+
+  private async initMap(): Promise<void> {
+    let MapMod: typeof __esri.Map;
+    let MapViewMod: typeof __esri.MapView;
+    let MapImageLayerMod: typeof MapImageLayer;
+
+    try {
+      const [{ default: MapTmp },
+        { default: MapViewTmp },
+        { default: MapImageLayerTmp }
+      ] = await Promise.all([
+        import('@arcgis/core/Map'),
+        import('@arcgis/core/views/MapView'),
+        import('@arcgis/core/layers/MapImageLayer'),
+      ]);
+      MapMod = MapTmp;
+      MapViewMod = MapViewTmp;
+      MapImageLayerMod = MapImageLayerTmp;
+
+    } catch (e) {
+      console.error("Failed to load core ARcGIS module..", e);
+      this.errorMessage.set('Map could not be initialized');
+      this.resolveBootTask();
+      return;
+    }
+
+    await this.esriAuth.authenticateUserForMapAccess();
+    const samplesMapLayer = new WebMap({
+      portalItem: {
+        id: "c177620bd7744a22b6e7e0d98c33d18a"
+      }
+    });
+
+
+    this.mapView = new MapView({
+      container: this.mapViewEl?.nativeElement,
+      map: samplesMapLayer,
+      center: MAP_CONFIG.center,
+      
+
+      // zoom: MAP_CONFIG.minZoom,
+      // constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom }
+
+    });
+
+    // const map = new MapMod({ basemap: 'topo-vector' });
+    // this.mapView = new MapViewMod({
+    //   container: this.mapViewEl?.nativeElement,
+    //   map,
+    //   center: MAP_CONFIG.center,
+    //   zoom: MAP_CONFIG.minZoom,
+    //   constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom }
+    // });
+
+    const mapServerUrl = `${this.extConfigService.settings.mapServerUrl}`
+
+    await this.mapView.when();
+    const view = this.mapView;
+    if (!view) {
+      this.resolveBootTask();
+      return;
+    }
+    const viewMap = view.map;
+    if (!viewMap) {
+      this.resolveBootTask();
+      return;
+    }
+
+    const explorerLayer = new MapImageLayerMod({
+      url: mapServerUrl,
+      sublayers: [
+        {
+          id: 6, // “Oil Wells”
+          visible: true,
+        },
+        {
+          id: 5, // “Gas Pipelines”
+          visible: true,
+        },
+      ],
+      opacity: 0.8,
+      title: 'Explorer (Oil & Gas)',
+    });
+
+    this.legendLayer = createLegendLayer(view);
+    viewMap.add(this.legendLayer);
+    const wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
+    const bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
+    samplesMapLayer.addMany([explorerLayer, wwellLayer, bubbleLayer]);
+    this.mapReady.set(true);
+    this.bubbleLayerReady.set(bubbleLayer);
+    await this.waitForInitialMapRender();
+    this.resolveBootTask();
+
+    this.stationaryWatchHandle = reactiveWatch(
+      () => this.mapView?.stationary,
+      (isStationary) => {
+        if (isStationary) {
+          const layer = this.bubbleLayerReady();
+          if (layer) this.layoutBubbles(layer);
         }
-
-        const selectWell = rxMethod<{ epANum: number; date?: Date }>(
-            pipe(
-                tap(({ epANum, date }) => {
-                    patchState(store, {
-                        selectedEpANum: epANum,
-                        selectedDate: date || new Date(),
-                        loading: true,
-                        error: null,
-                    });
-                }),
-                switchMap(({ epANum, date }) =>
-                    wellDataService.getWellDetails(epANum, date).pipe(
-                        tapResponse({
-                            next: (wellDetails) => {
-                                logMissingKeys(wellDetails, epANum);
-                                patchState(store, {
-                                    wellDetails,
-                                    loading: false,
-                                    animationTrigger: store.animationTrigger() + 1,
-                                });
-                            },
-                            error: (err: Error) => {
-                                patchState(store, {
-                                    error: err.message ?? 'Failed to load well details',
-                                    loading: false,
-                                });
-                            },
-                        }),
-                    ),
-                ),
-            ),
-        );
-
-        const loadWellNames = rxMethod<void>(
-            pipe(
-                tap(() => {
-                    patchState(store, { loading: true, error: null });
-                }),
-                switchMap(() => {
-                    const mrDate = store.selectedDate().toISOString().slice(0, 10)
-
-                    return morningReportService.getMorningReportByDate(mrDate).pipe(
-                        delay(MIN_LOADER_DELAY),
-                        map((reports: MorningReport[]) =>
-                            reports.map(r => ({ wellName: r.wGnrName, epANum: Number(r.epANum) }))
-                        ),
-                        tapResponse({
-                            next: (wellNames) => {
-                                patchState(store, { wellNames, loading: false });
-                                if (wellNames.length > 0 && !store.selectedEpANum()) {
-                                    selectWell({ epANum: wellNames[0].epANum });
-
-                                }
-                            },
-                            error: (err: Error) => {
-                                patchState(store, {
-                                    error: err.message ?? 'Failed to load well names',
-                                    loading: false,
-                                });
-                            },
-                        }),
-                    )
-                },
-                ),
-            ),
-        );
-
-        return {
-            selectWell,
-            loadWellNames,
-            setSelectedDate(date: Date): void {
-                patchState(store, { selectedDate: date });
-                // Reload well data for the newly selected date if a well is selected
-                if (store.selectedEpANum() !== null) {
-                    selectWell({ epANum: store.selectedEpANum()!, date });
-                }
-            },
-            getFormattedDate(): string {
-                return formatDateForInput(store.selectedDate());
-            },
-            nextPage(): void {
-                const idx = store.wellNamesPage() + 1;
-                patchState(store, { wellNamesPage: idx });
-                const first = firstOnPage(idx);
-                if (first) selectWell({ epANum: first.epANum, date: store.selectedDate() });
-
-            },
-            prevPage(): void {
-                const idx = Math.max(0, store.wellNamesPage() - 1);
-                patchState(store, { wellNamesPage: idx });
-                const first = firstOnPage(idx);
-                if (first) selectWell({ epANum: first.epANum, date: store.selectedDate() });
-            },
-        };
-    }),
-
-    withHooks({
-        onInit() { /* bootstrap via component */ },
-        onDestroy() { /* cleanup if needed */ },
-    }),
-);
-
-export { WellActions, WellEvents };
+      }
+    );
+  }
 
 
-=== Selectors ====
+  private esriAuth = inject(EsriMapService)
+  private async initMap2(): Promise<void> {
 
+    //   const portalUrl = `${this.extConfigService.settings.esriServiceUrl}`
+    //   const samplesMapLayer = new WebMap({
+    //     portalItem: {
+    //       id: "c177620bd7744a22b6e7e0d98c33d18a"
+    //     }
+    //   });
 
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-import { IFormationTops } from '../../../shared/models/wwell/formation-tops.model';
-import { IHeaderIR } from '../../../shared/models/wwell/header-ir.model';
-import { WellLogsIndicators } from '../../../models/well-design/well-logs-indicators.model';
-import { WellboreDiagramData } from '../../../models/well-design/wellbore-diagram.model';
-import { WellName } from '../../../models/well-design/well-name.model';
-import { sortCasingsByDepthDesc } from '../../../utils/wellbore-math.util';
-
-import { MiscWellData, OffsetWaterWells, PickedFormationTops, WellTestResult } from './well.store';
-
-
-
-export const PAGE_SIZE = 5;
-export const FALLBACK_STR = 'N/A';
-
-export function uniqueByWellName(names: WellName[]): WellName[] {
-    const seen = new Set<string>();
-    return names.filter(w => {
-        if (seen.has(w.wellName)) return false;
-        seen.add(w.wellName);
-        return true;
+    await this.esriAuth.authenticateUserForMapAccess();
+    const samplesMapLayer = new WebMap({
+      portalItem: {
+        id: "c177620bd7744a22b6e7e0d98c33d18a"
+      }
     });
-}
 
-export function selectTotalPages(unique: WellName[]): number {
-    return Math.ceil(unique.length / PAGE_SIZE);
-}
 
-export function selectPagedWellNames(unique: WellName[], page: number): WellName[] {
-    return unique.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-}
+    this.mapView = new MapView({
+      container: this.mapViewEl?.nativeElement,
+      map: samplesMapLayer
 
-export function selectHasPrevPage(page: number): boolean {
-    return page > 0;
-}
-
-export function selectHasNextPage(unique: WellName[], page: number): boolean {
-    return (page + 1) * PAGE_SIZE < unique.length;
-}
-
-// ─── Well data selectors ───────────────────────────────────────────────────────
-
-export function selectTotalDepth(d: IWellData | null): number {
-    return d?.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0;
-}
-
-export function selectDiagramData(d: IWellData | null): WellboreDiagramData | null {
-    if (!d) return null;
-    return {
-        wellName: d.WELL_MASTER?.[0]?.well ?? '',
-        totalDepth: d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0,
-        casings: sortCasingsByDepthDesc(d.EXAD_GWD_IR_CASING ?? []),
-        geologicTops: [...(d.EXAD_GWD_IR_TOPS ?? [])].sort((a, b) => a.planTvdDepth - b.planTvdDepth),
-        hydrogeology: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0] ?? null,
-        prewap: d.EXAD_RCD_PREWAP?.[0] ?? null,
-        rigActivity: d.RIG_ACTIVITY?.[0] ?? null,
-        currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
-        mudCirculation: (d.WELL_MUD_CIRC ?? []).map(m => ({
-            depth: Number(m.W_PRSNT_DPTH),
-            pct: Number(m.W_MUD_CIRC_PC),
-        })),
-    };
-}
-
-export function selectMiscWellData(d: IWellData | null): MiscWellData | null {
-    if (!d) return null;
-    const rig = d.RIG_ACTIVITY?.[0];
-    const status = d.DRLG_OP_STATUS?.[0];
-    return {
-        wellName: rig?.wellName ?? FALLBACK_STR,
-        targetDesc: rig?.drlgPlanWellDesc ?? FALLBACK_STR,
-        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier ?? FALLBACK_STR,
-        currentStatus: FALLBACK_STR,
-        daysSinceSpud: status?.spuddays ?? 0,
-        targetDays: d.NEW_TARGET_DAYS?.[0]?.targetDays ?? rig?.wDrlgTrgtDay ?? 0,
-        biNum: rig?.biNum ?? FALLBACK_STR,
-        supportingWell: rig?.waterWell ?? FALLBACK_STR,
-        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? status?.footage ?? 0,
-        previousWell: FALLBACK_STR,
-        currentDepth: status?.wPrsntDpth ?? 0,
-        nextWell: d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity ?? FALLBACK_STR,
-        footage: status?.wDpthChgDis ?? 0,
-        operationSummary: d.DRLG_OP_SMRY?.[0].wOpRmk ?? FALLBACK_STR,
-        next24HrOperation: status?.nxt24HrPlanRmk ?? FALLBACK_STR
-    };
-}
-
-export function selectPickedFormations(d: IWellData | null): PickedFormationTops[] {
-    return (d?.DRLG_FM_TOPS ?? []).map((fm: IFormationTops) => ({
-        formation: fm.stLongCd ?? '',
-        depth: fm.wStDmrkDpth ?? 0,
-        remarks: fm.wStDmrkRmk ?? '',
-    }));
-}
-
-export function selectOffsetWells(d: IWellData | null): OffsetWaterWells[] {
-    if (!d) return [];
-    return (d.EXAD_GWD_IR_WATER ?? []).map(ow => {
-        const test = (d.WATER_WELL_TEST_OUTCOME ?? []).find(t => t.wellName === ow.offsetWaterWell);
-        return {
-            wellName: ow.offsetWaterWell,
-            aquifer: ow.aquifer || test?.aquifer || 'WASI',
-            tds: test?.tds ?? 0,
-            rpm: ow.rpm ?? 0,
-            h2s: ow.h2s ?? 0, // ✅ fixed missing fallback
-            distance: ow.distance ?? 0,
-            productivity: ow.specificCapacity ?? 0,
-            rate: test?.flowRate ?? ow.flowRate ?? 0,
-        };
     });
-}
-
-export function selectWellLogsIndicators(d: IWellData | null): WellLogsIndicators | null {
-    if (!d) return null;
-    const h: IHeaderIR | undefined = d.EXAD_GWD_IR_HEADER?.[0];
-    return {
-        rcc: !!(h?.dtRemarks?.trim()),
-        mudLog: !!(h?.mudRemarks?.trim()),
-        logging: !!(h?.loggingRemarks?.trim()),
-    };
-}
-
-export function selectWellTestResults(d: IWellData | null): WellTestResult[] {
-    if (!d) return [];
-    return (d.WATER_WELL_TEST_OUTCOME ?? []).map(t => ({
-        wellName: t.wellName ?? '',
-        testType: t.testType ?? FALLBACK_STR,
-        aquifer: t.aquifer ?? FALLBACK_STR,
-        rpm: t.rpm ?? 0,
-        flowRate: t.flowRate ?? 0,
-        temperature: t.temperature ?? 0,
-        tds: t.tds ?? 0,
-        productivity: t.producitivty ?? 0, // note: upstream typo preserved intentionally
-        h2s: t.h2s ?? 0,
-    }));
-}
 
 
-== actions ===
-
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-import { WellName } from '../../../models/well-design/well-name.model';
-
-// ─── Commands (triggered by UI / lifecycle) ───────────────────────────────────
-export const WellActions = {
-    loadWellNames: '[Well] Load Well Names',
-    selectWell: '[Well] Select Well',
-    nextPage: '[Well] Next Page',
-    prevPage: '[Well] Prev Page',
-} as const;
-
-// ─── Events (outcomes after async operations) ────────────────────────────────
-export const WellEvents = {
-    wellNamesLoaded: '[Well] Well Names Loaded',
-    wellNamesLoadFailed: '[Well] Well Names Load Failed',
-    wellDetailsLoaded: '[Well] Well Details Loaded',
-    wellDetailsLoadFailed: '[Well] Well Details Load Failed',
-    wellTestResultsLoaded: '[Well] Well Test Results Loaded'
-} as const;
-
-// ─── Typed payloads ───────────────────────────────────────────────────────────
-export interface SelectWellPayload { epANum: number }
-export interface WellNamesResult { wellNames: WellName[] }
-export interface WellDetailsResult { wellDetails: IWellData; epANum: number }
-export interface WellOperationError { error: string }
 
 
-=== duplicate store ===
-import { computed, inject } from '@angular/core';
-import {
-    patchState,
-    signalStore,
-    withComputed,
-    withMethods,
-    withState,
-} from '@ngrx/signals';
-import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { tapResponse } from '@ngrx/operators';
-import { map, pipe, switchMap, tap } from 'rxjs';
-import { MorningReport } from '../../../models/morining-report.model';
-import { IWellData } from '../../../models/well-design/wwell-data.model';
-import { WellboreDiagramData } from '../../../models/well-design/wellbore-diagram.model';
-import { WwellDataService } from '../../../services/wwell-data.service';
-import { sortCasingsByDepthDesc } from '../../../utils/wellbore-math.util';
-import { MoriningReportService } from '../../../services/morining-report.service';
-import { WellName } from '../../../models/well-design/well-name.model';
-import { IFormationTops } from '../../../shared/models/wwell/formation-tops.model';
-import { WellLogsIndicators } from '../../../models/well-design/well-logs-indicators.model';
-import { IHeaderIR } from '../../../shared/models/wwell/header-ir.model';
+  }
 
-export interface MiscWellData {
-    //Well Header
-    field: string,
-    wellName: string;
-    lon: number;
-    lat: number;
-    targetedAquifer: string;
-    epNum: number;
-    //status: number;
-    biNum: string;
-    //Database Information
-    prsntDpth: number;
-    csgBotDpth: number;
-    spuddate: string,
-    spudOprDay: number;
-    prevDpth: number;
-    spuddays: number;
-    targetDepth: number;
-    csgSize: string;
-    csgType: string;
-    csgDepth: number;
-    //csgRemarks?: string | null;
-    //Summary Of Operation
-    ops: string;
-    nextOps: string;
-    wellType: string;
-    currentStatus: string;
-    daysSinceSpud: number;
-    targetDays: number;
-    waterWell: string;
-    footage: number;
-    previousWell: string;
-    currentDepth: number;
-    nextWell: string;
-    feetDrilledToday: number;
-    targetDesc: string;
-    supportingWell: string;
-    //Formation Tops
-    formation: string;
-    stDmrkDpth: number;
-    planTvdDpth: number;
-    stDmrkRmk?: string | null;
-    //Well Test
-    flowType: string;
-    aquifer?: string | null;
-    depth: number;
-    duration: number;
-    swl: number;
-    rate?: number | null;
-    dwl: number;
-    temp?: number | null;
-    productivity: number;
-    tds?: number | null;
-    conductedBy: string;
-    h2s?: number | null;
-}
+  private async waitForInitialMapRender(): Promise<void> {
+    if (!this.mapView) return;
+    if (!this.mapView.updating) {
+      await new Promise(requestAnimationFrame);
+      return;
+    }
 
-export interface PickedFormationTops {
-    formation: string;
-    depth: number;
-    remarks: string;
-}
+    await new Promise<void>((resolve) => {
+      const handle = watch(
+        () => this.mapView?.updating ?? false,
+        (updating) => {
+          if (!updating) {
+            handle.remove();
+            requestAnimationFrame(() => resolve());
+          }
+        }
+      );
+    });
+  }
 
-export interface OffsetWaterWells {
-    wellName: string;
-    aquifer: string;
-    tds: number;
-    rpm: number;
-    h2s: number;
-    distance: number;
-    productivity: number;
-    rate: number;
-}
+  private async drawWWellIcons(layer: GraphicsLayer): Promise<void> {
+    layer.removeAll();
+    const { default: Point } = await import('@arcgis/core/geometry/Point');
+    const { default: PictureMarkerSymbol } = await import('@arcgis/core/symbols/PictureMarkerSymbol');
+    const wells = this.wwells();
+    for (const wwell of wells) {
+      const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
+      const symbol = new PictureMarkerSymbol({
+        url: STYLE.markerIcon,
+        width: STYLE.markerSize,
+        height: STYLE.markerSize
+      });
+      layer.add(
+        new Graphic({
+          geometry: point,
+          symbol,
+          attributes: {
+            wwellId: wwell.wwellId,
+            Location: wwell.location
+          },
+        })
+      );
+    }
+  }
 
-const PAGE_SIZE = 5;
+  private layoutBubbles(layer: GraphicsLayer): void {
+    if (!this.mapView) return;
+    layer.removeAll();
+    this.placedBubbles = [];
 
-interface WellState {
-    readonly wellNames: WellName[];
-    readonly selectedEpANum: number | null;
-    readonly wellDetails: IWellData | null;
-    readonly loading: boolean;
-    readonly error: string | null;
-    readonly animationTrigger: number;
-    readonly wellNamesPage: number;
-}
+    const view = this.mapView;
+    const viewW = view.width;
+    const viewH = view.height;
 
-const initialState: WellState = {
-    wellNames: [],
-    selectedEpANum: null,
-    wellDetails: null,
-    loading: false,
-    error: null,
-    animationTrigger: 0,
-    wellNamesPage: 0,
-};
+    const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
+    const iconRadius = STYLE.markerSize / 2;
+    const graphics: Graphic[] = [];
+    const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: { wkid: 4326 } });
 
-const FALLBACK_STR = 'N/A';
+    const wells: WWell[] = this.wwells();
+    for (const wwell of wells) {
+      // ---- 3.1  Anchor point (screen → map) --------------------
+      anchorPt.latitude = wwell.lat;
+      anchorPt.longitude = wwell.lng;
 
-function mapToMiscWellData(d: IWellData | null): MiscWellData | null {
-    if (!d) return null;
-    //Well Header, Database Information
-    const rigActivity = d.RIG_ACTIVITY?.[0];
-    const nextWellActivity = d.NEXT_2_WELL_ACTIVITY?.[0];
-    const drlgOpStatus = d.DRLG_OP_STATUS?.[0];
-    const wellMaster = d.WELL_MASTER?.[0];
-    const exadGwdIrCasing = d.EXAD_GWD_IR_CASING?.[0];
-    //Summary Of Operation
-    const drlgOpSmry = d.DRLG_OP_SMRY?.[0];
-    //Formation Tops
-    const drlgFmTops = d.DRLG_FM_TOPS?.[0];
-    const exadGwdIrTops = d.EXAD_GWD_IR_TOPS?.[0];
-    //Well Test, Formation Tops
-    const wellTestOutcome = d.WATER_WELL_TEST_OUTCOME?.[0];
-    const exadGwdIrWater = d.EXAD_GWD_IR_WATER?.[0];
-    const exadRcdPrewap = d.EXAD_RCD_PREWAP?.[0];
-    const exadGwdIrHydrogeology = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
+      const sp = view.toScreen(anchorPt);
+      if (!sp) continue;
 
-    return {
-        //Well Header
-        field: 'Shaybah',
-        wellName: rigActivity?.wellName ?? d.WELL_MASTER?.[0]?.well ?? FALLBACK_STR,
-        lon: wellMaster?.lon,
-        lat: wellMaster?.lat,
-        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier ?? FALLBACK_STR,
-        epNum: nextWellActivity.epANum,
-        spuddate: rigActivity?.spuddate,
-        //status: 1,
-        biNum: rigActivity?.biNum ?? FALLBACK_STR,
-        //Database Information
-        prsntDpth: drlgOpStatus?.wPrsntDpth,
-        csgBotDpth: drlgOpStatus?.wCsgBotDpth,
-        spudOprDay: drlgOpStatus?.wSpudOprDay,
-        footage: drlgOpStatus?.footage,
-        prevDpth: drlgOpStatus?.wPrevDpth,
-        spuddays: drlgOpStatus?.epANum,
-        targetDepth: drlgOpStatus?.targetDepth,
-        csgSize: exadGwdIrCasing?.csgSize,
-        csgDepth: exadGwdIrCasing?.csgDepth,
-        csgType: exadGwdIrCasing?.csgType,
-        //Summary Of Operation
-        ops: drlgOpSmry?.wOpRmk,
-        nextOps: drlgOpStatus?.nxt24HrPlanRmk,
-        targetDesc: rigActivity?.welltype ?? rigActivity?.drlgPlanWellDesc ?? FALLBACK_STR,
-        currentStatus: drlgOpStatus?.nxt24HrPlanRmk ?? drlgOpStatus?.wOpRmk ?? FALLBACK_STR,
-        daysSinceSpud: drlgOpStatus?.spuddays ?? 0,
-        targetDays: d.NEW_TARGET_DAYS?.[0]?.targetDays ?? rigActivity?.wDrlgTrgtDay ?? 0,
-        supportingWell: rigActivity?.waterWell ?? FALLBACK_STR,
-        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? drlgOpStatus?.footage ?? 0,
-        previousWell: FALLBACK_STR,
-        currentDepth: drlgOpStatus?.wPrsntDpth ?? 0,
-        nextWell: d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity ?? FALLBACK_STR,
-        //Formation Tops
-        formation: drlgFmTops?.stLongCd,
-        stDmrkDpth: drlgFmTops?.wStDmrkDpth,
-        planTvdDpth: exadGwdIrTops?.planTvdDepth,
-        stDmrkRmk: drlgFmTops?.wStDmrkRmk,
-        //Well Test
-        flowType: exadGwdIrHydrogeology.flowType,
-        aquifer: wellTestOutcome.aquifer,
-        depth: exadRcdPrewap.estTargetDepth,
-        duration: exadGwdIrWater.testDuration,
-        swl: 155817,
-        rate: wellTestOutcome.flowRate,
-        dwl: 16555,
-        temp: exadGwdIrWater.testDuration,
-        productivity: exadGwdIrHydrogeology.estProductivity,
-        tds: wellTestOutcome.tds,
-        conductedBy: 'Abdulrahman',
-        h2s: wellTestOutcome.h2s,
+      // keep the bubble inside the view margins
+      sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
+      sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
 
-        wellType: '',
-        waterWell: '',
-        //footage: 0,
+      // ---- 3.2  Find a non‑overlapping screen position ----------
+      const obstacles = [
+        ...this.placedBubbles,
+        { x: sp.x, y: sp.y, radius: iconRadius + 6 },
+      ];
+      const finalScreen = findNonOverlappingPosition(
+        sp.x,
+        sp.y,
+        obstacles,
+        bubblePixelRadius
+      );
 
-    };
-}
+      // ---- 3.3  Remember the placed bubble for the next iterations
+      this.placedBubbles.push({
+        x: finalScreen.x,
+        y: finalScreen.y,
+        radius: bubblePixelRadius,
+      });
 
-export const WaterWellDataStore = signalStore(
-    { providedIn: 'root' },
-    withState<WellState>(initialState),
+      // ---- 3.4  Convert back to map coordinates -----------------
+      let finalMapPoint = view.toMap(finalScreen) as __esri.Point | null;
+      if (!finalMapPoint) finalMapPoint = anchorPt.clone();
 
-    withComputed(({ wellDetails, wellNames, wellNamesPage }) => ({
-
-        uniqueWellNames: computed(() => {
-            const seen = new Set<string>();
-            return wellNames().filter((w) => {
-                if (seen.has(w.wellName)) return false;
-                seen.add(w.wellName);
-                return true;
-            });
+      // ---- 3.5  Small offset so the bubble never sits on the oil well
+      const offsetLat = 3;
+      const offsetLng = 2;
+      finalMapPoint.latitude = Math.min(
+        Math.max(finalMapPoint.latitude! + offsetLat, MAP_BOUNDS.minLat),
+        MAP_BOUNDS.maxLat
+      );
+      finalMapPoint.longitude = Math.min(
+        Math.max(finalMapPoint.longitude! + offsetLng, MAP_BOUNDS.minLng),
+        MAP_BOUNDS.maxLng
+      );
+      // 4.1  Stick (polyline from oil‑well to bubble)
+      const stick = new Graphic({
+        geometry: new Polyline({
+          paths: [
+            [
+              [wwell.lng, wwell.lat],
+              [finalMapPoint.longitude!, finalMapPoint.latitude!],
+            ],
+          ],
+          spatialReference: { wkid: 4326 },
         }),
+        symbol: lineSymbol(tilesMap.get(wwell.label)!.color),
+      });
 
-        isLoaded: computed(() => wellDetails() !== null),
-
-        totalDepth: computed(
-            () => wellDetails()?.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 4000,
-        ),
-
-        /** Total number of pages given PAGE_SIZE */
-        totalPages: computed(() => {
-            const seen = new Set<string>();
-            const unique = wellNames().filter((w) => {
-                if (seen.has(w.wellName)) return false;
-                seen.add(w.wellName);
-                return true;
-            });
-            return Math.ceil(unique.length / PAGE_SIZE);
+      // 4.2  Top rectangle (bubble “head”)
+      const topPoly = translatePolygon(
+        topPolygonTemplate,
+        finalMapPoint.longitude!,
+        finalMapPoint.latitude!
+      );
+      const bubbleTop = new Graphic({
+        geometry: topPoly,
+        symbol: new SimpleFillSymbol({
+          color: tilesMap.get(wwell.label)!.color,
+          outline: { color: [0, 0, 0], width: 1 },
         }),
+      });
 
-        /** The 5 well names visible on the current page */
-        pagedWellNames: computed(() => {
-            const seen = new Set<string>();
-            const unique = wellNames().filter((w) => {
-                if (seen.has(w.wellName)) return false;
-                seen.add(w.wellName);
-                return true;
-            });
-            const start = wellNamesPage() * PAGE_SIZE;
-            return unique.slice(start, start + PAGE_SIZE);
+      // 4.3  Bottom rectangle (bubble “tail”)
+      const bottomPoly = translatePolygon(
+        bottomPolygonTemplate,
+        finalMapPoint.longitude!,
+        finalMapPoint.latitude!
+      );
+      const bubbleBottom = new Graphic({
+        geometry: bottomPoly,
+        symbol: new SimpleFillSymbol({
+          color: [0, 191, 255, 0.9],
+          outline: { color: [0, 0, 0], width: 1 },
         }),
+      });
 
-        hasPrevPage: computed(() => wellNamesPage() > 0),
+      // Inside the loop, after you have `finalMapPoint`:
+      const wwellIdLabel = new Graphic({
+        geometry: finalMapPoint,
+        // No clone – we keep the concrete TextSymbol type
+        symbol: wwellIdTextSymbol(STYLE.textFont),
+      });
+      (wwellIdLabel.symbol as TextSymbol).text = `${wwell.wwellId}`;
+      (wwellIdLabel.symbol as TextSymbol).verticalAlignment = "middle";
+      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = "center";
 
-        hasNextPage: computed(() => {
-            const seen = new Set<string>();
-            const unique = wellNames().filter((w) => {
-                if (seen.has(w.wellName)) return false;
-                seen.add(w.wellName);
-                return true;
-            });
-            return (wellNamesPage() + 1) * PAGE_SIZE < unique.length;
-        }),
+      const locationLabel = new Graphic({
+        geometry: finalMapPoint,
+        symbol: locationTextSymbol(STYLE.textFont),
+      });
+      (locationLabel.symbol as TextSymbol).text = `${wwell.location}`;
+      (locationLabel.symbol as TextSymbol).horizontalAlignment = "center";
+      (locationLabel.symbol as TextSymbol).verticalAlignment = "middle";
+      graphics.push(stick, bubbleTop, bubbleBottom, wwellIdLabel, locationLabel);
+    }
+    layer.addMany(graphics);
+  }
 
-        diagramData: computed((): WellboreDiagramData | null => {
-            const d = wellDetails();
-            if (!d) return null;
-            return {
-                wellName: d.WELL_MASTER?.[0]?.well ?? '',
-                totalDepth: d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 4000,
-                casings: sortCasingsByDepthDesc(d.EXAD_GWD_IR_CASING ?? []),
-                geologicTops: [...(d.EXAD_GWD_IR_TOPS ?? [])].sort(
-                    (a, b) => a.planTvdDepth - b.planTvdDepth
-                ),
-                hydrogeology: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0] ?? null,
-                prewap: d.EXAD_RCD_PREWAP?.[0] ?? null,
-                rigActivity: d.RIG_ACTIVITY?.[0] ?? null,
-                currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ??
-                    d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ??
-                    0,
+  async saveMapImage(): Promise<void> {
 
-                mudCirculation: []
-            };
-        }),
 
-        miscWellData: computed(() => mapToMiscWellData(wellDetails())),
+    // Download
+    const base64 = await this.captureMapAsBase64();
+    this.downloadBase64(base64, 'water-wells-map.png');
+  }
 
-        pickedFormations: computed((): PickedFormationTops[] => {
-            return (wellDetails()?.DRLG_FM_TOPS ?? []).map((fm: IFormationTops) => ({
-                formation: fm.stLongCd ?? '',
-                depth: fm.wStDmrkDpth ?? 0,
-                remarks: fm.wStDmrkRmk ?? ''
-            }));
-        }),
+  async captureMapAsBase64() {
+    if (!this.mapView) return;
 
-        offsetWells: computed((): OffsetWaterWells[] => {
-            const d = wellDetails();
-            if (!d) return [];
+    // Show the legend
+    this.legendLayer!.visible = true;
 
-            const offsetData = d.EXAD_GWD_IR_WATER ?? [];
-            const testOutcomes = d.WATER_WELL_TEST_OUTCOME ?? [];
-            return offsetData.map((ow) => {
-                const test = testOutcomes.find(t => t.wellName === ow.offsetWaterWell);
-                return {
-                    wellName: ow.offsetWaterWell,
-                    aquifer: ow.aquifer || test?.aquifer || 'WASI',
-                    tds: test?.tds ?? 0,
-                    rpm: ow?.rpm ?? 0,
-                    h2s: ow.h2s,
-                    distance: ow.distance ?? 0,
-                    productivity: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estProductivity ?? 2.1,
-                    rate: test?.flowRate ?? ow.flowRate ?? 930
-                };
-            });
-        }),
+    // Wait for the layer view to finish drawing
+    await this.waitForLegendRender();
 
-        wellsLogsIndicators: computed<WellLogsIndicators | null>(() => {
-            const d = wellDetails();
-            if (!d) return null;
+    // Capture screenshot
+    const base64 = await this.getScreenshotBase64();
 
-            const header: IHeaderIR | undefined = d.EXAD_GWD_IR_HEADER?.[0];
-            return {
-                rcc: !!header?.dtRemarks,
-                mudLog: !!header?.mudRemarks,
-                logging: !!header?.loggingRemarks
-            };
-        }),
+    // Hide the legend again (so the UI stays clean)
+    this.legendLayer!.visible = false;
+    return base64;
 
-    })),
+  }
 
-    withMethods((store, wellDataService = inject(WwellDataService), morningReportService = inject(MoriningReportService)) => {
+  private async waitForLegendRender(): Promise<void> {
+    const layerView = await this.mapView!.whenLayerView(this.legendLayer!);
+    if (!layerView.updating) {
+      await new Promise(requestAnimationFrame);
+      return;
+    }
 
-        const selectWell = rxMethod<number>(
-            pipe(
-                tap((epANum) =>
-                    patchState(store, {
-                        selectedEpANum: epANum,
-                        loading: true,
-                        error: null,
-                    }),
-                ),
-                switchMap((epANum) =>
-                    wellDataService.getWellDetails(epANum).pipe(
-                        tapResponse({
-                            next: (wellDetails) =>
-                                patchState(store, {
-                                    wellDetails,
-                                    loading: false,
-                                    animationTrigger: store.animationTrigger() + 1,
-                                }),
-                            error: (err: Error) =>
-                                patchState(store, {
-                                    error: err.message ?? 'Failed to load well details',
-                                    loading: false,
-                                }),
-                        }),
-                    ),
-                ),
-            ),
-        );
+    await new Promise<void>((resolve) => {
+      const handle = watch(() => layerView.updating,
+        (updating) => {
+          if (!updating) {
+            handle.remove();
+            requestAnimationFrame(() => resolve());
+          }
+        })
+    });
+  }
 
-        const loadWellNames = rxMethod<void>(
-            pipe(
-                tap(() => patchState(store, { loading: true, error: null })),
-                switchMap(() =>
-                    morningReportService.getMorningReport().pipe(
-                        map((reports: MorningReport[]) =>
-                            reports.map((report) => ({
-                                wellName: report.wGnrName,
-                                epANum: Number(report.epANum)
-                            }))
-                        ),
-                        tapResponse({
-                            next: (wellNames) => {
-                                patchState(store, { wellNames, loading: false });
-                                if (wellNames.length > 0 && !store.selectedEpANum()) {
-                                    selectWell(wellNames[0].epANum);
-                                }
-                            },
-                            error: (err: Error) =>
-                                patchState(store, {
-                                    error: err.message ?? 'Failed to load well names',
-                                    loading: false,
-                                }),
-                        }),
-                    ),
-                ),
-            ),
-        );
-        return {
-            selectWell,
-            loadWellNames,
-            nextPage(): void {
-                const nextPageIndex = store.wellNamesPage() + 1;
-                patchState(store, { wellNamesPage: nextPageIndex });
-                // Auto-select first well on the new page
-                const seen = new Set<string>();
-                const unique = store.wellNames().filter((w) => {
-                    if (seen.has(w.wellName)) return false;
-                    seen.add(w.wellName);
-                    return true;
-                });
-                const firstOnPage = unique[nextPageIndex * PAGE_SIZE];
-                if (firstOnPage) selectWell(firstOnPage.epANum);
-            },
-            prevPage(): void {
-                const prevPageIndex = Math.max(0, store.wellNamesPage() - 1);
-                patchState(store, { wellNamesPage: prevPageIndex });
-                // Auto-select first well on the new page
-                const seen = new Set<string>();
-                const unique = store.wellNames().filter((w) => {
-                    if (seen.has(w.wellName)) return false;
-                    seen.add(w.wellName);
-                    return true;
-                });
-                const firstOnPage = unique[prevPageIndex * PAGE_SIZE];
-                if (firstOnPage) selectWell(firstOnPage.epANum);
-            },
-        };
-    }),
-);
+  private async getScreenshotBase64(): Promise<string> {
+    const screenshot = await this.mapView!.takeScreenshot({
+      format: 'png',
+      quality: 1,
+    });
+    const [, rawBase64] = screenshot.dataUrl.split(',');
+    if (!rawBase64) throw new Error('Failed to extract Base‑64 payload');
+
+    // Resize (optional)
+    const img = new Image();
+    img.src = `data:image/png;base64,${rawBase64}`;
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+    });
+
+    const scale = Math.min(1, MAX_WIDTH / img.width);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Small pause to let the browser finish any pending paint
+    await new Promise((r) => setTimeout(r, 300));
+
+    const resizedDataUrl = canvas.toDataURL('image/jpeg', 1);
+    const [, resizedBase64] = resizedDataUrl.split(',');
+    return resizedBase64;
+  }
+
+  private downloadBase64(base64: string | undefined, fileName: string): void {
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${base64}`;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  private registerBootTask(): void {
+    if (this.bootTaskRegistered) return;
+    this.bootTaskRegistered = true;
+    this.loader.registerBootTask(WWELL_MAP_BOOT_TASK);
+  }
+
+  private resolveBootTask(): void {
+    if (!this.bootTaskRegistered) return;
+    this.bootTaskRegistered = false;
+    this.loader.resolveBootTask(WWELL_MAP_BOOT_TASK);
+  }
+
+}
