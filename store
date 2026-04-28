@@ -34,7 +34,6 @@
 
     <div class="active-wwell-content">
       <div class="aw-page-header">
-        <div class="well-header">Single Well Review</div>
         <div class="aw-date-picker">
           <label class="aw-date-label" for="aw-date-input">Date:</label>
           <input
@@ -47,6 +46,8 @@
             aria-label="Select date for well data"
           />
         </div>
+        <div class="well-header">Single Water Well Review</div>
+        <div class="aw-header-spacer"></div>
       </div>
 
       <div class="active-wwell-grid">
@@ -294,7 +295,15 @@
   padding: 0.5rem;
 }
 
-.active-wwell-content > .aw-page-header .well-header,
+.active-wwell-content > .aw-page-header .well-header {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #fff;
+  text-align: center;
+  justify-self: center;
+}
+
 .active-wwell-main > .aw-section .well-header {
   font-size: 1rem;
   font-weight: 800;
@@ -307,18 +316,30 @@
 }
 
 .aw-page-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: #2563eb;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
   margin-bottom: 0.5rem;
 }
+
+.aw-header-spacer {
+  justify-self: end;
+}
+
 .aw-date-picker {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  justify-self: start;
 }
 
 .aw-date-label {
   font-size: 0.88rem;
   font-weight: 600;
-  color: #374151;
+  color: #fff;
   white-space: nowrap;
 }
 
@@ -651,227 +672,3 @@
   padding: 8px;
   border-bottom: 1px solid #e5e7eb;
 }
-==
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  OnInit,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
-import { NgClass } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { DrillingDataStore } from '@store/drilling-data/drilling-data.store';
-import { formatDateForInput, getTodayAtMidnight, parseDateFromInput } from 'src/app/shared/utils/date.util';
-import { CasingInfoComponent } from '../casing-info/casing-info.component';
-import { DatabaseInfoComponent } from '../database-info/database-info.component';
-import { FormationTopsAndCasingComponent } from '../formation-tops-and-casing/formation-tops-and-casing.component';
-import { OperationSummaryComponent } from '../operation-summary/operation-summary.component';
-import { WwellHeaderComponent } from '../wwell-header/wwell-header.component';
-import { WwellTestComponent } from '../wwell-test/wwell-test.component';
-import { ActiveWwellUiStore } from '../active-wwell-ui.store';
-import {
-  ACTIVE_WWELL_FALLBACK,
-  deriveStatusLabel,
-} from '../active-wwell.helpers';
-import { displayValue, selectLatestFormation } from '@store/active-wwell/active-wwell.selectors';
-import { AddStatusDialogComponent } from '../add-status-dialog/add-status-dialog.component';
-import { FileUploadComponent } from '@shared/components/file-upload/file-upload.component';
-
-const AREAS = [
-  { value: 'RAK' },
-  { value: 'Central' },
-  { value: 'North West' },
-  { value: 'Jafurah' },
-  { value: 'GH' },
-] as const;
-
-const ADD_NEW_SENTINEL = '__ADD_NEW__';
-
-@Component({
-  selector: 'app-active-wwell-view',
-  standalone: true,
-  imports: [
-    NgClass,
-    FormsModule,
-    MatChipsModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatSelectModule,
-    WwellHeaderComponent,
-    OperationSummaryComponent,
-    DatabaseInfoComponent,
-    CasingInfoComponent,
-    FormationTopsAndCasingComponent,
-    WwellTestComponent,
-    FileUploadComponent,
-  ],
-  templateUrl: './active-wwell-view.component.html',
-  styleUrl: './active-wwell-view.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [ActiveWwellUiStore],
-})
-export class ActiveWwellViewComponent implements OnInit {
-  protected readonly ADD_NEW_SENTINEL = ADD_NEW_SENTINEL;
-  protected readonly areas = AREAS;
-
-  protected readonly store = inject(DrillingDataStore);
-  protected readonly uiStore = inject(ActiveWwellUiStore);
-
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly dialog = inject(MatDialog);
-
-  protected readonly wells = computed(() => this.store.uniqueWellNames());
-  protected readonly statusOptions = this.uiStore.statusOptions;
-  protected readonly statusSearchQuery = signal('');
-  protected readonly filteredStatusOptions = computed(() => {
-    const q = this.statusSearchQuery().trim().toLowerCase();
-    return q
-      ? this.statusOptions().filter(s => s.toLowerCase().includes(q))
-      : this.statusOptions();
-  });
-  protected readonly selectedArea = this.uiStore.selectedArea;
-  protected readonly selectedStatus = computed(() => {
-    const epANum = this.store.selectedEpANum();
-    return this.uiStore.statusForWell(epANum) ?? deriveStatusLabel(this.store.selectedWell());
-  });
-
-  protected readonly summaryStats = computed(() => {
-    const details = this.store.selectedWell();
-    const latestFormation = selectLatestFormation(details);
-
-    return {
-      formationDrilling:
-        latestFormation?.stLongCd ??
-        details?.EXAD_RCD_PREWAP?.[0]?.targetFormation ??
-        ACTIVE_WWELL_FALLBACK,
-      bitSize: details?.BITINFO?.[0]?.bitSz ?? ACTIVE_WWELL_FALLBACK,
-      circulation: details?.DRLG_OP_STATUS?.[0]?.wMudCircPc ?? ACTIVE_WWELL_FALLBACK,
-      mudWeight: details?.actualRm ?? ACTIVE_WWELL_FALLBACK,
-      avgRop: details?.ROP_DATA?.[0]?.rop ?? ACTIVE_WWELL_FALLBACK,
-    };
-  });
-
-  protected readonly drillingRemarks = computed(() => {
-    const details = this.store.selectedWell();
-    return details?.DRLG_OP_STATUS?.[0]?.wOpRmk ?? details?.DRLG_OP_SMRY?.[0]?.wOpRmk ?? '';
-  });
-
-  protected readonly maxDateString = formatDateForInput(getTodayAtMidnight());
-  protected readonly selectedDateString = computed(() => formatDateForInput(this.store.selectedDate()));
-
-  protected readonly displayValue = displayValue;
-
-  constructor() {
-    effect(() => {
-      const epANum = this.store.selectedEpANum();
-      const selectedDate = this.store.selectedDate();
-
-      if (epANum == null) {
-        return;
-      }
-
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: {
-          epANum,
-          date: formatDateForInput(selectedDate),
-        },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
-    });
-
-    effect(() => {
-      const epANum = this.store.selectedEpANum();
-      const details = this.store.selectedWell();
-      const detailsEpANum = details?.DRLG_OP_STATUS?.[0]?.epANum ?? null;
-
-      if (epANum == null || epANum !== detailsEpANum) {
-        return;
-      }
-
-      this.uiStore.ensureStatusForWell(epANum, deriveStatusLabel(details));
-    });
-  }
-
-  ngOnInit(): void {
-    this.store.loadWellNames();
-
-    const params = this.route.snapshot.queryParamMap;
-    const rawEpANum = params.get('epANum');
-
-    if (!rawEpANum) {
-      return;
-    }
-
-    const epANum = Number.parseInt(rawEpANum, 10);
-
-    if (!Number.isNaN(epANum)) {
-      this.store.selectWell({ epANum });
-    }
-  }
-
-  protected onDateChange(value: string): void {
-    const date = parseDateFromInput(value);
-    const today = getTodayAtMidnight();
-    if (!Number.isNaN(date.getTime()) && date <= today) {
-      this.store.setDate(formatDateForInput(date));
-    }
-  }
-
-  protected onWellSelect(epANum: number): void {
-    this.store.selectWell({ epANum });
-  }
-
-  protected onSelect(status: string): void {
-    if (status === ADD_NEW_SENTINEL) {
-      this.openAddDialog();
-      return;
-    }
-
-    this.uiStore.setStatusForWell(this.store.selectedEpANum(), status);
-  }
-
-  protected onAreaChange(area: string): void {
-    this.uiStore.setSelectedArea(area);
-  }
-
-  protected onStatusPanelToggle(opened: boolean): void {
-    if (!opened) this.statusSearchQuery.set('');
-  }
-
-  private openAddDialog(): void {
-    const dialogRef = this.dialog.open(AddStatusDialogComponent, {
-      width: '280px',
-      data: { name: '' },
-      disableClose: true,
-    });
-
-    dialogRef
-      .afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((name?: string) => {
-        if (!name) {
-          return;
-        }
-
-        this.uiStore.setStatusForWell(this.store.selectedEpANum(), name);
-      });
-  }
-}
-
