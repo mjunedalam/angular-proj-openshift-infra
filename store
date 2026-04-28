@@ -1,563 +1,1721 @@
-import { DrillingDataStore } from '@core/store/drilling-data/drilling-data.store';
-import { isPlatformBrowser } from '@angular/common';
+export interface IWellDesign {
+  name: string | null;
+  prewapSeq: number | null;
+  staticWaterLevel: string | null;
+  staticWaterLevelText: string | null;
+  pumpLevelText: string | null;
+  pumpLevel: string | null;
+  ohFlag: string | null;
+  ohRemarks: string | null;
+  gpFlag: string | null;
+  gpRemarks: string | null;
+  perfFlag: string | null;
+  perfRemarks: string | null;
+  lsFlag: string | null;
+  lsRemarks: string | null;
+}
+==
+import { ScaleLinear, scaleLinear } from 'd3-scale';
+import { ICasingIR } from '@shared/models/wwell/casing-ir.model';
+
+export function createDepthScale(
+  totalDepth: number,
+  drawingHeight: number,
+): ScaleLinear<number, number> {
+  return scaleLinear().domain([0, totalDepth]).range([0, drawingHeight]);
+}
+
+export function buildDepthTicks(totalDepth: number, interval = 500): number[] {
+  const ticks: number[] = [];
+  for (let depth = 0; depth <= totalDepth; depth += interval) {
+    ticks.push(depth);
+  }
+  return ticks;
+}
+
+export function sortCasingsByDepthDesc(casings: ICasingIR[]): ICasingIR[] {
+  return [...casings].sort((a, b) => b.csgDepth - a.csgDepth);
+}
+
+export function computeCasingHalfWidth(
+  depthDescIndex: number,
+  baseHalfWidth: number,
+  increment: number,
+): number {
+  return baseHalfWidth + depthDescIndex * increment;
+}
+
+export function buildCasingPath(
+  centerX: number,
+  halfWidth: number,
+  topPx: number,
+  bottomPx: number,
+  shoeOffset: number,
+): string {
+  const left  = centerX - halfWidth;
+  const right = centerX + halfWidth;
+  const ctrl  = bottomPx + shoeOffset;
+  return `M${left},${topPx} L${left},${bottomPx} S ${centerX} ${ctrl} ${right} ${bottomPx} L${right},${topPx} Z`;
+}
+
+export function buildOpenHolePath(
+  centerX: number,
+  halfWidth: number,
+  topPx: number,
+  bottomPx: number,
+): string {
+  const l = centerX - halfWidth;
+  const r = centerX + halfWidth;
+  return `M${l},${topPx}L${l},${bottomPx}L${r},${bottomPx}L${r},${topPx}`;
+}
+
+export function buildArrowHeadRight(
+  tipX: number,
+  midY: number,
+  size = 7,
+): string {
+  return `M${tipX - size} ${midY - size} L${tipX} ${midY} L${tipX - size} ${midY + size} Z`;
+}
+
+export function buildArrowHeadLeft(
+  tipX: number,
+  midY: number,
+  size = 7,
+): string {
+  return `M${tipX + size} ${midY - size} L${tipX} ${midY} L${tipX + size} ${midY + size} Z`;
+}
+
+export function buildDepthArrow(
+  startY: number,
+  endY: number,
+  centerX: number,
+  shaftWidth: number,
+  headHeight: number,
+): string {
+  const hw        = shaftWidth / 2;
+  const shaftEndY = endY - headHeight;
+  return [
+    `M${centerX - hw},${startY}`,
+    `L${centerX - hw},${shaftEndY}`,
+    `L${centerX - hw - 5},${shaftEndY}`,
+    `L${centerX},${endY}`,
+    `L${centerX + hw + 5},${shaftEndY}`,
+    `L${centerX + hw},${shaftEndY}`,
+    `L${centerX + hw},${startY}`,
+    `Z`,
+  ].join(' ');
+}
+
+// ============================================================================
+// NEW WIDGET UTILITY METHODS
+// ============================================================================
+
+/** Builds a closed rectangle path (used for blank pipe, gravel pack, or screen) */
+export function buildRectPath(
+  centerX: number,
+  halfWidth: number,
+  topPx: number,
+  bottomPx: number
+): string {
+  const l = centerX - halfWidth;
+  const r = centerX + halfWidth;
+  return `M${l},${topPx} L${r},${topPx} L${r},${bottomPx} L${l},${bottomPx} Z`;
+}
+
+/** Builds the two outward-pointing black triangles representing a packer or hanger */
+export function buildPackerTriangles(
+  centerX: number,
+  halfWidth: number,
+  yPx: number,
+  packerWidth = 16,
+  packerHeight = 10
+): string {
+  const lInner = centerX - halfWidth;
+  const rInner = centerX + halfWidth;
+  
+  const leftTriangle = `M${lInner},${yPx} L${lInner - packerWidth},${yPx} L${lInner},${yPx + packerHeight} Z`;
+  const rightTriangle = `M${rInner},${yPx} L${rInner + packerWidth},${yPx} L${rInner},${yPx + packerHeight} Z`;
+  
+  return `${leftTriangle} ${rightTriangle}`;
+}
+
+/** Builds a small standalone downward-pointing blue triangle/arrow */
+export function buildSmallDownArrow(
+  centerX: number,
+  yPx: number,
+  arrowWidth = 12,
+  arrowHeight = 10
+): string {
+  const hw = arrowWidth / 2;
+  return `M${centerX - hw},${yPx} L${centerX + hw},${yPx} L${centerX},${yPx + arrowHeight} Z`;
+}
+
+/**
+ * Builds a "U-shaped" path representing the gravel pack outline.
+ * The path traces down the left side, across the bottom, and up the right side.
+ */
+export function buildGravelPackUPath(
+  centerX: number,
+  halfWidth: number,
+  topPx: number,
+  bottomPx: number
+): string {
+  const left = centerX - halfWidth;
+  const right = centerX + halfWidth;
+  
+  // Draws a path down the left side, across the bottom shoe, and back up the right side
+  return `M${left},${topPx} L${left},${bottomPx} L${right},${bottomPx} L${right},${topPx}`;
+}
+
+// ============================================================================
+// FORMATTERS & HELPERS
+// ============================================================================
+
+export function formatDepth(depth: number): string {
+  return `${depth.toLocaleString()} ft`;
+}
+
+export function openHoleHalfWidth(
+  innermostHalfWidth: number,
+  margin = 12,
+): number {
+  return innermostHalfWidth + margin;
+}
+
+/**
+ * Builds paired horizontal tick marks on both sides of the wellbore at regular
+ * intervals — the standard engineering symbol for casing perforations.
+ */
+export function buildPerforationsPath(
+  centerX: number,
+  halfWidth: number,
+  topPx: number,
+  bottomPx: number,
+  spacing = 10,
+  tickLength = 8,
+): string {
+  const paths: string[] = [];
+  for (let y = topPx + spacing; y <= bottomPx; y += spacing) {
+    paths.push(`M${centerX - halfWidth - tickLength},${y}L${centerX - halfWidth},${y}`);
+    paths.push(`M${centerX + halfWidth},${y}L${centerX + halfWidth + tickLength},${y}`);
+  }
+  return paths.join(' ');
+}
+
+export interface PrePerfLinerPaths {
+  /** Two dashed vertical lines — the liner body walls */
+  walls: string;
+  /** Horizontal tick lines extending outward — the perforations */
+  ticks: string;
+  /** Dashed horizontal line at the bottom — the liner shoe */
+  shoe: string;
+}
+
+/**
+ * Builds the three SVG path components for a pre-perforated liner symbol:
+ * dashed vertical walls, outward tick perforations, and a dashed bottom shoe.
+ */
+export function buildPrePerfLiner(
+  centerX: number,
+  halfWidth: number,
+  topPx: number,
+  bottomPx: number,
+  spacing = 14,
+  tickLength = 10,
+): PrePerfLinerPaths {
+  const lx = centerX - halfWidth;
+  const rx = centerX + halfWidth;
+
+  const walls = `M${lx},${topPx} L${lx},${bottomPx} M${rx},${topPx} L${rx},${bottomPx}`;
+
+  const tickPaths: string[] = [];
+  for (let y = topPx + spacing; y <= bottomPx - spacing / 2; y += spacing) {
+    tickPaths.push(`M${lx - tickLength},${y} L${lx},${y}`);
+    tickPaths.push(`M${rx},${y} L${rx + tickLength},${y}`);
+  }
+
+  return {
+    walls,
+    ticks: tickPaths.join(' '),
+    shoe: `M${lx},${bottomPx} L${rx},${bottomPx}`,
+  };
+}
+
+export function casingGradientId(csgType: string): string {
+  if (csgType === 'Conductor') return 'conductorGradient';
+  if (csgType === 'Liner')     return 'linerGradient';
+  return 'mainGradient';
+}
+
+/**
+ * Builds the two hanger bracket paths for a liner screen top.
+ *
+ * Shape matches the standard wellbore convention:
+ *   Left  side: drops `dropPx` down then angles back up-right  (filled triangle)
+ *   Right side: drops `dropPx` down then angles back up-left   (filled triangle)
+ *
+ * Example (dropPx=8, size=20):
+ *   Left:  M sl,y  L sl,y+8  L sl+20,y  Z
+ *   Right: M sr,y  L sr,y+8  L sr-20,y  Z
+ *
+ * @param centerX   SVG centre-x of the wellbore
+ * @param y         Y pixel position of the hanger (casing shoe px)
+ * @param halfWidth Half-width of the liner screen (screenHW)
+ * @param dropPx    Vertical drop of the bracket leg  (default 8)
+ * @param size      Horizontal span of the bracket    (default 20)
+ */
+export function buildScreenHanger(
+  centerX: number,
+  y: number,
+  halfWidth: number,
+  dropPx = 8,
+  size = 20,
+): { left: string; right: string } {
+  const sl = centerX - halfWidth; // left  edge of screen
+  const sr = centerX + halfWidth; // right edge of screen
+
+  const left  = `M${sl},${y} L${sl},${y + dropPx} L${sl + size},${y} Z`;
+  const right = `M${sr},${y} L${sr},${y + dropPx} L${sr - size},${y} Z`;
+
+  return { left, right };
+}
+==
+:host {
+  display: block;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.wellbore-svg {
+  display: block;
+  background: transparent;
+}
+
+
+
+:host ::ng-deep {
+
+
+  .ground-line   { stroke: #b94a12; stroke-width: 2.5; stroke-linecap: round; opacity: 0.9; }
+  .ground-label  { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; fill: #b94a12; text-transform: uppercase; opacity: 0.85; }
+  .geo-axis      { stroke: #000; stroke-width: 1.5; opacity: 1; }
+  .column-label  { font-family: 'DM Sans', sans-serif; font-size: 11px; fill: var(--accent); font-weight: 700; opacity: 0.9; }
+  .geo-tick      { stroke: #000; stroke-width: 1.5; opacity: 1; }
+  .geo-depth     { font-size: 18px; font-weight: 800;  text-anchor: end; }
+  .geo-code      { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 800; fill: var(--text-primary); letter-spacing: 0.05em; }
+
+  .geo-target-band  { fill: rgb(35 135 232 / 60%);  }
+  .geo-tick--target { stroke: #d97706; stroke-width: 2.5; }
+  .geo-depth--target{ font-size: 12px; font-weight: 700; fill: #d97706; text-anchor: end; }
+  .geo-code--target { font-size: 14px; font-weight: 900; fill: #d97706; }
+
+  .casing            { stroke-linecap: round; }
+  .casing-label__line   { stroke: var(--text-muted); stroke-width: 1; opacity: 0.75; }
+  .casing-label__arrow  { fill: var(--text-muted); opacity: 0.75; }
+  .casing-label__primary {
+     font-size: 15px; font-weight: 800;
+     
+  }
+  .casing-label__secondary {
+    font-size: 14.5px; font-weight: 500;
+     font-style: italic;
+  }
+  .casing-size-inner {
+    font-size: 17px; font-weight: 600;
+    opacity: 0.70;
+  }
+
+  .water-line  { stroke: #0ea5e9; stroke-width: 1.8; stroke-dasharray: 7,4; opacity: 0.8; }
+  .water-arrow { fill: #0ea5e9; stroke: #0ea5e9; opacity: 0.8; }
+  .water-label {  font-size: 14.5px;  font-weight: 900; fill: #0ea5e9;}
+
+  .open-hole        { stroke: #000; stroke-width: 3; fill: none; stroke-dasharray: 5,3; opacity: 1; }
+  .oh-label-line    { stroke: var(--text-muted); stroke-width: 1; opacity: 0.65; }
+  .oh-label-arrow   { fill: var(--text-muted); opacity: 0.65; }
+  .open-hole-text   { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 900;  }
+
+  .liner-screen     { stroke: var(--text-secondary); stroke-width: 1.8; fill: url(#gridPattern); opacity: 0.72; }
+  .screen-hanger    { opacity: 0.78; }
+  .screen-label-line{ stroke: var(--text-muted); stroke-width: 1; opacity: 0.65; }
+  .screen-label-text{ font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 800;  }
+
+  .gravelHole { opacity: 1; }
+
+  .perf-wall { stroke: #000; stroke-width: 2.5; fill: none; stroke-dasharray: 5,9; opacity: 1; }
+  .perf-tick { stroke: #000; stroke-width: 2; fill: none; opacity: 1; }
+  .perf-shoe { stroke: #000; stroke-width: 2.5; fill: none; opacity: 1; }
+
+  .depth-arrow-group {
+    .mud-circ-seg {
+      cursor: crosshair;
+      rect { transition: filter 0.15s; }
+      &:hover rect:first-child { filter: brightness(1.35) saturate(1.2); }
+    }
+  }
+
+  .depth-arrow-head {
+    fill: var(--accent);
+    filter: drop-shadow(0 0 4px var(--accent));
+  }
+
+  .depth-arrow-head-g circle {
+    filter: blur(2px);
+  }
+
+  .circ-tooltip {
+    pointer-events: none;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  }
+
+  .total-depth-main {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 800;
+    fill: var(--accent); letter-spacing: 0.05em; opacity: 0.9;
+  }
+
+}
+==
 import {
   ChangeDetectionStrategy,
   Component,
-  effect,
   ElementRef,
-
   inject,
-
-  Inject,
-  OnDestroy,
-  OnInit,
-  PLATFORM_ID,
-  signal,
-  ViewChild,
+  effect,
+  input,
+  viewChild,
 } from '@angular/core';
-import Graphic from '@arcgis/core/Graphic';
-import { watch as reactiveWatch, watch } from '@arcgis/core/core/reactiveUtils';
-import Point from '@arcgis/core/geometry/Point';
-import Polyline from '@arcgis/core/geometry/Polyline';
-import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import MapImageLayer from '@arcgis/core/layers/MapImageLayer';
-import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
-import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import { MatCardModule } from '@angular/material/card';
-import { Subject, takeUntil } from 'rxjs';
-import { MorningReport } from 'src/app/core/models/morning-report/morning-report.model';
-import { MorningReportService } from 'src/app/core/services/morning-report.service';
-import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
+import { select, Selection } from 'd3-selection';
+import { easeCubicInOut } from 'd3-ease';
+import 'd3-transition';
+
+import { WellStore } from '@store/active-wwell/active-wwell.store';
+import { ANIM, computeOverlayDelay, DIAGRAM_LAYOUT, WellboreDiagramData } from 'src/app/core/models/well-design/wellbore-diagram.model';
+import { ICasingIR } from 'src/app/shared/models/wwell/casing-ir.model';
+import { ITopsIR } from 'src/app/shared/models/wwell/tops-ir.model';
 import {
-  bottomPolygonTemplate,
-  lineSymbol,
-  locationTextSymbol,
-  MAP_BOUNDS,
-  MAP_CONFIG,
-  MAX_WIDTH,
-  STYLE,
-  tilesMap,
-  topPolygonTemplate,
-  WWell,
-  wwellIdTextSymbol,
-} from 'src/app/shared/models/config/agwa-map.config';
-import { createLegendLayer, findNonOverlappingPosition, translatePolygon } from 'src/app/shared/utils/wwell-placement-utils';
-import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
-import WebMap from '@arcgis/core/WebMap';
-import esriConfig from "@arcgis/core/config.js";
-import OAuthInfo from '@arcgis/core/identity/OAuthInfo';
-import MapView from '@arcgis/core/views/MapView';
-import { EsriMapService } from '@core/services/esri-map.service';
+  buildArrowHeadLeft,
+  buildArrowHeadRight,
+  buildCasingPath,
+  buildOpenHolePath,
+  buildGravelPackUPath,
+  buildPrePerfLiner,
+  buildScreenHanger,
+  casingGradientId,
+  computeCasingHalfWidth,
+  createDepthScale,
+  openHoleHalfWidth,
+} from 'src/app/shared/utils/wellbore-math.util';
 
-const WWELL_MAP_BOOT_TASK = 'arcgis-map';
+type SvgSel = Selection<SVGSVGElement, unknown, null, undefined>;
+type GSel = Selection<SVGGElement, unknown, null, undefined>;
+type DefsSel = Selection<SVGDefsElement, unknown, null, undefined>;
+
 @Component({
-  selector: 'app-active-wwell-map',
+  selector: 'app-well-bore-view',
   standalone: true,
-  imports: [MatCardModule],
-  templateUrl: './active-wwell-map.component.html',
-  styleUrl: './active-wwell-map.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './wellbore-view.component.html',
+  styleUrl: './wellbore-view.component.scss',
 })
-export class ActiveWwellMapComponent implements OnInit, OnDestroy {
-  protected readonly store = inject(DrillingDataStore);
+export class WellBoreViewComponent {
+  protected readonly store = inject(WellStore);
+  readonly diagramData = input.required<WellboreDiagramData | null>();
+  readonly animTrigger = input.required<number>();
 
+  private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('wellboreSvg');
 
-  @ViewChild('presMapViewNode', { static: true }) private mapViewEl?: ElementRef;
-  private mapView?: __esri.MapView;
+  private readonly layout = DIAGRAM_LAYOUT;
+  private rootG!: GSel;
+  private defsEl!: DefsSel;
 
-  protected readonly wwells = signal<WWell[]>([]);
-  protected readonly errorMessage = signal<string | null>(null);
-  protected readonly mapReady = signal<boolean>(false);
-  private readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
-
-  private placedBubbles: { x: number; y: number; radius: number }[] = [];
-  private readonly destroy$ = new Subject<void>();
-  private stationaryWatchHandle?: __esri.WatchHandle;
-  private legendLayer: GraphicsLayer | undefined;
-  private bootTaskRegistered = false;
-
-  constructor(
-    @Inject(PLATFORM_ID) private readonly platformId: object,
-    private readonly morningService: MorningReportService,
-    private readonly extConfigService: ExternalConfigService,
-    private readonly loader: LoaderService,
-  ) {
+  constructor() {
     effect(() => {
-      this.wwells();          // reactive read
-      if (!this.mapReady()) return;        // map not ready yet
-      const wwellLayer = this.getLayerById('WWell-icons') as GraphicsLayer;
-      if (!wwellLayer) return;
-      this.drawWWellIcons(wwellLayer).catch(e =>
-        console.error('drawWWellIcons failed', e)
-      );
-    });
-    effect(() => {
-      this.wwells();                 // creates a dependency on the data
-      const bubbleLayer = this.bubbleLayerReady(); // creates a dependency on the layer
-      if (!bubbleLayer) return;                    // layer not ready yet
-      // Synchronous layout – no await inside the effect
-      this.layoutBubbles(bubbleLayer);
+      const svgEl = this.svgRef();
+      const data = this.diagramData();
+
+      if (!svgEl?.nativeElement || !data) return;
+
+      // Bootstrap once; redraw on every data/trigger change.
+      if (!this.rootG) {
+        this.bootstrapSvg(svgEl.nativeElement);
+      }
+
+      if (this.rootG) {
+        this.redraw(data);
+      }
     });
   }
 
-  ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    this.registerBootTask();
-    this.fetchMorningReports();
+  private bootstrapSvg(element: SVGSVGElement): void {
+    const { wellboreViewWidth, svgHeight, marginTop } = this.layout;
+    const svg = select(element) as SvgSel;
+
+    svg.attr('width', '100%')
+      .attr('height', '100%')
+      .attr('viewBox', `0 0 ${wellboreViewWidth} ${svgHeight}`)
+      .attr('preserveAspectRatio', 'none');
+
+    this.defsEl = svg.append('defs') as DefsSel;
+    this.addStaticDefs(this.defsEl);
+
+    this.rootG = svg.append('g')
+      .attr('class', 'wellbore-root')
+      .attr('transform', `translate(0,${marginTop})`) as GSel;
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.stationaryWatchHandle?.remove();
-    this.mapView?.destroy();
-    this.resolveBootTask();
+  private redraw(data: WellboreDiagramData): void {
+    if (!this.rootG) return;
+    
+    this.rootG.selectAll('*').remove();
+    this.defsEl.selectAll('.dyn-clip').remove();
+
+    const { drawingHeight, geoLineX, casingCenterX } = this.layout;
+    const scale = createDepthScale(data.totalDepth, drawingHeight);
+    const targetAquifer = data.hydrogeology?.estTargetAquifier ?? null;
+
+    // ── Build a strict sequential timeline ─────────────────────────────────
+    const structuralCasings = data.casings.filter(
+      (c: ICasingIR) => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack'
+    );
+
+    const t_casingsStart = 0;
+    const t_casingsDone = computeOverlayDelay(structuralCasings.length);
+    const t_ohStart = t_casingsDone + ANIM.SEQ_GAP;
+    const t_ohDone = t_ohStart + ANIM.OH_DURATION;
+    const t_gravelStart = t_ohDone + ANIM.SEQ_GAP;
+    const t_gravelDone = t_gravelStart + ANIM.GRAVEL_DURATION;
+    const t_hangerStart = t_gravelDone + ANIM.SEQ_GAP;
+    const t_drillStart = 0;
+    const t_labelsStart = t_casingsDone + ANIM.SEQ_GAP;
+    const t_ohLabelStart = t_ohDone + ANIM.SEQ_GAP;
+    const t_waterStart = t_ohLabelStart + ANIM.OVERLAY_FADE + ANIM.SEQ_GAP;
+    const t_notDrilledStart = t_casingsDone + ANIM.SEQ_GAP;
+    const t_tdLabelStart = t_notDrilledStart + ANIM.OVERLAY_FADE + ANIM.SEQ_GAP;
+
+    // ── Draw ───────────────────────────────────────────────────────────────
+    this.drawStaticChrome(geoLineX, casingCenterX);
+    this.drawGeologicTops(data.geologicTops, geoLineX, scale, targetAquifer);
+    this.drawOpenHoleAndScreen(data, casingCenterX, scale, t_ohStart, t_ohDone, t_ohLabelStart);
+    this.drawGravelPackDesign(data, casingCenterX, scale, t_ohStart, t_ohLabelStart);
+    this.drawPerforations(data, casingCenterX, scale, t_ohStart, t_ohLabelStart);
+    this.drawScreenHanger(data, casingCenterX, scale, t_hangerStart);
+    this.drawCasings(data.casings, casingCenterX, scale, t_casingsStart, t_gravelStart);
+    this.drawCasingLabels(data.casings, casingCenterX, scale, t_labelsStart);
+    this.drawWaterLevel(data, casingCenterX, scale, t_waterStart);
+    this.drawDrillArrow(data, scale, t_drillStart, t_casingsDone);
+
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const ohHW = openHoleHalfWidth(innerHW);
+
+    this.drawNotDrilledZone(data, casingCenterX, scale, t_notDrilledStart, ohHW);
+    this.drawTotalDepthLabel(data.totalDepth, casingCenterX, drawingHeight, t_tdLabelStart);
   }
 
-  private fetchMorningReports(): void {
-    this.errorMessage.set(null);
-    this.morningService
-      .getMorningReportForKSA()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (data: MorningReport[]) => {
-          this.buildWWellSignal(data);
-          this.initMap().catch((e) => {
-            console.error('initMap error', e);
-            this.resolveBootTask();
-          });
-        },
-        error: (err) => {
-          console.error('Failed to fetch morning report', err);
-          this.errorMessage.set('Unable to load well data.');
-          this.resolveBootTask();
-        },
-      });
-  }
+  private addStaticDefs(defs: DefsSel): void {
+    this.addLinearGradient(defs, 'mainGradient', [
+      { offset: '0%', color: '#2d3748' },
+      { offset: '40%', color: '#c9d1d9' },
+      { offset: '60%', color: '#e6edf3' },
+      { offset: '100%', color: '#2d3748' },
+    ]);
+    this.addLinearGradient(defs, 'conductorGradient', [
+      { offset: '0%', color: '#1a3a2a' },
+      { offset: '45%', color: '#3fb950' },
+      { offset: '55%', color: '#56d364' },
+      { offset: '100%', color: '#1a3a2a' },
+    ]);
+    this.addLinearGradient(defs, 'linerGradient', [
+      { offset: '0%', color: '#2d3748' },
+      { offset: '40%', color: '#8b949e' },
+      { offset: '60%', color: '#c9d1d9' },
+      { offset: '100%', color: '#2d3748' },
+    ]);
 
-  private buildWWellSignal(data: MorningReport[]): void {
-    const safeNum = (s?: string | null): number => {
-      const n = Number.parseFloat(s ?? '');
-      return Number.isNaN(n) ? 0 : n;
+    const grid = defs.append('pattern')
+      .attr('id', 'gridPattern')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 6).attr('height', 6);
+    grid.append('path')
+      .attr('d', 'M6,-4 L6,6 L-4,6')
+      .attr('stroke', '#000000')
+      .attr('stroke-width', 2)
+      .attr('opacity', '1')
+      .attr('fill', 'none');
+
+    const gravelPattern = defs.append('pattern')
+      .attr('id', 'gravelpattern')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 8)
+      .attr('height', 4);
+
+    gravelPattern.append('rect')
+      .attr('x', 0).attr('y', 0)
+      .attr('width', 4).attr('height', 2)
+      .attr('fill', '#000').attr('opacity', '1');
+
+    gravelPattern.append('rect')
+      .attr('x', 4).attr('y', 2)
+      .attr('width', 4).attr('height', 2)
+      .attr('fill', '#000').attr('opacity', '1');
+
+    const dashedPattern = defs.append('pattern')
+      .attr('id', 'dashed')
+      .attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', 5).attr('height', 5);
+
+    dashedPattern.append('image')
+      .attr('href', "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMCcgaGVpZ2h0PScxMCc+CiAgPHJlY3Qgd2lkdGg9JzEwJyBoZWlnaHQ9JzEwJyBmaWxsPSd3aGl0ZScgLz4KICA8Y2lyY2xlIGN4PScyLjUnIGN5PScyLjUnIHI9JzIuNScgZmlsbD0nYmxhY2snLz4KPC9zdmc+");
+
+    const addMarker = (id: string, fill: string): void => {
+      defs.append('marker')
+        .attr('id', id)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 5).attr('refY', 0)
+        .attr('markerWidth', 4).attr('markerHeight', 4)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', fill);
     };
+    addMarker('arrowBlack', 'var(--text-secondary)');
+    addMarker('arrowBlue', '#3CC3FF');
 
-    const wells: WWell[] = data
-      .map((r) => ({
-        wwellId: r.wGnrName ?? 'N/A',
-        lat: safeNum(r.racEstDdLatCord),
-        lng: safeNum(r.racEstDdLonCord),
-        location: r.trgtRsvrCd ?? 'N/A',
-        label: r.biNum ?? 'N/A',
-      }))
-      .filter((w) => w.lat !== 0 && w.lng !== 0);
-
-    this.wwells.set(wells);
+    addMarker('arrowBlue', '#3CC3FF');
   }
 
-  private getLayerById(id: string): GraphicsLayer | undefined {
-    return this.mapView?.map?.layers.find((l) => l.id === id) as
-      | GraphicsLayer
-      | undefined;
-  }
-
-  private async initMap(): Promise<void> {
-    let MapMod: typeof __esri.Map;
-    let MapViewMod: typeof __esri.MapView;
-    let MapImageLayerMod: typeof MapImageLayer;
-
-    try {
-      const [{ default: MapTmp },
-        { default: MapViewTmp },
-        { default: MapImageLayerTmp }
-      ] = await Promise.all([
-        import('@arcgis/core/Map'),
-        import('@arcgis/core/views/MapView'),
-        import('@arcgis/core/layers/MapImageLayer'),
-      ]);
-      MapMod = MapTmp;
-      MapViewMod = MapViewTmp;
-      MapImageLayerMod = MapImageLayerTmp;
-
-    } catch (e) {
-      console.error("Failed to load core ARcGIS module..", e);
-      this.errorMessage.set('Map could not be initialized');
-      this.resolveBootTask();
-      return;
-    }
-
-    await this.esriAuth.authenticateUserForMapAccess();
-    const samplesMapLayer = new WebMap({
-      portalItem: {
-        id: "c177620bd7744a22b6e7e0d98c33d18a"
-      }
-    });
-
-
-    this.mapView = new MapView({
-      container: this.mapViewEl?.nativeElement,
-      map: samplesMapLayer,
-      center: MAP_CONFIG.center,
-      
-
-      // zoom: MAP_CONFIG.minZoom,
-      // constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom }
-
-    });
-
-    // const map = new MapMod({ basemap: 'topo-vector' });
-    // this.mapView = new MapViewMod({
-    //   container: this.mapViewEl?.nativeElement,
-    //   map,
-    //   center: MAP_CONFIG.center,
-    //   zoom: MAP_CONFIG.minZoom,
-    //   constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom }
-    // });
-
-    const mapServerUrl = `${this.extConfigService.settings.mapServerUrl}`
-
-    await this.mapView.when();
-    const view = this.mapView;
-    if (!view) {
-      this.resolveBootTask();
-      return;
-    }
-    const viewMap = view.map;
-    if (!viewMap) {
-      this.resolveBootTask();
-      return;
-    }
-
-    const explorerLayer = new MapImageLayerMod({
-      url: mapServerUrl,
-      sublayers: [
-        {
-          id: 6, // “Oil Wells”
-          visible: true,
-        },
-        {
-          id: 5, // “Gas Pipelines”
-          visible: true,
-        },
-      ],
-      opacity: 0.8,
-      title: 'Explorer (Oil & Gas)',
-    });
-
-    this.legendLayer = createLegendLayer(view);
-    viewMap.add(this.legendLayer);
-    const wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
-    const bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
-    samplesMapLayer.addMany([explorerLayer, wwellLayer, bubbleLayer]);
-    this.mapReady.set(true);
-    this.bubbleLayerReady.set(bubbleLayer);
-    await this.waitForInitialMapRender();
-    this.resolveBootTask();
-
-    this.stationaryWatchHandle = reactiveWatch(
-      () => this.mapView?.stationary,
-      (isStationary) => {
-        if (isStationary) {
-          const layer = this.bubbleLayerReady();
-          if (layer) this.layoutBubbles(layer);
-        }
-      }
+  private addLinearGradient(
+    defs: DefsSel,
+    id: string,
+    stops: { offset: string; color: string }[],
+  ): void {
+    const g = defs.append('linearGradient').attr('id', id);
+    stops.forEach(({ offset, color }) =>
+      g.append('stop').attr('offset', offset).attr('stop-color', color),
     );
   }
 
+  private getCasingTier(csg: ICasingIR, casings: ICasingIR[]): number {
+    const structuralCasings = casings.filter(c => c.csgType !== 'Gravel Pack');
+    const idx = structuralCasings.indexOf(csg);
+    return idx === -1 ? 0 : idx;
+  }
 
-  private esriAuth = inject(EsriMapService)
-  private async initMap2(): Promise<void> {
+  private drawStaticChrome(geoLineX: number, centerX: number): void {
+    this.rootG.append('line')
+      .attr('class', 'ground-line')
+      .attr('x1', geoLineX + 200).attr('x2', centerX + 300)
+      .attr('y1', -3).attr('y2', -3);
 
-    //   const portalUrl = `${this.extConfigService.settings.esriServiceUrl}`
-    //   const samplesMapLayer = new WebMap({
-    //     portalItem: {
-    //       id: "c177620bd7744a22b6e7e0d98c33d18a"
-    //     }
-    //   });
+    this.rootG.append('text')
+      .attr('class', 'ground-label')
+      .attr('x', centerX).attr('y', -12)
+      .attr('text-anchor', 'middle')
+      .text('Ground Level');
 
-    await this.esriAuth.authenticateUserForMapAccess();
-    const samplesMapLayer = new WebMap({
-      portalItem: {
-        id: "c177620bd7744a22b6e7e0d98c33d18a"
+    this.rootG.append('line')
+      .attr('class', 'geo-axis')
+      .attr('x1', geoLineX).attr('x2', geoLineX)
+      .attr('y1', 0).attr('y2', this.layout.drawingHeight);
+
+    this.rootG.append('text')
+      .attr('class', 'column-label')
+      .attr('x', geoLineX).attr('y', -30)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '13px')
+      .call((t) => {
+        t.append('tspan').attr('x', geoLineX).attr('dy', 0).text('Geologic');
+        t.append('tspan').attr('x', geoLineX).attr('dy', 12).text('Horizons (ft bgl)');
+      });
+  }
+
+  private drawGeologicTops(
+    tops: ITopsIR[],
+    geoLineX: number,
+    scale: ReturnType<typeof createDepthScale>,
+    targetAquifer: string | null,
+  ): void {
+    const sorted = [...tops].sort((a, b) => a.planTvdDepth - b.planTvdDepth);
+    sorted.forEach((top, idx) => {
+      const isTarget = !!targetAquifer && top.stLongCd === targetAquifer;
+      const yPx = scale(top.planTvdDepth);
+      const g = this.rootG.append('g')
+        .attr('class', isTarget ? 'geo-top geo-top--target' : 'geo-top')
+        .attr('transform', `translate(0,${yPx})`)
+        .style('opacity', 0);
+
+      if (isTarget) {
+        g.append('rect')
+          .attr('class', 'geo-target-band')
+          .attr('x', geoLineX - 75)
+          .attr('width', 150)
+          .attr('height', 25)
+          .attr('y', -14)
+          .attr('rx', 3);
+      }
+
+      g.append('line')
+        .attr('class', 'geo-tick')
+        .attr('x1', geoLineX - 14).attr('x2', geoLineX + 14)
+        .attr('y1', 0).attr('y2', 0);
+
+      g.append('text')
+        .attr('class', 'geo-depth')
+        .attr('x', geoLineX - 17)
+        .attr('dy', '0.35em')
+        .text(top.planTvdDepth.toLocaleString());
+
+      g.append('text')
+        .attr('class', 'geo-code')
+        .attr('x', geoLineX + 18)
+        .attr('dy', '0.35em')
+        .text(top.stLongCd);
+
+      g.transition()
+        .delay(ANIM.GEO_DELAY + idx * ANIM.GEO_STAGGER)
+        .duration(220)
+        .style('opacity', 1);
+    });
+  }
+
+  private drawCasings(
+    casings: ICasingIR[],
+    centerX: number,
+    scale: ReturnType<typeof createDepthScale>,
+    casingsStart: number,
+    gravelStart: number,
+  ): void {
+    const { baseHalfWidth, halfWidthIncrement, shoeCurveOffset } = this.layout;
+    casings.forEach((csg, i) => {
+      if (csg.csgType === 'Liner') return;
+      const tier = this.getCasingTier(csg, casings);
+      const hw = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+      const bottomPx = scale(csg.csgDepth);
+      const clipId = `dyn-casing-clip-${i}`;
+      const animOrder = casings.length - 1 - i;
+      const delay = animOrder * ANIM.CASING_STAGGER;
+      const clipRadius = csg.csgType === 'Gravel Pack'
+        ? (computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement) - 10) + 20
+        : openHoleHalfWidth(hw) + 20;
+
+      const clipRect = this.defsEl
+        .append('clipPath')
+        .attr('class', 'dyn-clip')
+        .attr('id', clipId)
+        .append('rect')
+        .attr('x', centerX - clipRadius - 15)
+        .attr('y', -5)
+        .attr('width', clipRadius * 2 + 30)
+        .attr('height', 0);
+
+      if (csg.csgType === 'Gravel Pack') {
+        const deepestSolid = casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack');
+        const startDepthPx = deepestSolid ? scale(deepestSolid.csgDepth) : 0;
+        const gravelBottomPx = scale(csg.csgDepth);
+        const innerHW = computeCasingHalfWidth(0, this.layout.baseHalfWidth, this.layout.halfWidthIncrement);
+        const screenHW = innerHW - 10;
+        const annulusWidth = 10;
+        const annulusCenter = screenHW + (annulusWidth / 2);
+        this.rootG.append('path')
+          .attr('class', 'gravelHole')
+          .attr('d', buildGravelPackUPath(centerX, annulusCenter, startDepthPx, gravelBottomPx))
+          .attr('stroke', 'url(#gravelpattern)')
+          .attr('stroke-width', String(annulusWidth))
+          .style('fill', 'none')
+          .attr('clip-path', `url(#${clipId})`);
+        clipRect.transition()
+          .delay(gravelStart)
+          .duration(ANIM.GRAVEL_DURATION)
+          .ease(easeCubicInOut)
+          .attr('height', gravelBottomPx + 20);
+      } else {
+        this.rootG.append('path')
+          .attr('class', 'casing')
+          .attr('d', buildCasingPath(centerX, hw, 0, bottomPx, shoeCurveOffset))
+          .attr('clip-path', `url(#${clipId})`)
+          .attr('fill', `url(#${casingGradientId(csg.csgType)})`)
+          .attr('stroke', '#1e293b')
+          .attr('stroke-width', '5')
+          .style('opacity', csg.csgType === 'Conductor' ? 0.92 : 0.65);
+        clipRect.transition()
+          .delay(casingsStart + delay)
+          .duration(ANIM.CASING_DURATION)
+          .ease(easeCubicInOut)
+          .attr('height', bottomPx + shoeCurveOffset + 20);
       }
     });
-
-
-    this.mapView = new MapView({
-      container: this.mapViewEl?.nativeElement,
-      map: samplesMapLayer
-
-    });
-
-
-
-
   }
 
-  private async waitForInitialMapRender(): Promise<void> {
-    if (!this.mapView) return;
-    if (!this.mapView.updating) {
-      await new Promise(requestAnimationFrame);
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
-      const handle = watch(
-        () => this.mapView?.updating ?? false,
-        (updating) => {
-          if (!updating) {
-            handle.remove();
-            requestAnimationFrame(() => resolve());
-          }
+  private drawCasingLabels(
+    casings: ICasingIR[],
+    centerX: number,
+    scale: ReturnType<typeof createDepthScale>,
+    labelsStart: number,
+  ): void {
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    casings.forEach((csg) => {
+      if (csg.csgType === 'Liner') return;
+      const tier = this.getCasingTier(csg, casings);
+      const hw = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+      const shoePx = scale(csg.csgDepth);
+      let labelYPx = shoePx;
+      if (csg.csgType === 'Gravel Pack') {
+        labelYPx = scale(csg.csgDepth);
+      }
+      const rEdge = csg.csgType === 'Gravel Pack'
+        ? centerX + (computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement) - 10)
+        : centerX + hw;
+      const lEnd = rEdge + 22;
+      const labelX = lEnd + 8;
+      const lg = this.rootG.append('g')
+        .attr('class', 'casing-label')
+        .style('opacity', 0);
+      lg.append('line')
+        .attr('class', 'casing-label__line')
+        .attr('x1', rEdge).attr('x2', lEnd)
+        .attr('y1', labelYPx).attr('y2', labelYPx);
+      lg.append('path')
+        .attr('class', 'casing-label__arrow')
+        .attr('d', buildArrowHeadRight(lEnd, labelYPx, 6));
+      if (csg.csgType === 'Gravel Pack') {
+        lg.append('text')
+          .attr('class', 'casing-label__primary')
+          .attr('x', labelX).attr('y', labelYPx + 4)
+          .text(csg.csgRemarks || 'Gravel Pack');
+      } else {
+        lg.append('text')
+          .attr('class', 'casing-label__primary')
+          .attr('x', labelX).attr('y', shoePx + 4)
+          .text(`${csg.csgSize}" ${csg.csgType} @ ${csg.csgDepth.toLocaleString()}`);
+        if (csg.csgRemarks) {
+          lg.append('text')
+            .attr('class', 'casing-label__secondary')
+            .attr('x', labelX).attr('y', shoePx + 17)
+            .text(`(${csg.csgRemarks})`);
         }
-      );
+        this.rootG.append('text')
+          .attr('class', 'casing-size-inner')
+          .attr('x', centerX).attr('y', shoePx - 9)
+          .attr('text-anchor', 'middle')
+          .style('opacity', 0)
+          .text(`${csg.csgSize}"`)
+          .transition().delay(labelsStart).duration(250).style('opacity', 1);
+      }
+      lg.transition().delay(labelsStart).duration(300).ease(easeCubicInOut).style('opacity', 1);
     });
   }
 
-  private async drawWWellIcons(layer: GraphicsLayer): Promise<void> {
-    layer.removeAll();
-    const { default: Point } = await import('@arcgis/core/geometry/Point');
-    const { default: PictureMarkerSymbol } = await import('@arcgis/core/symbols/PictureMarkerSymbol');
-    const wells = this.wwells();
-    for (const wwell of wells) {
-      const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
-      const symbol = new PictureMarkerSymbol({
-        url: STYLE.markerIcon,
-        width: STYLE.markerSize,
-        height: STYLE.markerSize
-      });
-      layer.add(
-        new Graphic({
-          geometry: point,
-          symbol,
-          attributes: {
-            wwellId: wwell.wwellId,
-            Location: wwell.location
-          },
-        })
-      );
+  private drawWaterLevel(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, waterStart: number): void {
+    if (!data.hydrogeology) return;
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const wPx = scale(data.hydrogeology.estStaticWaterLevel);
+    const widestCsg = data.casings[data.casings.length - 1];
+    const tier = widestCsg ? this.getCasingTier(widestCsg, data.casings) : 0;
+    const innerHW = computeCasingHalfWidth(tier, baseHalfWidth, halfWidthIncrement);
+    const lR = centerX + innerHW + 10;
+    const lL = centerX - innerHW - 10;
+    const label = data.hydrogeology.flowType === 'Y' ? 'Flowing (SIWHP: 50 PSI)' : `Static WL: ${data.hydrogeology.estStaticWaterLevel.toLocaleString()} ft`;
+    const wg = this.rootG.append('g').attr('class', 'water-level').style('opacity', 0);
+    wg.append('line').attr('class', 'water-line').attr('x1', lL).attr('x2', lR).attr('y1', wPx).attr('y2', wPx);
+    wg.append('path').attr('class', 'water-arrow').attr('d', `M${lL} ${wPx - 5} L${lL - 10} ${wPx} L${lL} ${wPx + 5} Z`);
+    wg.append('text').attr('class', 'water-label').attr('x', lR - 350).attr('y', wPx + 4).text(label);
+    wg.transition().delay(waterStart).duration(ANIM.OVERLAY_FADE).ease(easeCubicInOut).style('opacity', 1);
+  }
+
+  private drawOpenHoleAndScreen(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, ohStart: number, ohDone: number, ohLabelStart: number): void {
+    if (!data.casings.length) return;
+
+    const { wellDesign } = data;
+    const shouldDrawOH = !wellDesign || wellDesign.ohFlag === 'Y';
+    const shouldDrawLS = !wellDesign || wellDesign.lsFlag === 'Y';
+    if (!shouldDrawOH && !shouldDrawLS) return;
+
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const ohHW = openHoleHalfWidth(innerHW);
+    const screenHW = innerHW - 10;
+    const deepestSolid = data.casings.find((c: ICasingIR) => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
+    const liner = data.casings.find((c: ICasingIR) => c.csgType === 'Liner');
+    const shoePx = scale(deepestSolid.csgDepth);
+    const tdPx = scale(data.totalDepth);
+    // When flag-driven, always run to total depth; otherwise fall back to liner depth.
+    const screenBottomPx = wellDesign ? tdPx : (liner ? scale(liner.csgDepth) : tdPx - 15);
+
+    const clipHW = shouldDrawOH ? ohHW : screenHW;
+    const clipId = 'dyn-oh-clip';
+    const clipRect = this.defsEl.append('clipPath').attr('class', 'dyn-clip').attr('id', clipId).append('rect')
+      .attr('x', centerX - clipHW - 15).attr('y', shoePx - 5).attr('width', clipHW * 2 + 30).attr('height', 0);
+
+    if (shouldDrawOH) {
+      this.rootG.append('path').attr('class', 'open-hole')
+        .attr('d', buildOpenHolePath(centerX, ohHW, shoePx, tdPx))
+        .attr('clip-path', `url(#${clipId})`);
+    }
+
+    if (shouldDrawLS) {
+      this.rootG.append('path').attr('class', 'liner-screen')
+        .attr('d', buildOpenHolePath(centerX, screenHW, shoePx, screenBottomPx))
+        .attr('clip-path', `url(#${clipId})`);
+    }
+
+    clipRect.transition().delay(ohStart).duration(ANIM.OH_DURATION).ease(easeCubicInOut).attr('height', tdPx - shoePx + 20);
+
+    if (shouldDrawOH) {
+      const ohLabel = wellDesign?.ohRemarks ?? '8 1/2" Open Hole';
+      const ohLY = shoePx + (tdPx - shoePx) * 0.2;
+      const ohLG = this.rootG.append('g').attr('class', 'open-hole-label').style('opacity', 0);
+      ohLG.append('line').attr('class', 'oh-label-line').attr('x1', centerX - ohHW).attr('x2', centerX - ohHW - 28).attr('y1', ohLY).attr('y2', ohLY);
+      ohLG.append('path').attr('class', 'oh-label-arrow').attr('d', buildArrowHeadLeft(centerX - ohHW - 28, ohLY, 6));
+      ohLG.append('text').attr('class', 'open-hole-text').attr('x', centerX - ohHW - 34).attr('y', ohLY + 4).attr('text-anchor', 'end').text(ohLabel);
+      ohLG.transition().delay(ohLabelStart).duration(ANIM.OVERLAY_FADE).ease(easeCubicInOut).style('opacity', 1);
+    }
+
+    if (shouldDrawLS) {
+      const fallbackFt = liner ? liner.csgDepth - deepestSolid.csgDepth : data.totalDepth - deepestSolid.csgDepth;
+      const screenLabel = wellDesign?.lsRemarks ?? (liner?.csgRemarks ?? `+/- ${fallbackFt.toLocaleString()} ft of Screen`);
+      const scrLG = this.rootG.append('g').attr('class', 'screen-label').style('opacity', 0);
+      scrLG.append('line').attr('class', 'screen-label-line').attr('x1', centerX + screenHW).attr('x2', centerX + screenHW + 28).attr('y1', screenBottomPx).attr('y2', screenBottomPx);
+      scrLG.append('path').attr('d', buildArrowHeadRight(centerX + screenHW + 28, screenBottomPx, 6));
+      scrLG.append('text').attr('class', 'screen-label-text').attr('x', centerX + screenHW + 34).attr('y', screenBottomPx + 4).text(screenLabel);
+      scrLG.transition().delay(ohLabelStart + ANIM.OVERLAY_FADE + ANIM.SEQ_GAP).duration(ANIM.OVERLAY_FADE).ease(easeCubicInOut).style('opacity', 1);
     }
   }
 
-  private layoutBubbles(layer: GraphicsLayer): void {
-    if (!this.mapView) return;
-    layer.removeAll();
-    this.placedBubbles = [];
+  private drawGravelPackDesign(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, ohStart: number, ohLabelStart: number): void {
+    if (data.wellDesign?.gpFlag !== 'Y') return;
+    if (!data.casings.length) return;
 
-    const view = this.mapView;
-    const viewW = view.width;
-    const viewH = view.height;
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const screenHW = innerHW - 10;
+    const annulusWidth = 10;
+    const annulusCenter = screenHW + annulusWidth / 2;
+    const deepestSolid = data.casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
+    const startDepthPx = scale(deepestSolid.csgDepth);
+    const tdPx = scale(data.totalDepth);
 
-    const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
-    const iconRadius = STYLE.markerSize / 2;
-    const graphics: Graphic[] = [];
-    const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: { wkid: 4326 } });
+    const clipId = 'dyn-gp-design-clip';
+    const clipRect = this.defsEl.append('clipPath').attr('class', 'dyn-clip').attr('id', clipId).append('rect')
+      .attr('x', centerX - annulusCenter - 15).attr('y', startDepthPx - 5)
+      .attr('width', (annulusCenter + 15) * 2).attr('height', 0);
 
-    const wells: WWell[] = this.wwells();
-    for (const wwell of wells) {
-      // ---- 3.1  Anchor point (screen → map) --------------------
-      anchorPt.latitude = wwell.lat;
-      anchorPt.longitude = wwell.lng;
+    this.rootG.append('path')
+      .attr('class', 'gravelHole')
+      .attr('d', buildGravelPackUPath(centerX, annulusCenter, startDepthPx, tdPx))
+      .attr('stroke', 'url(#gravelpattern)')
+      .attr('stroke-width', String(annulusWidth))
+      .style('fill', 'none')
+      .attr('clip-path', `url(#${clipId})`);
 
-      const sp = view.toScreen(anchorPt);
-      if (!sp) continue;
+    clipRect.transition()
+      .delay(ohStart)
+      .duration(ANIM.GRAVEL_DURATION)
+      .ease(easeCubicInOut)
+      .attr('height', tdPx - startDepthPx + 20);
 
-      // keep the bubble inside the view margins
-      sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
-      sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
-
-      // ---- 3.2  Find a non‑overlapping screen position ----------
-      const obstacles = [
-        ...this.placedBubbles,
-        { x: sp.x, y: sp.y, radius: iconRadius + 6 },
-      ];
-      const finalScreen = findNonOverlappingPosition(
-        sp.x,
-        sp.y,
-        obstacles,
-        bubblePixelRadius
-      );
-
-      // ---- 3.3  Remember the placed bubble for the next iterations
-      this.placedBubbles.push({
-        x: finalScreen.x,
-        y: finalScreen.y,
-        radius: bubblePixelRadius,
-      });
-
-      // ---- 3.4  Convert back to map coordinates -----------------
-      let finalMapPoint = view.toMap(finalScreen) as __esri.Point | null;
-      if (!finalMapPoint) finalMapPoint = anchorPt.clone();
-
-      // ---- 3.5  Small offset so the bubble never sits on the oil well
-      const offsetLat = 3;
-      const offsetLng = 2;
-      finalMapPoint.latitude = Math.min(
-        Math.max(finalMapPoint.latitude! + offsetLat, MAP_BOUNDS.minLat),
-        MAP_BOUNDS.maxLat
-      );
-      finalMapPoint.longitude = Math.min(
-        Math.max(finalMapPoint.longitude! + offsetLng, MAP_BOUNDS.minLng),
-        MAP_BOUNDS.maxLng
-      );
-      // 4.1  Stick (polyline from oil‑well to bubble)
-      const stick = new Graphic({
-        geometry: new Polyline({
-          paths: [
-            [
-              [wwell.lng, wwell.lat],
-              [finalMapPoint.longitude!, finalMapPoint.latitude!],
-            ],
-          ],
-          spatialReference: { wkid: 4326 },
-        }),
-        symbol: lineSymbol(tilesMap.get(wwell.label)!.color),
-      });
-
-      // 4.2  Top rectangle (bubble “head”)
-      const topPoly = translatePolygon(
-        topPolygonTemplate,
-        finalMapPoint.longitude!,
-        finalMapPoint.latitude!
-      );
-      const bubbleTop = new Graphic({
-        geometry: topPoly,
-        symbol: new SimpleFillSymbol({
-          color: tilesMap.get(wwell.label)!.color,
-          outline: { color: [0, 0, 0], width: 1 },
-        }),
-      });
-
-      // 4.3  Bottom rectangle (bubble “tail”)
-      const bottomPoly = translatePolygon(
-        bottomPolygonTemplate,
-        finalMapPoint.longitude!,
-        finalMapPoint.latitude!
-      );
-      const bubbleBottom = new Graphic({
-        geometry: bottomPoly,
-        symbol: new SimpleFillSymbol({
-          color: [0, 191, 255, 0.9],
-          outline: { color: [0, 0, 0], width: 1 },
-        }),
-      });
-
-      // Inside the loop, after you have `finalMapPoint`:
-      const wwellIdLabel = new Graphic({
-        geometry: finalMapPoint,
-        // No clone – we keep the concrete TextSymbol type
-        symbol: wwellIdTextSymbol(STYLE.textFont),
-      });
-      (wwellIdLabel.symbol as TextSymbol).text = `${wwell.wwellId}`;
-      (wwellIdLabel.symbol as TextSymbol).verticalAlignment = "middle";
-      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = "center";
-
-      const locationLabel = new Graphic({
-        geometry: finalMapPoint,
-        symbol: locationTextSymbol(STYLE.textFont),
-      });
-      (locationLabel.symbol as TextSymbol).text = `${wwell.location}`;
-      (locationLabel.symbol as TextSymbol).horizontalAlignment = "center";
-      (locationLabel.symbol as TextSymbol).verticalAlignment = "middle";
-      graphics.push(stick, bubbleTop, bubbleBottom, wwellIdLabel, locationLabel);
+    if (data.wellDesign.gpRemarks) {
+      const labelY = startDepthPx + (tdPx - startDepthPx) * 0.5;
+      const rEdge = centerX + innerHW;
+      const lEnd = rEdge + 22;
+      const lg = this.rootG.append('g').attr('class', 'gp-design-label').style('opacity', 0);
+      lg.append('line').attr('class', 'screen-label-line').attr('x1', rEdge).attr('x2', lEnd).attr('y1', labelY).attr('y2', labelY);
+      lg.append('path').attr('d', buildArrowHeadRight(lEnd, labelY, 6));
+      lg.append('text').attr('class', 'screen-label-text').attr('x', lEnd + 6).attr('y', labelY + 4).text(data.wellDesign.gpRemarks);
+      lg.transition().delay(ohLabelStart).duration(ANIM.OVERLAY_FADE).ease(easeCubicInOut).style('opacity', 1);
     }
-    layer.addMany(graphics);
   }
 
-  async saveMapImage(): Promise<void> {
+  private drawPerforations(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, ohStart: number, ohLabelStart: number): void {
+    if (data.wellDesign?.perfFlag !== 'Y') return;
+    if (!data.casings.length) return;
 
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const linerHW = innerHW - 10;
+    const deepestSolid = data.casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
+    const topPx = scale(deepestSolid.csgDepth);
+    const tdPx = scale(data.totalDepth);
 
-    // Download
-    const base64 = await this.captureMapAsBase64();
-    this.downloadBase64(base64, 'water-wells-map.png');
+    const { walls, ticks, shoe } = buildPrePerfLiner(centerX, linerHW, topPx, tdPx);
+
+    const clipId = 'dyn-perf-clip';
+    const clipRect = this.defsEl.append('clipPath').attr('class', 'dyn-clip').attr('id', clipId).append('rect')
+      .attr('x', centerX - linerHW - 20).attr('y', topPx - 5)
+      .attr('width', (linerHW + 20) * 2).attr('height', 0);
+
+    const perfG = this.rootG.append('g').attr('clip-path', `url(#${clipId})`);
+    perfG.append('path').attr('class', 'perf-wall').attr('d', walls);
+    perfG.append('path').attr('class', 'perf-tick').attr('d', ticks);
+    perfG.append('path').attr('class', 'perf-shoe').attr('d', shoe);
+
+    clipRect.transition()
+      .delay(ohStart)
+      .duration(ANIM.OH_DURATION)
+      .ease(easeCubicInOut)
+      .attr('height', tdPx - topPx + 20);
+
+    if (data.wellDesign.perfRemarks) {
+      const labelY = topPx + (tdPx - topPx) * 0.7;
+      const lEdge = centerX - linerHW;
+      const lEnd = lEdge - 22;
+      const lg = this.rootG.append('g').attr('class', 'perf-label').style('opacity', 0);
+      lg.append('line').attr('class', 'oh-label-line').attr('x1', lEdge).attr('x2', lEnd).attr('y1', labelY).attr('y2', labelY);
+      lg.append('path').attr('class', 'oh-label-arrow').attr('d', buildArrowHeadLeft(lEnd, labelY, 6));
+      lg.append('text').attr('class', 'open-hole-text').attr('x', lEnd - 4).attr('y', labelY + 4).attr('text-anchor', 'end').text(data.wellDesign.perfRemarks);
+      lg.transition().delay(ohLabelStart + ANIM.OVERLAY_FADE + ANIM.SEQ_GAP).duration(ANIM.OVERLAY_FADE).ease(easeCubicInOut).style('opacity', 1);
+    }
   }
 
-  async captureMapAsBase64() {
-    if (!this.mapView) return;
-
-    // Show the legend
-    this.legendLayer!.visible = true;
-
-    // Wait for the layer view to finish drawing
-    await this.waitForLegendRender();
-
-    // Capture screenshot
-    const base64 = await this.getScreenshotBase64();
-
-    // Hide the legend again (so the UI stays clean)
-    this.legendLayer!.visible = false;
-    return base64;
-
+  private drawScreenHanger(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, hangerStart: number): void {
+    if (!data.casings.length) return;
+    const { baseHalfWidth, halfWidthIncrement } = this.layout;
+    const innerHW = computeCasingHalfWidth(0, baseHalfWidth, halfWidthIncrement);
+    const screenHW = innerHW - 10;
+    const deepestSolid = data.casings.find(c => c.csgType !== 'Liner' && c.csgType !== 'Gravel Pack') || data.casings[0];
+    const shoePx = scale(deepestSolid.csgDepth);
+    const { left: hangerLeft, right: hangerRight } = buildScreenHanger(centerX, shoePx + 6, screenHW);
+    const hangerG = this.rootG.append('g').attr('class', 'screen-hangers').style('opacity', 0);
+    hangerG.append('path').attr('class', 'screen-hanger').attr('stroke', '#1e293b').attr('stroke-width', '1').attr('fill', '#1e293b').attr('d', hangerLeft);
+    hangerG.append('path').attr('class', 'screen-hanger').attr('stroke', '#1e293b').attr('stroke-width', '1').attr('fill', '#1e293b').attr('d', hangerRight);
+    hangerG.transition().delay(hangerStart).duration(ANIM.HANGER_DURATION).ease(easeCubicInOut).style('opacity', 1);
   }
 
-  private async waitForLegendRender(): Promise<void> {
-    const layerView = await this.mapView!.whenLayerView(this.legendLayer!);
-    if (!layerView.updating) {
-      await new Promise(requestAnimationFrame);
-      return;
+  private drawDrillArrow(data: WellboreDiagramData, scale: ReturnType<typeof createDepthScale>, drillStart: number, t_casingsDone: number): void {
+    const arrowCx = this.layout.depthArrowX;
+    const shaftHW = 4;
+    const headH = 14;
+    const headHW = 9;
+    const duration = t_casingsDone - drillStart;
+    const totalPx = scale(data.totalDepth);
+    const currPx = scale(data.currentDepth);
+    const points = data.mudCirculation;
+    const circColour = (pct: number): string => {
+      const clamped = Math.max(0, Math.min(100, pct));
+      if (clamped === 0) return '#e53e3e';
+      if (clamped === 100) return '#16a34a';
+      // orange (30) → yellow (55) for 1–99
+      const t = (clamped - 1) / 98;
+      const hue = 30 + t * 25;
+      return `hsl(${hue.toFixed(1)}, 90%, 50%)`;
+    };
+    const arrowG = this.rootG.append('g').attr('class', 'depth-arrow-group');
+    const clipId = `arrow-clip-${Date.now()}`;
+    this.defsEl.append('clipPath').attr('class', 'dyn-clip').attr('id', clipId).append('rect')
+      .attr('x', arrowCx - headHW - 4).attr('y', -4).attr('width', (headHW + 4) * 2).attr('height', 0)
+      .transition().delay(drillStart).duration(duration).ease(easeCubicInOut).attr('height', totalPx + 4);
+    const shaftG = arrowG.append('g').attr('clip-path', `url(#${clipId})`);
+    const maxCircDepth = points.length ? Math.max(...points.map(p => p.depth)) : 0;
+    const effectiveDepth = Math.max(data.currentDepth, maxCircDepth);
+    const effectivePx = scale(effectiveDepth);
+    const shaftMaxPx = totalPx - headH;
+    const cappedEffectivePx = Math.min(effectivePx, shaftMaxPx);
+    if (points.length && effectivePx > 0) {
+      const gradId = `circ-grad-${Date.now()}`;
+      const grad = this.defsEl.append('linearGradient').attr('class', 'dyn-clip').attr('id', gradId).attr('gradientUnits', 'userSpaceOnUse').attr('x1', arrowCx).attr('y1', 0).attr('x2', arrowCx).attr('y2', cappedEffectivePx);
+      const segs: { topPx: number; botPx: number; pct: number; topDepth: number; botDepth: number }[] = [];
+      for (let i = 0; i < points.length; i++) {
+        const topDepth = i === 0 ? 0 : points[i - 1].depth;
+        const botDepth = points[i].depth;
+        if (topDepth < botDepth) segs.push({ topPx: scale(topDepth), botPx: scale(botDepth), pct: points[i].pct, topDepth, botDepth });
+      }
+      segs.forEach((seg, idx) => {
+        const col = circColour(seg.pct);
+        const topPct = (seg.topPx / effectivePx) * 100;
+        const botPct = (seg.botPx / effectivePx) * 100;
+        const nextCol = idx + 1 < segs.length ? circColour(segs[idx + 1].pct) : col;
+        if (seg.pct === 100) {
+          const midPct = (topPct + botPct) / 2;
+          grad.append('stop').attr('offset', `${topPct.toFixed(4)}%`).attr('stop-color', '#15803d');
+          grad.append('stop').attr('offset', `${midPct.toFixed(4)}%`).attr('stop-color', '#4ade80');
+          grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', '#15803d');
+        } else {
+          grad.append('stop').attr('offset', `${topPct.toFixed(4)}%`).attr('stop-color', col);
+          grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', col);
+        }
+        if (nextCol !== col) grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', nextCol);
+      });
+      shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', 0).attr('width', shaftHW * 2).attr('height', cappedEffectivePx).attr('fill', `url(#${gradId})`);
+      shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', 0).attr('width', shaftHW).attr('height', cappedEffectivePx).attr('fill', 'rgba(255,255,255,0.10)').attr('pointer-events', 'none');
+      segs.forEach(seg => {
+        const fill = circColour(seg.pct);
+        const segH = Math.max(1, seg.botPx - seg.topPx);
+        const midY = seg.topPx + segH / 2;
+        const ttipX = arrowCx + shaftHW + 10;
+        const ttipG = arrowG.append('g').attr('class', 'circ-tooltip').style('opacity', 0).style('pointer-events', 'none');
+        ttipG.append('rect').attr('x', ttipX).attr('y', midY - 29).attr('width', 220).attr('height', 58).attr('rx', 8).attr('fill', '#0f172a').attr('stroke', fill).attr('stroke-width', 2).attr('opacity', 0.97);
+        ttipG.append('circle').attr('cx', ttipX + 16).attr('cy', midY - 7).attr('r', 6).attr('fill', fill);
+        ttipG.append('text').attr('x', ttipX + 28).attr('y', midY - 3).attr('font-size', '14').attr('font-family', 'DM Sans, sans-serif').attr('font-weight', '700').attr('fill', '#e2e8f0').text(`${seg.topDepth.toLocaleString()} – ${seg.botDepth.toLocaleString()} ft`);
+        ttipG.append('text').attr('x', ttipX + 16).attr('y', midY + 18).attr('font-size', '16').attr('font-family', 'DM Sans, sans-serif').attr('font-weight', '800').attr('fill', fill).text(`Circulation: ${seg.pct}%`);
+        shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', seg.topPx).attr('width', shaftHW * 2).attr('height', segH).attr('fill', 'transparent').attr('class', 'mud-circ-seg').on('mouseenter', () => ttipG.transition().duration(100).style('opacity', 1)).on('mouseleave', () => ttipG.transition().duration(100).style('opacity', 0));
+      });
+    } else {
+      shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', 0).attr('width', shaftHW * 2).attr('height', Math.min(currPx, shaftMaxPx)).attr('fill', 'var(--accent)');
+    }
+    if (cappedEffectivePx < shaftMaxPx) {
+      shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', cappedEffectivePx).attr('width', shaftHW * 2).attr('height', shaftMaxPx - cappedEffectivePx).attr('fill', '#1e293b');
+    }
+    const headG = shaftG.append('g').attr('class', 'depth-arrow-head-g');
+    headG.append('path').attr('class', 'depth-arrow-head').attr('d', `M${arrowCx - headHW},${totalPx - headH} L${arrowCx},${totalPx} L${arrowCx + headHW},${totalPx - headH} Z`);
+  }
+
+  private drawNotDrilledZone(data: WellboreDiagramData, centerX: number, scale: ReturnType<typeof createDepthScale>, start: number, ohHW: number): void {
+    const estTargetDepth = data.totalDepth;
+    const currentDepth = data.currentDepth;
+    const undrilledFt = estTargetDepth - currentDepth;
+
+    // Only draw if there is undrilled section remaining
+    if (undrilledFt <= 1) return;
+
+    const topPx = scale(currentDepth);
+    const bottomPx = scale(estTargetDepth);
+    const height = bottomPx - topPx;
+    const width = ohHW * 2 + 160; // +80 units each side
+    const lx = centerX - ohHW - 80;
+    const midY = topPx + height / 2;
+
+    const ndg = this.rootG.append('g')
+      .attr('class', 'not-drilled-zone')
+      .style('opacity', 0);
+
+    // Dark semi-transparent soft red overlay for the entire section
+    ndg.append('rect')
+      .attr('x', lx)
+      .attr('y', topPx)
+      .attr('width', width)
+      .attr('height', height)
+      .attr('fill', 'rgba(239, 68, 68, 0.12)') // Soft light red
+      .attr('stroke', 'rgba(239, 68, 68, 0.3)') // Matching light red stroke
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '8,4');
+
+    // Central "NOT DRILLED" label
+    ndg.append('text')
+      .attr('class', 'not-drilled-label')
+      .attr('x', centerX)
+      .attr('y', midY - 6)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#fbbf24') // yellow-400
+      .style('font-size', '16px')
+      .style('font-weight', '800')
+      .style('letter-spacing', '0.15em')
+      .text('NOT DRILLED');
+
+    // Footage remaining label
+    ndg.append('text')
+      .attr('class', 'not-drilled-footage')
+      .attr('x', centerX)
+      .attr('y', midY + 14)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#fca5a5') // light red-300
+      .style('font-size', '13px')
+      .style('font-weight', '700')
+      .text(`REMAINING: ${undrilledFt.toLocaleString()} FT`);
+
+    ndg.transition()
+      .delay(start)
+      .duration(ANIM.OVERLAY_FADE)
+      .style('opacity', 1);
+  }
+
+  private drawTotalDepthLabel(td: number, centerX: number, drawingHeight: number, start: number): void {
+    const g = this.rootG.append('g').attr('class', 'td-label').style('opacity', 0);
+    g.append('text').attr('class', 'total-depth-main').attr('x', centerX).attr('y', drawingHeight + 35).attr('text-anchor', 'middle').text(`TOTAL DEPTH: ${td.toLocaleString()} FT`);
+    g.transition().delay(start).duration(ANIM.OVERLAY_FADE).style('opacity', 1);
+  }
+}
+==
+import { IWellData } from '@models/well-design/well-data.model';
+import { WellLogsIndicators } from '@models/well-design/well-logs-indicators.model';
+import { WellName } from '@models/well-design/well-name.model';
+import { WellboreDiagramData } from '@models/well-design/wellbore-diagram.model';
+import { MorningReport } from '@models/morning-report/morning-report.model';
+import {
+    CasingInfoViewModel,
+    DatabaseInfoViewModel,
+    FormationInfoViewModel,
+    MiscWellData,
+    OffsetWaterWells,
+    OperationSummaryViewModel,
+    PickedFormationTops,
+    WellHeaderViewModel,
+    WellTestResult,
+    WwellTestViewModel,
+} from '@models/active-wwell/active-wwell-view.model';
+import { IFormationTops } from 'src/app/shared/models/wwell/formation-tops.model';
+import { IHeaderIR } from 'src/app/shared/models/wwell/header-ir.model';
+import { ICasingIR } from 'src/app/shared/models/wwell/casing-ir.model';
+import { ITopsIR } from 'src/app/shared/models/wwell/tops-ir.model';
+import { IWaterIR } from 'src/app/shared/models/wwell/water-ir.model';
+import { IWaterWellTestOutcome } from 'src/app/shared/models/wwell/water-well-test-outcome.model';
+import { WaterWellTestResult } from 'src/app/shared/models/wwell/wwell-test-result.model';
+import { sortCasingsByDepthDesc } from 'src/app/shared/utils/wellbore-math.util';
+import { formatDateForInput } from 'src/app/shared/utils/date.util';
+
+export const PAGE_SIZE = 5;
+export const FALLBACK_STR = 'N/A';
+
+export function uniqueByEpANum(names: WellName[]): WellName[] {
+    const seen = new Set<number>();
+    return names.filter(w => {
+        if (seen.has(w.epANum)) return false;
+        seen.add(w.epANum);
+        return true;
+    });
+}
+
+export function selectTotalPages(unique: WellName[]): number {
+    return Math.ceil(unique.length / PAGE_SIZE);
+}
+
+export function selectPagedWellNames(unique: WellName[], page: number): WellName[] {
+    return unique.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+}
+
+export function selectPageIndexForEpANum(unique: WellName[], epANum: number | null, fallbackPage = 0): number {
+    if (epANum === null) {
+        return fallbackPage;
     }
 
-    await new Promise<void>((resolve) => {
-      const handle = watch(() => layerView.updating,
-        (updating) => {
-          if (!updating) {
-            handle.remove();
-            requestAnimationFrame(() => resolve());
-          }
-        })
+    const index = unique.findIndex(well => well.epANum === epANum);
+    return index === -1 ? fallbackPage : Math.floor(index / PAGE_SIZE);
+}
+
+export function selectHasPrevPage(page: number): boolean {
+    return page > 0;
+}
+
+export function selectHasNextPage(unique: WellName[], page: number): boolean {
+    return (page + 1) * PAGE_SIZE < unique.length;
+}
+
+// ─── Well data selectors ───────────────────────────────────────────────────────
+
+export function selectWellEpANum(d: IWellData | null | undefined): number | null {
+    const epANum = d?.DRLG_OP_STATUS?.[0]?.epANum ?? null;
+    return Number.isFinite(epANum) && (epANum ?? 0) > 0 ? epANum : null;
+}
+
+export function selectTotalDepth(d: IWellData | null): number {
+    return d?.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0;
+}
+
+export function selectWellNamesFromData(data: IWellData[]): WellName[] {
+    return data.map(d => ({
+        wellName: d.RIG_ACTIVITY?.[0]?.wellName ?? '',
+        epANum: selectWellEpANum(d) ?? 0,
+    }));
+}
+
+export function selectSelectedWell(data: IWellData[], epANum: number | null): IWellData | null {
+    if (epANum === null) {
+        return null;
+    }
+
+    return data.find(well => selectWellEpANum(well) === epANum) ?? null;
+}
+
+export function selectMorningReports(
+    data: IWellData[],
+    rigStatusOverrides: Record<number, string>,
+): MorningReport[] {
+    return data.map(d => {
+        const report = mapWellDataToMorningReport(d);
+        const overrideKey = Number.parseInt(report.epANum, 10);
+        const override = Number.isFinite(overrideKey) ? rigStatusOverrides[overrideKey] : undefined;
+        return override !== undefined ? { ...report, rigStatus: override } : report;
     });
-  }
+}
 
-  private async getScreenshotBase64(): Promise<string> {
-    const screenshot = await this.mapView!.takeScreenshot({
-      format: 'png',
-      quality: 1,
+export function selectWaterWellTestResultsFromData(data: IWellData[]): WaterWellTestResult[] {
+    return data.flatMap(d => (d.EXAD_GWD_WELL_TESTS ?? []).map(mapToWaterWellTestResult));
+}
+
+export function selectDiagramData(d: IWellData | null): WellboreDiagramData | null {
+    if (!d) return null;
+    return {
+        wellName: d.WELL_MASTER?.[0]?.well ?? '',
+        totalDepth: d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0,
+        casings: sortCasingsByDepthDesc(d.EXAD_GWD_IR_CASING ?? []),
+        geologicTops: [...(d.EXAD_GWD_IR_TOPS ?? [])].sort((a, b) => a.planTvdDepth - b.planTvdDepth),
+        hydrogeology: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0] ?? null,
+        prewap: d.EXAD_RCD_PREWAP?.[0] ?? null,
+        rigActivity: d.RIG_ACTIVITY?.[0] ?? null,
+        currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
+        mudCirculation: (d.MUD_CIRC ?? []).map(m => ({
+            depth: m.wPrsntDpth,
+            pct: Number(m.wMudCircPc),
+        })),
+        wellDesign: d.EXAD_GWD_WELL_DESIGN?.[0] ?? null,
+    };
+}
+
+export function selectMiscWellData(d: IWellData | null): MiscWellData | null {
+    if (!d) return null;
+    const rig = d.RIG_ACTIVITY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    return {
+        wellName: rig?.wellName ?? FALLBACK_STR,
+        targetDesc: rig?.drlgPlanWellDesc ?? FALLBACK_STR,
+        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier ?? FALLBACK_STR,
+        currentStatus: d.EXAD_GWD_DAILY_REMARKS?.[0].status ?? FALLBACK_STR,
+        daysSinceSpud: status?.spuddays ?? 0,
+        targetDays: d.NEW_TARGET_DAYS?.[0]?.targetDays ?? rig?.wDrlgTrgtDay ?? 0,
+        biNum: rig?.biNum ?? FALLBACK_STR,
+        supportingWell: rig?.waterWell ?? FALLBACK_STR,
+        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? status?.footage ?? 0,
+        previousWell: FALLBACK_STR,
+        currentDepth: status?.wPrsntDpth ?? 0,
+        nextWell: d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity ?? FALLBACK_STR,
+        footage: status?.wDpthChgDis ?? 0,
+        operationSummary: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.opRmk ?? d?.DRLG_OP_SMRY?.[0]?.wOpRmk,
+
+        next24HrOperation: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.next24HrPlanRrmk ?? status?.nxt24HrPlanRmk,
+        drlgSmryRmk: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.drlgSmryRmk ?? status?.wDrlgSmryRmk ?? null,
+        rop: d.ROP_DATA?.[0]?.rop ?? null,
+        actualRm: d.actualRm ?? null,
+        kpiRm: d.kpiRm ?? null,
+        rigMoveDays: d?.rigMoveDays ?? null,
+        rigName: d.RIG_IDENTIFICATION?.[0].rigname ?? FALLBACK_STR,
+        spudDate: rig?.spuddate ?? FALLBACK_STR,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    };
+}
+
+export function selectPickedFormations(d: IWellData | null): PickedFormationTops[] {
+    return (d?.DRLG_FM_TOPS ?? []).map((fm: IFormationTops) => ({
+        formation: fm.stLongCd ?? '',
+        depth: fm.wStDmrkDpth ?? 0,
+        remarks: fm.wStDmrkRmk ?? '',
+    }));
+}
+
+export function selectOffsetWells(d: IWellData | null): OffsetWaterWells[] {
+    if (!d) return [];
+    return (d.EXAD_GWD_IR_WATER ?? []).map(ow => {
+        const test = (d.EXAD_GWD_WELL_TESTS ?? []).find(t => t.wellName === ow.offsetWaterWell);
+        return {
+            wellName: ow.offsetWaterWell,
+            aquifer: ow.aquifer || test?.aquifer || 'WASI',
+            tds: test?.tds ?? 0,
+            rpm: ow.rpm ?? 0,
+            h2s: ow.h2s ?? 0,
+            distance: ow.distance ?? 0,
+            productivity: ow.specificCapacity ?? 0,
+            rate: test?.flowRate ?? ow.flowRate ?? 0,
+        };
     });
-    const [, rawBase64] = screenshot.dataUrl.split(',');
-    if (!rawBase64) throw new Error('Failed to extract Base‑64 payload');
+}
 
-    // Resize (optional)
-    const img = new Image();
-    img.src = `data:image/png;base64,${rawBase64}`;
-    await new Promise((res, rej) => {
-      img.onload = res;
-      img.onerror = rej;
-    });
+export function selectWellLogsIndicators(d: IWellData | null): WellLogsIndicators | null {
+    if (!d) return null;
+    const h: IHeaderIR | undefined = d.EXAD_GWD_IR_HEADER?.[0];
+    return {
+        rcc: !!(h?.dtRemarks?.trim()),
+        mudLog: !!(h?.mudRemarks?.trim()),
+        logging: !!(h?.loggingRemarks?.trim()),
+    };
+}
 
-    const scale = Math.min(1, MAX_WIDTH / img.width);
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+export function selectWellTestResults(d: IWellData | null): WellTestResult[] {
+    if (!d) return [];
+    return (d.EXAD_GWD_WELL_TESTS ?? []).map(t => ({
+        wellName: t.wellName ?? '',
+        testType: t.testType ?? FALLBACK_STR,
+        aquifer: t.aquifer ?? FALLBACK_STR,
+        rpm: t.rpm ?? 0,
+        flowRate: t.flowRate ?? 0,
+        temperature: t.temperature ?? 0,
+        tds: t.tds ?? 0,
+        productivity: t.producitivty ?? 0,
+        h2s: t.h2s ?? 0,
+    }));
+}
 
-    // Small pause to let the browser finish any pending paint
-    await new Promise((r) => setTimeout(r, 300));
+// ─── Primitive selectors ───────────────────────────────────────────────────────
 
-    const resizedDataUrl = canvas.toDataURL('image/jpeg', 1);
-    const [, resizedBase64] = resizedDataUrl.split(',');
-    return resizedBase64;
-  }
+export function displayValue(value: unknown, fallback = FALLBACK_STR): string {
+    return value === null || value === undefined || value === '' ? fallback : String(value);
+}
 
-  private downloadBase64(base64: string | undefined, fileName: string): void {
-    const a = document.createElement('a');
-    a.href = `data:image/png;base64,${base64}`;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
+export function selectPrimaryCasing(d: IWellData | null): ICasingIR | null {
+    const casings = [...(d?.EXAD_GWD_IR_CASING ?? [])].sort(
+        (l, r) => Number(r.csgDepth ?? 0) - Number(l.csgDepth ?? 0),
+    );
+    return casings[0] ?? null;
+}
 
-  private registerBootTask(): void {
-    if (this.bootTaskRegistered) return;
-    this.bootTaskRegistered = true;
-    this.loader.registerBootTask(WWELL_MAP_BOOT_TASK);
-  }
+export function selectLatestFormation(d: IWellData | null): IFormationTops | null {
+    const formations = d?.DRLG_FM_TOPS ?? [];
+    return formations.length ? formations[formations.length - 1] : null;
+}
 
-  private resolveBootTask(): void {
-    if (!this.bootTaskRegistered) return;
-    this.bootTaskRegistered = false;
-    this.loader.resolveBootTask(WWELL_MAP_BOOT_TASK);
-  }
+export function findPlannedFormation(d: IWellData | null, formationCode: string | null | undefined): ITopsIR | null {
+    if (!formationCode) return null;
+    return d?.EXAD_GWD_IR_TOPS?.find(top => top.stLongCd === formationCode) ?? null;
+}
 
+export function selectPrimaryTestOutcome(d: IWellData | null): IWaterWellTestOutcome | null {
+    return d?.EXAD_GWD_WELL_TESTS?.[0] ?? null;
+}
+
+export function selectPrimaryWaterReference(d: IWellData | null): IWaterIR | null {
+    return d?.EXAD_GWD_IR_WATER?.[0] ?? null;
+}
+
+// ─── View model selectors ──────────────────────────────────────────────────────
+
+export function selectWellHeaderViewModel(d: IWellData | null, epANum: number | null): WellHeaderViewModel | null {
+    if (!d) return null;
+    const rig = d.RIG_ACTIVITY?.[0];
+    const master = d.WELL_MASTER?.[0];
+    const prewap = d.EXAD_RCD_PREWAP?.[0];
+    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    return {
+        field: prewap?.supportedBusiness ?? rig?.wDrlgLocDesc ?? rig?.welltype ?? FALLBACK_STR,
+        wellName: rig?.wellName ?? master?.well ?? FALLBACK_STR,
+        lat: master?.lat ?? FALLBACK_STR,
+        lon: master?.lon ?? FALLBACK_STR,
+        targetedAquifer: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? FALLBACK_STR,
+        depth: prewap?.estTargetDepth ?? status?.targetDepth ?? FALLBACK_STR,
+        epNum: status?.epANum ?? epANum ?? FALLBACK_STR,
+        biNum: rig?.biNum ?? FALLBACK_STR,
+    };
+}
+
+export function selectDatabaseInfoViewModel(d: IWellData | null, date: Date): DatabaseInfoViewModel | null {
+    if (!d) return null;
+    const rig = d.RIG_ACTIVITY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    const prewap = d.EXAD_RCD_PREWAP?.[0];
+    const casing = selectPrimaryCasing(d);
+    return {
+        date: formatDateForInput(date),
+        daysSinceSpud: status?.spuddays ?? FALLBACK_STR,
+        spudDate: rig?.spuddate ?? FALLBACK_STR,
+        fiveAmDepth: status?.wPrsntDpth ?? FALLBACK_STR,
+        lastCasingSize: displayValue(casing?.csgSize ?? status?.wCsgOdSz),
+        rig: rig?.wRigCd ?? FALLBACK_STR,
+        targetDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
+        releaseDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
+        preFiveAmDepth: status?.wPrevDpth ?? FALLBACK_STR,
+        lastCasingDepth: casing?.csgDepth ?? status?.wCsgBotDpth ?? FALLBACK_STR,
+        spudDays: status?.spuddays ?? FALLBACK_STR,
+        samDepth: status?.targetDepth ?? prewap?.estTargetDepth ?? FALLBACK_STR,
+        rigMoveKpi: d.kpiRm ?? FALLBACK_STR,
+        wellTdDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
+        footage: status?.wDpthChgDis ?? FALLBACK_STR,
+        secondarySamDepth: prewap?.estTargetDepth ?? FALLBACK_STR,
+    };
+}
+
+export function selectOperationSummaryViewModel(d: IWellData | null): OperationSummaryViewModel | null {
+    if (!d) return null;
+    const status = d.DRLG_OP_STATUS?.[0];
+    const opSummary = d.DRLG_OP_SMRY?.[0];
+    return {
+        operation: status?.wOpRmk ?? opSummary?.wOpRmk ?? FALLBACK_STR,
+        nextOperation: status?.nxt24HrPlanRmk ?? FALLBACK_STR,
+    };
+}
+
+export function selectFormationInfoViewModel(d: IWellData | null): FormationInfoViewModel | null {
+    if (!d) return null;
+    const latest = selectLatestFormation(d);
+    const planned = findPlannedFormation(d, latest?.stLongCd);
+    const actualDepth = latest?.wStDmrkDpth ?? null;
+    const plannedDepth = planned?.planTvdDepth ?? null;
+    return {
+        formation: latest?.stLongCd ?? FALLBACK_STR,
+        prognosed: plannedDepth ?? FALLBACK_STR,
+        actualDepth: actualDepth ?? FALLBACK_STR,
+        difference: actualDepth !== null && plannedDepth !== null ? actualDepth - plannedDepth : FALLBACK_STR,
+        remarks: latest?.wStDmrkRmk ?? FALLBACK_STR,
+    };
+}
+
+export function selectCasingInfoViewModel(d: IWellData | null): CasingInfoViewModel | null {
+    if (!d) return null;
+    const casing = selectPrimaryCasing(d);
+    const status = d.DRLG_OP_STATUS?.[0];
+    return {
+        csgType: casing?.csgType ?? FALLBACK_STR,
+        csgSize: casing?.csgSize ?? status?.wCsgOdSz ?? FALLBACK_STR,
+        csgDepth: casing?.csgDepth ?? FALLBACK_STR,
+        csgBotDpth: status?.wCsgBotDpth ?? FALLBACK_STR,
+    };
+}
+
+export function selectWwellTestViewModel(d: IWellData | null): WwellTestViewModel | null {
+    if (!d) return null;
+    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
+    const testOutcome = selectPrimaryTestOutcome(d);
+    const water = selectPrimaryWaterReference(d);
+    const status = d.DRLG_OP_STATUS?.[0];
+    const statusRecord = status as unknown as Record<string, unknown> | undefined;
+    const drillingEngineer = typeof statusRecord?.['wDrlgEngName'] === 'string' ? statusRecord['wDrlgEngName'] : null;
+    const foreman = typeof statusRecord?.['wFmanName'] === 'string' ? statusRecord['wFmanName'] : null;
+    const prewap = d.EXAD_RCD_PREWAP?.[0];
+    return {
+        flowType: hydro?.flowType ?? 'N',
+        testType: testOutcome?.testType ?? FALLBACK_STR,
+        aquiferActual: testOutcome?.aquifer ?? water?.aquifer ?? FALLBACK_STR,
+        aquiferEstimate: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? FALLBACK_STR,
+        h2sActual: testOutcome?.h2s ?? water?.h2s ?? FALLBACK_STR,
+        h2sEstimate: hydro?.estH2s ?? FALLBACK_STR,
+        temp: testOutcome?.temperature ?? FALLBACK_STR,
+        tds: testOutcome?.tds ?? water?.fieldTds ?? hydro?.estWaterQuality ?? FALLBACK_STR,
+        rpm: testOutcome?.rpm ?? water?.rpm ?? FALLBACK_STR,
+        duration: water?.testDuration ?? FALLBACK_STR,
+        conductedBy: drillingEngineer ?? foreman ?? FALLBACK_STR,
+        rate: testOutcome?.flowRate ?? water?.flowRate ?? FALLBACK_STR,
+        siwhp: water?.staticWaterLevel ?? FALLBACK_STR,
+        depth: prewap?.estTargetDepth ?? status?.wPrsntDpth ?? FALLBACK_STR,
+        productivityActual: testOutcome?.producitivty ?? water?.specificCapacity ?? FALLBACK_STR,
+        productivityEstimate: hydro?.estProductivity ?? FALLBACK_STR,
+        swl: water?.staticWaterLevel ?? hydro?.estStaticWaterLevel ?? FALLBACK_STR,
+        dwl: water?.drawDown ?? FALLBACK_STR,
+    };
+}
+
+// ─── Morning report / test result mappers ─────────────────────────────────────
+
+export function mapWellDataToMorningReport(d: IWellData): MorningReport {
+    const rig = d.RIG_ACTIVITY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    const master = d.WELL_MASTER?.[0];
+    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
+    const prewap = d.EXAD_RCD_PREWAP?.[0];
+    const opSmry = d.DRLG_OP_SMRY?.[0];
+    const tops = d.DRLG_FM_TOPS ?? [];
+    const lastTop = tops[tops.length - 1];
+
+    return {
+        epANum: String(status?.epANum ?? ''),
+        wGnrName: rig?.wellName ?? '',
+        wRigCd: rig?.wRigCd ?? '',
+        racEstDdLatCord: String(master?.lat ?? ''),
+        racEstDdLonCord: String(master?.lon ?? ''),
+        biNum: rig?.biNum ?? '',
+        trgtRsvrCd: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? '',
+        stLongCd: lastTop?.stLongCd ?? '',
+        wStDmrkDpth: String(lastTop?.wStDmrkDpth ?? ''),
+        wPrsntDpth: status?.wPrsntDpth ?? null,
+        wDpthChgDis: status?.wDpthChgDis ?? null,
+        wOpRmk: opSmry?.wOpRmk ?? status?.wOpRmk ?? '',
+        foremanRmk: status?.nxt24HrPlanRmk ?? '',
+        plLtrlEndDpth: prewap?.estTargetDepth ?? null,
+        supportings: rig?.waterWell ?? '',
+        wEvntTime: opSmry?.wEvntTime ?? '',
+        rigStatus: '',
+    };
+}
+
+export function mapToWaterWellTestResult(o: IWaterWellTestOutcome): WaterWellTestResult {
+    return {
+        wellName: o.wellName,
+        rPM: String(o.rpm ?? ''),
+        h2sPPM: String(o.h2s ?? ''),
+        temperature: String(o.temperature ?? ''),
+        trgtRsvrCd: o.aquifer ?? '',
+        testRate: String(o.flowRate ?? ''),
+        wellProductivity: String(o.producitivty ?? ''),
+    };
+}
+==
+import { ICasingIR } from 'src/app/shared/models/wwell/casing-ir.model';
+import { ITopsIR } from 'src/app/shared/models/wwell/tops-ir.model';
+import { IHydrogeologyIR } from 'src/app/shared/models/wwell/hydrogeology-ir.model';
+import { IPreWellData } from 'src/app/shared/models/wwell/pre-well-data.model';
+import { IRigActivity } from 'src/app/shared/models/wwell/rig-activity.model';
+import { IWellDesign } from 'src/app/shared/models/wwell/well-design.model';
+export interface MudCircPoint {
+  readonly depth: number;  // parsed from wPrsntDpth
+  readonly pct: number;    // parsed from wMudCircPc
+}
+
+export interface WellboreDiagramData {
+  readonly wellName: string;
+  readonly totalDepth: number;
+  readonly casings: ICasingIR[];
+  readonly geologicTops: ITopsIR[];
+  readonly hydrogeology: IHydrogeologyIR | null;
+  readonly prewap: IPreWellData | null;
+  readonly rigActivity: IRigActivity | null;
+  readonly currentDepth: number;
+  readonly mudCirculation: MudCircPoint[];
+  readonly wellDesign: IWellDesign | null;
+}
+
+export interface DiagramLayout {
+  readonly svgHeight: number;
+  readonly marginTop: number;
+  readonly drawingHeight: number;
+  readonly depthScaleWidth: number;
+  readonly depthAxisX: number;
+  readonly wellboreViewWidth: number;
+  readonly geoLineX: number;
+  readonly depthArrowX: number; // Controls the depth arrow's horizontal position
+  readonly casingCenterX: number;
+  readonly baseHalfWidth: number;
+  readonly halfWidthIncrement: number;
+  readonly shoeCurveOffset: number;
+}
+
+export const DIAGRAM_LAYOUT: DiagramLayout = {
+  svgHeight: 840,
+  marginTop: 55,
+  drawingHeight: 740,
+
+  // -- RESPONSIVE MIDPOINT MATH --
+  depthScaleWidth: 90,
+  depthAxisX: 60, // Leaves exactly 30 units from the right edge of the Depth SVG
+
+  wellboreViewWidth: 980,
+
+  // ── Horizontal zone layout (left → right inside wellbore SVG) ──────────
+  // [0 - 28]   drill arrow body  (centerX=20, halfWidth=10 → spans 10-30)
+  // [28 - 95]  geo depth labels  (right-aligned at geoLineX-17 = 78, ~5 chars)
+  // [95]       geo axis line
+  // [95 - 170] geo formation codes (left start at geoLineX+18 = 113)
+  // [170+]     gap before bore structure
+  // ─────────────────────────────────────────────────────────────────────
+  depthArrowX: 20,    // arrow centerX — spans x=10 to x=30, clear of geo labels
+  geoLineX: 95,       // geo axis — depth labels end ~x=78, codes start ~x=113
+  casingCenterX: 560, // bore structure center — plenty of gap after geo codes
+  baseHalfWidth: 58,
+  halfWidthIncrement: 20,
+  shoeCurveOffset: 12,
+};
+
+// ─── Animation mode ────────────────────────────────────────────────────────
+// 'realistic' : full cinematic sequence — casings drill down one by one,
+//               then open-hole / overlays appear after all casings finish.
+// 'fast'      : same sequence but 3× faster (good for development).
+// 'instant'   : no animation, everything visible immediately.
+export type AnimMode = 'realistic' | 'fast' | 'instant';
+
+export const ANIM_MODE: AnimMode = 'fast';   // ← change this to switch modes
+
+// Base timing profile (realistic).
+// 'fast' divides every duration & delay by FAST_FACTOR.
+// 'instant' sets everything to 0.
+const FAST_FACTOR = 3;
+
+function animValue(base: number): number {
+  if (ANIM_MODE === 'instant') return 0;
+  if (ANIM_MODE === 'fast') return Math.round(base / FAST_FACTOR);
+  return base;
+}
+
+// ─── Core durations ────────────────────────────────────────────────────────
+const _BASE = {
+  SCALE_DURATION: 1000,   // depth scale draws down
+  TICK_BASE_DELAY: 120,    // stagger for each depth tick
+  GEO_DELAY: 200,    // geologic tops start appearing
+  GEO_STAGGER: 55,     // stagger between each geo top
+  CASING_DURATION: 800,    // each casing clip reveal duration
+  CASING_STAGGER: 420,    // gap between each casing starting
+  OH_DURATION: 800,    // open hole + liner screen clip reveal
+  GRAVEL_DURATION: 600,    // gravel pack fill reveal
+  HANGER_DURATION: 300,    // hanger bracket fade-in
+  OVERLAY_FADE: 400,    // generic label / overlay fade-in
+  SEQ_GAP: 200,    // breathing gap between sequential phases
+};
+
+// Number of structural casings determines when the last casing finishes.
+// Components that must wait use computeOverlayDelay(casingCount).
+export function computeOverlayDelay(casingCount: number): number {
+  // Last casing (index 0 in draw order = innermost = last to animate) starts at:
+  //   (casingCount - 1) * CASING_STAGGER, finishes after + CASING_DURATION
+  const lastCasingDone = (casingCount - 1) * _BASE.CASING_STAGGER + _BASE.CASING_DURATION;
+  return animValue(lastCasingDone + 100); // 100ms breathing room
+}
+
+export const ANIM = {
+  SCALE_DURATION: animValue(_BASE.SCALE_DURATION),
+  TICK_BASE_DELAY: animValue(_BASE.TICK_BASE_DELAY),
+  GEO_DELAY: animValue(_BASE.GEO_DELAY),
+  GEO_STAGGER: animValue(_BASE.GEO_STAGGER),
+  CASING_DURATION: animValue(_BASE.CASING_DURATION),
+  CASING_STAGGER: animValue(_BASE.CASING_STAGGER),
+  OH_DURATION: animValue(_BASE.OH_DURATION),
+  GRAVEL_DURATION: animValue(_BASE.GRAVEL_DURATION),
+  HANGER_DURATION: animValue(_BASE.HANGER_DURATION),
+  OVERLAY_FADE: animValue(_BASE.OVERLAY_FADE),
+  SEQ_GAP: animValue(_BASE.SEQ_GAP),
+  // Legacy alias so depth-scale component keeps working unchanged
+  OVERLAY_DELAY: animValue((_BASE.CASING_STAGGER * 3) + _BASE.CASING_DURATION + 100),
+} as const;
+==
+import { IBitInfo } from 'src/app/shared/models/wwell/bit-info.model';
+import { ICasingIR } from 'src/app/shared/models/wwell/casing-ir.model';
+import { IContact } from 'src/app/shared/models/wwell/contact.model';
+import { IDrillingFootage } from 'src/app/shared/models/wwell/drilling-footage.model';
+import { IDrillingOperationStatus } from 'src/app/shared/models/wwell/drilling-operation-status.model';
+import { IDrillingOperationSummary } from 'src/app/shared/models/wwell/drilling-operation-summary.model';
+import { IFormationTops } from 'src/app/shared/models/wwell/formation-tops.model';
+import { IHeaderIR } from 'src/app/shared/models/wwell/header-ir.model';
+import { IHydrogeologyIR } from 'src/app/shared/models/wwell/hydrogeology-ir.model';
+import { INewTargetDays } from 'src/app/shared/models/wwell/new-target-days.model';
+import { INextWellActivity } from 'src/app/shared/models/wwell/next-well-activity.model';
+import { IPreWellData } from 'src/app/shared/models/wwell/pre-well-data.model';
+import { IRigActivity } from 'src/app/shared/models/wwell/rig-activity.model';
+import { IRigIdentification } from 'src/app/shared/models/wwell/rig-identification.model';
+import { IROPData } from 'src/app/shared/models/wwell/rop-data.model';
+import { ITopsIR } from 'src/app/shared/models/wwell/tops-ir.model';
+import { IWaterIR } from 'src/app/shared/models/wwell/water-ir.model';
+import { IWaterWellTestOutcome } from 'src/app/shared/models/wwell/water-well-test-outcome.model';
+import { IWellMaster } from 'src/app/shared/models/wwell/well-master.model';
+import { IMudCirculation } from '@models/well-design/mud-circulation.model';
+import { IWellDesign } from 'src/app/shared/models/wwell/well-design.model';
+
+export interface IDailyRemarks {
+    status?: string | null;
+    opRmk?: string | null;
+    next24HrPlanRrmk?: string | null;
+    drlgSmryRmk?: string | null;
+}
+
+export interface IWellData {
+    RIG_ACTIVITY: IRigActivity[];
+    WELL_MASTER: IWellMaster[];
+    RIG_IDENTIFICATION: IRigIdentification[];
+    CONTACT: IContact[];
+    DRLG_OP_STATUS: IDrillingOperationStatus[];
+    DRLG_FM_TOPS: IFormationTops[];
+    DRLG_FD_TDAY: IDrillingFootage[];
+    ROP_DATA: IROPData[];
+    NEXT_2_WELL_ACTIVITY: INextWellActivity[];
+    NEW_TARGET_DAYS: INewTargetDays[];
+    DRLG_OP_SMRY: IDrillingOperationSummary[];
+    BITINFO: IBitInfo[];
+    EXAD_GWD_IR_HEADER: IHeaderIR[];
+    EXAD_GWD_IR_TOPS: ITopsIR[];
+    EXAD_GWD_IR_CASING: ICasingIR[];
+    EXAD_GWD_IR_HYDROGEOLOGY: IHydrogeologyIR[];
+    EXAD_GWD_IR_WATER: IWaterIR[];
+    EXAD_RCD_PREWAP: IPreWellData[];
+    WATER_WELL_TEST_OUTCOME: IWaterWellTestOutcome[];
+    EXAD_GWD_WELL_TESTS?: IWaterWellTestOutcome[];
+    EXAD_GWD_WELL_DESIGN?: IWellDesign[];
+    EXAD_GWD_DAILY_REMARKS?: IDailyRemarks[];
+    MUD_CIRC?: IMudCirculation[];
+    actualRm?: number;
+    kpiRm?: number;
+    rigMoveDays?: number;
 }
