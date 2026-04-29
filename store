@@ -1,40 +1,161 @@
-curl -X 'POST' \
-  'http://localhost:8080/welldocuments/well-presentation-docs?epaNum=11111&uploadDate=2026-04-28' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'wellFile=@marchtimesheet.pdf;type=application/pdf'
-==
-Response {
-  "statusCode": 200,
-  "error": false,
-  "message": "File uploaded successfully",
-  "data": "File uploaded successfully"
-}
+import { computed, inject } from '@angular/core';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { tapResponse } from '@ngrx/operators';
+import { pipe, switchMap, tap } from 'rxjs';
 
-===
-curl -X 'GET' \
-  'http://localhost:8080/welldocuments/well-presentation-docs-list?epaNum=11111&uploadDate=2026-04-28' \
-  -H 'accept: application/json'
+import { WellDoc, WellDocsState } from '@models/well-design/well-docs.model';
+import { UploadDocResponse } from '@shared/models/wwell/api-response.model';
+import { PresDocsService } from '@services/pres-docs.service';
+import { NotificationService } from '@shared/components/notification/notification.service';
+import { DUMMY_DOCS, initialWellDocsState } from './well-docs.state';
+import { selectCategories, selectDocsByCategory, selectTotalDocCount } from './well-docs.selectors';
+import { WellDocsActions, WellDocsEvents, LoadDocsPayload, UploadDocsPayload } from './well-docs.actions';
+
+export const WellDocsStore = signalStore(
+  { providedIn: 'root' },
+
+  withState<WellDocsState>(initialWellDocsState),
+
+  withComputed(({ docs }) => ({
+    docsByCategory: computed(() => selectDocsByCategory(docs())),
+    categories:     computed(() => selectCategories(docs())),
+    totalCount:     computed(() => selectTotalDocCount(docs())),
+  })),
+
+  withMethods((store, svc = inject(PresDocsService), notify = inject(NotificationService)) => ({
+    loadDocs: rxMethod<LoadDocsPayload>(
+      pipe(
+        tap(() => patchState(store, { loading: true, error: null })),
+        switchMap(({ epANum, date }) =>
+          svc.getDocs(epANum, date).pipe(
+            tapResponse({
+              next: (docs: WellDoc[]) =>
+                patchState(store, {
+                  docs: docs.length > 0 ? docs : DUMMY_DOCS,
+                  loading: false,
+                }),
+              error: (err: unknown) => {
+                const msg = err instanceof Error ? err.message : 'Failed to load documents';
+                patchState(store, { docs: DUMMY_DOCS, loading: false, error: msg });
+                notify.error(msg);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
+
+    uploadDocs: rxMethod<UploadDocsPayload>(
+      pipe(
+        tap(() => patchState(store, { uploading: true, error: null })),
+        switchMap(({ files, epANum, date }) =>
+          svc.uploadDocs(files, epANum, date).pipe(
+            tapResponse({
+              next: (responses: UploadDocResponse[]) => {
+                const failed = responses.filter(r => r.error);
+                if (failed.length) {
+                  const msg = failed.map(r => r.message).join('; ');
+                  patchState(store, { uploading: false, error: msg });
+                  notify.error(msg);
+                  return;
+                }
+                notify.info('Documents uploaded successfully.');
+                svc.getDocs(epANum, date).subscribe({
+                  next: docs =>
+                    patchState(store, { docs: docs.length > 0 ? docs : DUMMY_DOCS, uploading: false }),
+                  error: () =>
+                    patchState(store, { uploading: false }),
+                });
+              },
+              error: (err: unknown) => {
+                const msg = err instanceof Error ? err.message : 'Upload failed';
+                patchState(store, { uploading: false, error: msg });
+                notify.error(msg);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
+
+    openViewer(doc: WellDoc): void {
+      patchState(store, { selectedDoc: doc, viewerOpen: true });
+    },
+
+    closeViewer(): void {
+      patchState(store, { selectedDoc: null, viewerOpen: false });
+    },
+
+    clearDocs(): void {
+      patchState(store, initialWellDocsState);
+    },
+  })),
+);
+
+export { WellDocsActions, WellDocsEvents };
 ==
-{
-  "statusCode": 200,
-  "error": false,
-  "message": null,
-  "data": {
-    "totalFiles": [
-      "marchtimesheet.pdf"
-    ]
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, forkJoin, throwError, timeout } from 'rxjs';
+import { WellDoc } from '@models/well-design/well-docs.model';
+import { UploadDocResponse } from '@shared/models/wwell/api-response.model';
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
+
+const CONNECTION_TIMEOUT_MS = 5000;
+
+@Injectable({ providedIn: 'root' })
+export class PresDocsService {
+  private readonly http = inject(HttpClient);
+  private readonly extConfigService = inject(ExternalConfigService);
+
+  private get apiUrl(): string {
+    try {
+      return this.extConfigService.settings.presDocsServiceUrl ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  uploadDocs(files: File[], epANum: number, uploadDate: string): Observable<UploadDocResponse[]> {
+    if (!this.apiUrl) {
+      return throwError(() => new Error('Well documents service unavailable.'));
+    }
+
+    const requests = files.map(file => {
+      const params = new HttpParams()
+        .set('epaNum', String(epANum))
+        .set('uploadDate', uploadDate);
+
+      const formData = new FormData();
+      formData.append('wellFile', file, file.name);
+
+      return this.http
+        .post<UploadDocResponse>(`${this.apiUrl}/welldocuments/well-presentation-docs`, formData, { params })
+        .pipe(timeout(CONNECTION_TIMEOUT_MS));
+    });
+
+    return forkJoin(requests);
+  }
+
+  getDocs(epANum: number, date: string): Observable<WellDoc[]> {
+    if (!this.apiUrl) {
+      return throwError(() => new Error('Well documents service unavailable.'));
+    }
+
+    const params = new HttpParams()
+      .set('epANum', epANum)
+      .set('date', date);
+
+    return this.http
+      .get<WellDoc[]>(`${this.apiUrl}/well-pres-docs`, { params })
+      .pipe(timeout(CONNECTION_TIMEOUT_MS));
   }
 }
-==
-curl -X 'GET' \
-  'http://localhost:8080/welldocuments/well-presentation-docs?docName=marchtimesheet.pdf&epaNum=11111&uploadDate=2026-04-28' \
-  -H 'accept: */*
-==
-response
-Response body
-Download file (File)
-Response headers
- content-disposition: attachment; filename="marchtimesheet.pdf" 
- content-type: application/octet-stream 
- transfer-encoding: chunked 
+===
+export interface UploadDocResponse {
+    statusCode: number;
+    error: boolean;
+    message: string;
+    data: string;
+}
