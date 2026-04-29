@@ -68,19 +68,19 @@
 
         <div class="doc-row__actions">
           <button class="action-btn action-btn--view"
-                  [class.action-btn--loading]="isLoading(docName)"
+                  [class.action-btn--loading]="isViewLoading(docName)"
                   type="button"
                   (click)="viewDoc(docName)">
-            <mat-spinner *ngIf="isLoading(docName)" diameter="14"></mat-spinner>
-            <mat-icon *ngIf="!isLoading(docName)">visibility</mat-icon>
+            <mat-spinner *ngIf="isViewLoading(docName)" diameter="14"></mat-spinner>
+            <mat-icon *ngIf="!isViewLoading(docName)">visibility</mat-icon>
           </button>
 
           <button class="action-btn action-btn--download"
-                  [class.action-btn--loading]="isLoading(docName)"
+                  [class.action-btn--loading]="isDownloadLoading(docName)"
                   type="button"
                   (click)="downloadDoc(docName)">
-            <mat-spinner *ngIf="isLoading(docName)" diameter="14"></mat-spinner>
-            <mat-icon *ngIf="!isLoading(docName)">download</mat-icon>
+            <mat-spinner *ngIf="isDownloadLoading(docName)" diameter="14"></mat-spinner>
+            <mat-icon *ngIf="!isDownloadLoading(docName)">download</mat-icon>
           </button>
         </div>
 
@@ -89,8 +89,7 @@
 
   </div>
 </div>
-==
-
+===
 // ── Container ──────────────────────────────────────────────────────────────────
 .docs-container {
   display: flex;
@@ -376,7 +375,8 @@ export class ActiveWwellDocsViewerComponent {
   private readonly el = inject(ElementRef<HTMLElement>);
 
   protected readonly collapsed = signal(true);
-  protected readonly actionLoading = signal<Set<string>>(new Set());
+  protected readonly viewLoading = signal<Set<string>>(new Set());
+  protected readonly downloadLoading = signal<Set<string>>(new Set());
 
   constructor() {
     effect(() => {
@@ -396,13 +396,13 @@ export class ActiveWwellDocsViewerComponent {
 
   protected viewDoc(docName: string): void {
     const context = this.getContext();
-    if (!context || this.isLoading(docName)) return;
+    if (!context || this.isViewLoading(docName)) return;
 
-    this.setLoading(docName, true);
+    this.setLoading(this.viewLoading, docName, true);
     this.svc.fetchDoc(docName, context.epANum, context.date).subscribe({
       next: (blob) => {
         const file = new File([blob], docName, { type: blob.type || this.guessMime(docName) });
-        this.setLoading(docName, false);
+        this.setLoading(this.viewLoading, docName, false);
         this.dialog.open(FilePreviewDialogComponent, {
           data: file,
           width: '60vw',
@@ -414,31 +414,37 @@ export class ActiveWwellDocsViewerComponent {
           enterAnimationDuration: '220ms',
         });
       },
-      error: () => this.setLoading(docName, false),
+      error: () => this.setLoading(this.viewLoading, docName, false),
     });
   }
 
   protected downloadDoc(docName: string): void {
     const context = this.getContext();
-    if (!context || this.isLoading(docName)) return;
+    if (!context || this.isDownloadLoading(docName)) return;
 
-    this.setLoading(docName, true);
+    this.setLoading(this.downloadLoading, docName, true);
     this.svc.fetchDoc(docName, context.epANum, context.date).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
         anchor.download = docName;
+        document.body.appendChild(anchor);
         anchor.click();
+        document.body.removeChild(anchor);
         setTimeout(() => URL.revokeObjectURL(url), 5000);
-        this.setLoading(docName, false);
+        this.setLoading(this.downloadLoading, docName, false);
       },
-      error: () => this.setLoading(docName, false),
+      error: () => this.setLoading(this.downloadLoading, docName, false),
     });
   }
 
-  protected isLoading(docName: string): boolean {
-    return this.actionLoading().has(docName);
+  protected isViewLoading(docName: string): boolean {
+    return this.viewLoading().has(docName);
+  }
+
+  protected isDownloadLoading(docName: string): boolean {
+    return this.downloadLoading().has(docName);
   }
 
   protected fileIcon(docName: string): string {
@@ -465,8 +471,8 @@ export class ActiveWwellDocsViewerComponent {
     return { epANum, date: formatDateForInput(this.wellStore.selectedDate()) };
   }
 
-  private setLoading(docName: string, loading: boolean): void {
-    this.actionLoading.update(set => {
+  private setLoading(target: ReturnType<typeof signal<Set<string>>>, docName: string, loading: boolean): void {
+    target.update((set: Set<string>) => {
       const next = new Set(set);
       loading ? next.add(docName) : next.delete(docName);
       return next;
@@ -503,5 +509,738 @@ export class ActiveWwellDocsViewerComponent {
       parent = parent.parentElement;
     }
     return null;
+  }
+}
+==
+
+
+
+
+
+<div class="pd" #dialogEl
+     cdkDrag
+     cdkDragRootElement=".cdk-overlay-pane"
+     cdkDragBoundary="body"
+     [class]="'pd pd--' + previewType">
+
+  <!-- ══ Top accent stripe (file-type colour) ══ -->
+  <div class="pd-accent-stripe"></div>
+
+  <!-- ══ Header / drag handle ══ -->
+  <header class="pd-header" cdkDragHandle>
+
+    <div class="pd-header__left">
+      <div class="pd-badge">
+        <mat-icon>{{ typeIcon }}</mat-icon>
+      </div>
+      <div class="pd-header__text">
+        <span class="pd-header__filename" [title]="fileName">{{ fileName }}</span>
+        <span class="pd-header__meta">{{ fileSize }}&ensp;·&ensp;{{ fileTypeLabel }}</span>
+      </div>
+    </div>
+
+    <div class="pd-header__right">
+
+      @if (previewType === 'image') {
+        <div class="pd-zoom">
+          <button type="button" class="pd-zoom__btn"
+                  (click)="zoomOut()" [disabled]="zoomLevel() <= 0.25"
+                  matTooltip="Zoom out">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <button type="button" class="pd-zoom__val" (click)="resetZoom()" matTooltip="Reset zoom">
+            {{ zoomPercent }}%
+          </button>
+          <button type="button" class="pd-zoom__btn"
+                  (click)="zoomIn()" [disabled]="zoomLevel() >= 3"
+                  matTooltip="Zoom in">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+        <div class="pd-rule"></div>
+      }
+
+      <button type="button" class="pd-btn pd-btn--ghost" (click)="download()" matTooltip="Download file">
+        <mat-icon>file_download</mat-icon>
+        <span>Download</span>
+      </button>
+
+      <button type="button" class="pd-btn pd-btn--close" (click)="close()" aria-label="Close preview">
+        <mat-icon>close</mat-icon>
+      </button>
+
+    </div>
+  </header>
+
+  <!-- ══ Content ══ -->
+  <main class="pd-body">
+    @switch (previewType) {
+
+      @case ('image') {
+        <div class="pd-img-wrap">
+          <img [src]="safeUrl" [alt]="fileName" class="pd-img"
+               [style.transform]="'scale(' + zoomLevel() + ')'"/>
+        </div>
+      }
+
+      @case ('pdf') {
+        <iframe [src]="safeUrl" class="pd-pdf" title="PDF Preview"></iframe>
+      }
+
+      @case ('document') {
+        <iframe [src]="safeUrl" class="pd-pdf" title="Document Preview"></iframe>
+      }
+
+      @case ('unsupported') {
+        <div class="pd-empty">
+          <div class="pd-empty__card">
+            <div class="pd-empty__icon"><mat-icon>insert_drive_file</mat-icon></div>
+            <p class="pd-empty__title">Preview not available</p>
+            <p class="pd-empty__body">
+              <strong>{{ fileTypeLabel }}</strong> files cannot be rendered in the browser.
+            </p>
+            <button type="button" class="pd-empty__dl" (click)="download()">
+              <mat-icon>download</mat-icon>
+              Download file
+            </button>
+          </div>
+        </div>
+      }
+
+    }
+  </main>
+
+  <!-- ══ Status bar ══ -->
+  <footer class="pd-statusbar">
+    <span class="pd-statusbar__left">
+      <span class="pd-statusbar__type">{{ fileTypeLabel }}</span>
+      <span class="pd-statusbar__sep">·</span>
+      <span>{{ fileSize }}</span>
+      @if (previewType === 'image') {
+        <span class="pd-statusbar__sep">·</span>
+        <span>{{ zoomPercent }}%</span>
+      }
+    </span>
+    <span class="pd-statusbar__right">Drag header to move&ensp;·&ensp;Drag corner to resize</span>
+    <div class="pd-grip" (mousedown)="onResizeStart($event)" title="Drag to resize"></div>
+  </footer>
+
+</div>
+==
+// ─────────────────────────────────────────────────────────────────────────────
+// Tokens
+// ─────────────────────────────────────────────────────────────────────────────
+$bg-root    : #0d1117;
+$bg-header  : #161b28;
+$bg-body    : #090c14;
+$bg-status  : #07090f;
+$border     : rgba(255,255,255,0.07);
+$text-hi    : #f1f5f9;
+$text-mid   : #94a3b8;
+$text-lo    : #3d4e68;
+
+$accent-image    : #38bdf8;
+$accent-pdf      : #f43f5e;
+$accent-document : #a78bfa;
+$accent-other    : #64748b;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Keyframes
+// ─────────────────────────────────────────────────────────────────────────────
+@keyframes pd-in {
+  from { opacity: 0; transform: scale(0.94) translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pd-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pd-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pd-pop {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Root shell
+// ─────────────────────────────────────────────────────────────────────────────
+.pd {
+  position: relative;
+  display: grid;
+  grid-template-rows: 3px 64px 1fr 28px;   // stripe | header | body | status
+  width: 100%;
+  height: 100%;
+  background: $bg-root;
+  border-radius: 14px;
+  overflow: hidden;
+  animation: pd-in 280ms cubic-bezier(0.22,1,0.36,1) both;
+
+  // ── accent stripe colour per file type ──────────────────────────────────
+  &--image    .pd-accent-stripe { background: $accent-image;    box-shadow: 0 0 18px rgba($accent-image,    .55); }
+  &--pdf      .pd-accent-stripe { background: $accent-pdf;      box-shadow: 0 0 18px rgba($accent-pdf,      .55); }
+  &--document .pd-accent-stripe { background: $accent-document; box-shadow: 0 0 18px rgba($accent-document, .55); }
+  &--unsupported .pd-accent-stripe { background: $accent-other; }
+
+  &--image    .pd-badge { background: linear-gradient(135deg,#38bdf8,#0284c7); box-shadow: 0 4px 16px rgba(56,189,248,.4); }
+  &--pdf      .pd-badge { background: linear-gradient(135deg,#fb7185,#e11d48); box-shadow: 0 4px 16px rgba(244, 63, 94,.4); }
+  &--document .pd-badge { background: linear-gradient(135deg,#a78bfa,#7c3aed); box-shadow: 0 4px 16px rgba(167,139,250,.4); }
+  &--unsupported .pd-badge { background: linear-gradient(135deg,#475569,#334155); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Accent stripe
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-accent-stripe {
+  grid-row: 1;
+  width: 100%;
+  height: 3px;
+  flex-shrink: 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Header
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-header {
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.75rem 0 1rem;
+  background: $bg-header;
+  border-bottom: 1px solid $border;
+  cursor: grab;
+  animation: pd-slide-down 300ms cubic-bezier(0.22,1,0.36,1) 30ms both;
+
+  &:active { cursor: grabbing; }
+}
+
+// ── Left: badge + name ───────────────────────────────────────────────────────
+.pd-header__left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.pd-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  transition: box-shadow 200ms ease;
+
+  mat-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    line-height: 1.25rem;
+    color: #fff;
+    overflow: visible;
+  }
+}
+
+.pd-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pd-header__filename {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: $text-hi;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.01em;
+}
+
+.pd-header__meta {
+  font-size: 0.64rem;
+  color: $text-lo;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+// ── Right: toolbar ───────────────────────────────────────────────────────────
+.pd-header__right {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Zoom strip
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-zoom {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 9px;
+  background: rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+
+.pd-zoom__btn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: $text-mid;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    line-height: 1rem;
+    overflow: visible;
+  }
+
+  &:hover:not([disabled]) { color: $text-hi; background: rgba(255,255,255,0.09); }
+  &[disabled]             { opacity: 0.2; cursor: default; }
+}
+
+.pd-zoom__val {
+  all: unset;
+  min-width: 3.4rem;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: $text-mid;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  border-right: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+
+  &:hover { color: $text-hi; background: rgba(255,255,255,0.06); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Header buttons
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-rule {
+  width: 1px;
+  height: 22px;
+  background: $border;
+  margin: 0 0.15rem;
+}
+
+.pd-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.75rem;
+  height: 34px;
+  border-radius: 9px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    line-height: 1rem;
+    overflow: visible;
+  }
+
+  &--ghost {
+    color: $text-mid;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+
+    &:hover {
+      color: $text-hi;
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.18);
+    }
+  }
+
+  &--close {
+    padding: 0;
+    width: 34px;
+    justify-content: center;
+    color: $text-lo;
+
+    &:hover {
+      color: #fda4af;
+      background: rgba(244,63,94,0.18);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Body / content area
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-body {
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  background: $bg-body;
+  // dot-grid overlay
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+  animation: pd-fade 250ms ease 60ms both;
+
+  // inner vignette for depth
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 70% at 50% 50%, transparent 40%, rgba(0,0,0,0.35) 100%);
+    pointer-events: none;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Image
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-img-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.pd-img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 2px 8px  rgba(0,0,0,0.4),
+    0 12px 40px rgba(0,0,0,0.6),
+    0 32px 80px rgba(0,0,0,0.4);
+  transition: transform 200ms cubic-bezier(0.34,1.2,0.64,1);
+  transform-origin: center center;
+  will-change: transform;
+  animation: pd-pop 380ms cubic-bezier(0.22,1,0.36,1) 110ms both;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PDF
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-pdf {
+  width: 100%;
+  height: 100%;
+  border: none;
+  position: relative;
+  z-index: 1;
+  animation: pd-fade 300ms ease 80ms both;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unsupported
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+  position: relative;
+  z-index: 1;
+  animation: pd-fade 300ms ease 80ms both;
+}
+
+.pd-empty__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+  padding: 3rem 2.75rem;
+  background: rgba(255,255,255,0.028);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  max-width: 360px;
+  backdrop-filter: blur(12px);
+  animation: pd-pop 350ms cubic-bezier(0.22,1,0.36,1) 100ms both;
+}
+
+.pd-empty__icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon {
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #1e2d45;
+    overflow: visible;
+  }
+}
+
+.pd-empty__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #475569;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.pd-empty__body {
+  font-size: 0.8rem;
+  color: #1e2d45;
+  margin: 0;
+  line-height: 1.7;
+  max-width: 260px;
+  strong { color: #334155; }
+}
+
+.pd-empty__dl {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.6rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0ea5e9, #0369a1);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(14,165,233,.4);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+
+  mat-icon { font-size: 1rem; width: 1rem; height: 1rem; overflow: visible; }
+  &:hover  { box-shadow: 0 6px 28px rgba(14,165,233,.55); transform: translateY(-1px); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status bar
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-statusbar {
+  grid-row: 4;
+  display: flex;
+  align-items: center;
+  padding: 0 2rem 0 1rem;
+  background: $bg-status;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  position: relative;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.6rem;
+    color: $text-lo;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    flex: 1;
+  }
+
+  &__type {
+    font-weight: 700;
+    color: rgba(148,163,184,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  &__sep { color: rgba(255,255,255,0.1); }
+
+  &__right {
+    font-size: 0.58rem;
+    color: rgba(255,255,255,0.08);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Resize grip
+// ─────────────────────────────────────────────────────────────────────────────
+.pd-grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  cursor: se-resize;
+  z-index: 10;
+  opacity: 0.28;
+  transition: opacity 180ms ease;
+  background:
+    linear-gradient(135deg, transparent 30%, rgba(148,163,184,1) 30%, rgba(148,163,184,1) 37%, transparent 37%),
+    linear-gradient(135deg, transparent 47%, rgba(148,163,184,1) 47%, rgba(148,163,184,1) 54%, transparent 54%),
+    linear-gradient(135deg, transparent 64%, rgba(148,163,184,1) 64%, rgba(148,163,184,1) 71%, transparent 71%);
+
+  &:hover { opacity: 0.9; }
+}
+===
+import { ChangeDetectionStrategy, Component, ElementRef, Inject, OnDestroy, ViewChild, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
+
+type PreviewType = 'image' | 'pdf' | 'document' | 'unsupported';
+
+@Component({
+  selector: 'app-file-preview-dialog',
+  standalone: true,
+  imports: [CommonModule, MatButtonModule, MatDialogModule, MatIconModule, MatTooltipModule, CdkDrag, CdkDragHandle],
+  templateUrl: './file-preview-dialog.component.html',
+  styleUrl: './file-preview-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class FilePreviewDialogComponent implements OnDestroy {
+  @ViewChild('dialogEl', { static: true }) private dialogEl!: ElementRef<HTMLDivElement>;
+
+  protected readonly fileName: string;
+  protected readonly previewType: PreviewType;
+  protected readonly safeUrl: SafeResourceUrl | null;
+  protected readonly fileSize: string;
+  protected readonly typeIcon: string;
+  protected readonly fileTypeLabel: string;
+  protected readonly zoomLevel = signal(1);
+
+  private readonly objectUrl: string | null;
+  private readonly zoomStep = 0.25;
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA) readonly file: File,
+    private readonly dialogRef: MatDialogRef<FilePreviewDialogComponent>,
+    private readonly sanitizer: DomSanitizer,
+  ) {
+    this.fileName = file.name;
+    this.previewType = this.resolveType(file);
+    this.fileSize = this.formatSize(file.size);
+    this.typeIcon = this.resolveIcon();
+    this.fileTypeLabel = file.name.split('.').pop()?.toUpperCase() ?? 'FILE';
+
+    if (this.previewType !== 'unsupported') {
+      this.objectUrl = URL.createObjectURL(file);
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.objectUrl);
+    } else {
+      this.objectUrl = null;
+      this.safeUrl = null;
+    }
+
+  }
+
+  ngOnDestroy(): void {
+    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
+  }
+
+  protected get zoomPercent(): number {
+    return Math.round(this.zoomLevel() * 100);
+  }
+
+  protected zoomIn(): void {
+    this.zoomLevel.update(z => Math.min(3, z + this.zoomStep));
+  }
+
+  protected zoomOut(): void {
+    this.zoomLevel.update(z => Math.max(0.25, z - this.zoomStep));
+  }
+
+  protected resetZoom(): void {
+    this.zoomLevel.set(1);
+  }
+
+  protected close(): void {
+    this.dialogRef.close();
+  }
+
+  protected download(): void {
+    const url = URL.createObjectURL(this.file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = this.fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  protected onResizeStart(event: MouseEvent): void {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startW = this.dialogEl.nativeElement.offsetWidth;
+    const startH = this.dialogEl.nativeElement.offsetHeight;
+
+    const onMove = (e: MouseEvent) => {
+      const w = Math.max(420, startW + (e.clientX - startX));
+      const h = Math.max(300, startH + (e.clientY - startY));
+      this.dialogRef.updateSize(`${w}px`, `${h}px`);
+    };
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  private resolveType(file: File): PreviewType {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const mime = file.type.toLowerCase();
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+    if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+    if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'].includes(ext)) return 'document';
+    return 'unsupported';
+  }
+
+  private resolveIcon(): string {
+    if (this.previewType === 'image') return 'image';
+    if (this.previewType === 'pdf') return 'picture_as_pdf';
+    const ext = this.file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (['doc', 'docx'].includes(ext)) return 'article';
+    if (['xls', 'xlsx'].includes(ext)) return 'table_chart';
+    if (['ppt', 'pptx'].includes(ext)) return 'slideshow';
+    if (['txt', 'csv'].includes(ext)) return 'description';
+    return 'insert_drive_file';
+  }
+
+  private formatSize(size: number): string {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   }
 }
