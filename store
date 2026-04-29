@@ -1,55 +1,1041 @@
-{
-    "statusCode": 200,
-    "error": false,
-    "message": "Success",
-    "data": [
-        {
-            "epANum": 97882,
-            "wellName": "HABA-821"
-        },
-        {
-            "epANum": 98415,
-            "wellName": "JLMN-843"
-        },
-        {
-            "epANum": 97830,
-            "wellName": "JNAB-822"
-        },
-        {
-            "epANum": 97834,
-            "wellName": "JNAB-826"
-        },
-        {
-            "epANum": 97818,
-            "wellName": "HRDH-3569"
-        },
-        {
-            "epANum": 97155,
-            "wellName": "FYDH-803"
-        },
-        {
-            "epANum": 98408,
-            "wellName": "HWYH-3554"
-        },
-        {
-            "epANum": 98084,
-            "wellName": "HWYH-3553"
-        },
-        {
-            "epANum": 98775,
-            "wellName": "MSBA-801"
-        },
-        {
-            "epANum": 96760,
-            "wellName": "HRDH-3559"
-        },
-        {
-            "epANum": 94474,
-            "wellName": "HZEM-851"
-        },
-        {
-            "epANum": 98765,
-            "wellName": "MNSY-802"
-        }
-    ]
+@let d = store.miscWellData();
+
+@if (d) {
+  <div class="misc-card">
+    <div class="misc-grid">
+      <!-- ROW 1: (Well Name + Spud Date stacked) | Targeted Aquifer -->
+      <div class="stack-cell">
+        <div class="cell cell--well-name">
+          <span class="cell__label">Well Name</span>
+          <div class="cell__name">{{ d.wellName }}</div>
+          <div class="cell__sub">{{ d.rigName }}</div>
+        </div>
+
+        <div class="cell cell--spud">
+          <div class="spud-icon">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              stroke-width="2"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+          </div>
+          <div>
+            <div class="cell__label-light">Spud Date</div>
+            <div class="spud-value">{{ formatSpudDate(d.spudDate) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cell cell--aquifer">
+        <span class="cell__label cell__label--dark">Targeted<br />Aquifer</span>
+        <img
+          class="size-8"
+          src="assets/images/agwa-logo.svg"
+          alt="AGWA"
+          style="width: 20px"
+        />
+        <div class="aquifer-name">{{ d.targetedAquifer }}</div>
+      </div>
+
+      <!-- ROW 2: Current Status | Days -->
+      <div class="cell cell--status">
+        <div class="status-left">
+          <span class="cell__label cell__label--dark">Current Status</span>
+          <div class="status-value">{{ d.currentStatus }}</div>
+        </div>
+        <div class="status-gear">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+            />
+          </svg>
+        </div>
+      </div>
+
+      <div class="cell cell--days">
+        <div class="days-cal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+        </div>
+        <div>
+          <div class="cell__label-light">Days</div>
+          <div class="days-value">
+            {{ d.daysSinceSpud | number: "1.2-2" }}/{{ d.targetDays }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: ROP | BI Supporting -->
+      <div class="cell cell--rop">
+        <div class="depth-labels">
+          <div class="rop-value">{{ d.rop | number }}</div>
+          <div class="cell__label-light">ROP</div>
+        </div>
+        <div class="feet-icon">
+          <mat-icon>speed</mat-icon>
+        </div>
+      </div>
+
+      <div class="cell cell--bi">
+        <div class="bi-num">BI{{ d.biNum }}</div>
+        <div class="bi-label">Supporting</div>
+        <div class="bi-well">Well {{ d.supportingWell }}</div>
+      </div>
+
+      <!-- ROW 4: Feet drilled | Previous Well -->
+      <div class="cell cell--feet">
+        <div class="feet-left">
+          <div class="feet-value">{{ d.feetDrilledToday | number }}</div>
+          <div class="cell__label-light">Feet</div>
+        </div>
+        <div class="feet-icon">
+          <svg
+            viewBox="0 0 40 40"
+            fill="none"
+            stroke="white"
+            stroke-width="1.8"
+          >
+            <path
+              d="M20 5v15M13 13l7 7 7-7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M5 25c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
+              opacity="0.6"
+            />
+            <path
+              d="M5 32c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
+              opacity="0.4"
+            />
+          </svg>
+        </div>
+      </div>
+
+      <div class="cell cell--prev">
+        <div class="cell__label-light">Previous Well</div>
+        <div class="well-name-val">{{ d.previousWell }}</div>
+      </div>
+
+      <!-- ROW 5: Current Depth + Rig Move | Next Well -->
+      <div class="stack-cell">
+        <div class="cell cell--depth">
+          <div class="depth-labels">
+            <div class="cell__label-light">Current</div>
+            <div class="cell__label-light">Depth</div>
+          </div>
+          <div class="depth-value">{{ d.currentDepth | number }}</div>
+        </div>
+
+        <div class="cell cell--next-kpi">
+          <div class="next-kpi__icon">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              stroke-width="2"
+            >
+              <path d="M7 7h10" stroke-linecap="round" />
+              <path d="M7 12h6" stroke-linecap="round" />
+              <path
+                d="M17 12l3 3-3 3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path d="M17 17H7" stroke-linecap="round" />
+            </svg>
+          </div>
+
+          <div class="cell cell--next-kpi">
+            <div class="next-kpi__content">
+              <div class="cell__label-light">Rig Move</div>
+              <div class="next-kpi__stat">
+                <span class="next-kpi__stat-label">Actual / KPI</span>
+                <span class="next-kpi__stat-value">
+                  <span
+                    [class.next-kpi__days--positive]="
+                      rigMoveTone(d.rigMoveDays) === 'positive'
+                    "
+                    [class.next-kpi__days--negative]="
+                      rigMoveTone(d.rigMoveDays) === 'negative'
+                    "
+                    >{{ d.actualRm | number: "1.0-2" }}</span
+                  >/{{ d.kpiRm | number: "1.0-2" }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cell cell--next">
+        <div class="cell__label-light">Next Well</div>
+        <div class="well-name-val">{{ d.nextWell }}</div>
+      </div>
+
+      <!-- ROW 6: Operation Summary (full width) -->
+      <div class="cell cell--op-summary">
+        <div class="op-header">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+            />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+          <span class="op-header__label">Operation Summary</span>
+        </div>
+        <div class="op-text">{{ d.operationSummary }}</div>
+      </div>
+
+      <!-- ROW 7: Next 24 Hr Operation (full width) -->
+      <div class="cell cell--next24">
+        <div class="op-header">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span class="op-header__label">Next 24 Hr Operation</span>
+        </div>
+        <div class="op-text">{{ d.next24HrOperation }}</div>
+      </div>
+      <!-- ROW 7: Drilling Summary Remark -->
+      <div class="cell cell--next24">
+        <div class="op-header">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span class="op-header__label">Drilling Summary Remarks</span>
+        </div>
+        <div class="op-text">{{ d.drlgSmryRmk }}</div>
+      </div>
+    </div>
+  </div>
+}
+==
+// ── Outer card wrapper ─────────────────────────────────────────────────────────
+.misc-card {
+  padding: 10px;
+  height: 100%;
+  box-sizing: border-box;
+  container-type: inline-size;
+  container-name: misc;
+  font-family: var(--font-sans);
+}
+
+// ── 2-column grid ─────────────────────────────────────────────────────────────
+.misc-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: clamp(4px, 1.5cqi, 10px);
+  width: 100%;
+}
+
+
+.stack-cell {
+  display: grid;
+  gap: clamp(4px, 1.5cqi, 10px);
+  min-width: 0;
+}
+
+// ── Base cell ─────────────────────────────────────────────────────────────────
+.cell {
+  border-radius: clamp(8px, 2.5cqi, 14px);
+  padding: clamp(8px, 2.2cqi, 16px) clamp(10px, 2.8cqi, 18px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border);
+  min-height: clamp(52px, 14cqi, 80px);
+}
+
+// ── Cell color variants ────────────────────────────────────────────────────────
+
+.cell--well-name {
+  background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
+  border: none;
+  color: #fff;
+  min-height: clamp(52px, 13cqi, 72px);
+}
+
+.cell--spud {
+ background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(4px, 1.5cqi, 10px);
+}
+
+.spud-icon {
+  width: clamp(26px, 7cqi, 38px);
+  height: clamp(26px, 7cqi, 38px);
+  border-radius: clamp(6px, 1.5cqi, 10px);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: clamp(14px, 3.5cqi, 22px);
+    height: clamp(14px, 3.5cqi, 22px);
+  }
+}
+
+.spud-value {
+  font-size: clamp(14px, 3.2cqi, 17px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.cell--aquifer {
+  align-self: start;
+  background: var(--bg-card, #fff);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(4px, 1.5cqi, 10px);
+  padding: clamp(6px, 2cqi, 12px) clamp(8px, 2.5cqi, 14px);
+}
+
+.cell--status {
+  background: var(--bg-card, #fff);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(4px, 1.5cqi, 10px);
+}
+
+.cell--days {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(4px, 1.5cqi, 10px);
+}
+
+.cell--gauges {
+  background: var(--bg-card, #fff);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  gap: clamp(4px, 1.5cqi, 10px);
+  padding: clamp(6px, 2cqi, 14px) clamp(4px, 1.5cqi, 12px);
+}
+
+.cell--bi {
+  background: linear-gradient(135deg, #2563eb 0%, #22d3ee 100%);
+  border: none;
+  color: #fff;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  gap: clamp(1px, 0.5cqi, 3px);
+}
+
+.cell--feet {
+  background: linear-gradient(135deg, #0ea5e9 0%, #22d3ee 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cell--prev {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+  border: none;
+  color: #fff;
+}
+
+.cell--depth {
+  background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(6px, 2cqi, 14px);
+}
+
+.cell--next {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+  border: none;
+  color: #fff;
+}
+
+.cell--next-kpi {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(4px, 1.5cqi, 10px);
+
+  &.cell--kpi-positive {
+    background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+  }
+
+  &.cell--kpi-negative {
+    background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
+  }
+}
+
+// ── Text helpers ───────────────────────────────────────────────────────────────
+
+.cell__label {
+  font-size: clamp(12px, 2.6cqi, 13px);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: clamp(3px, 0.6cqi, 6px);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.cell__label--dark {
+  color: #475569;
+  font-size: clamp(12px, 2.6cqi, 13px);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.cell__label-light {
+  font-size: clamp(12px, 2.6cqi, 13px);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: clamp(2px, 0.5cqi, 4px);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.cell__name {
+  font-size: clamp(17px, 4.4cqi, 24px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.25;
+  margin-bottom: clamp(2px, 0.5cqi, 4px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell__sub {
+  font-size: clamp(13px, 2.9cqi, 15px);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+// ── Aquifer cell ───────────────────────────────────────────────────────────────
+.aquifer-drop {
+  width: clamp(24px, 7cqi, 42px);
+  height: clamp(24px, 7cqi, 42px);
+  flex-shrink: 0;
+}
+
+.aquifer-name {
+  font-size: clamp(15px, 3.4cqi, 19px);
+  font-weight: 800;
+  color: #1e3a8a;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+// ── Status cell ────────────────────────────────────────────────────────────────
+.status-left {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.8cqi, 5px);
+  min-width: 0;
+}
+
+.status-value {
+  font-size: clamp(16px, 3.4cqi, 19px);
+  font-weight: 800;
+  color: #0ea5e9;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.status-gear {
+  width: clamp(28px, 8cqi, 42px);
+  height: clamp(28px, 8cqi, 42px);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+
+  svg {
+    width: clamp(14px, 4cqi, 22px);
+    height: clamp(14px, 4cqi, 22px);
+  }
+}
+
+// ── Days cell ──────────────────────────────────────────────────────────────────
+.days-cal {
+  width: clamp(26px, 7cqi, 38px);
+  height: clamp(26px, 7cqi, 38px);
+  border-radius: clamp(6px, 1.5cqi, 10px);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: clamp(14px, 3.5cqi, 22px);
+    height: clamp(14px, 3.5cqi, 22px);
+  }
+}
+
+.days-value {
+  font-size: clamp(18px, 3.8cqi, 21px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+// ── Gauge internals ────────────────────────────────────────────────────────────
+.gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(3px, 1cqi, 7px);
+}
+
+.gauge__label {
+  font-size: clamp(11px, 2.4cqi, 12px);
+  font-weight: 800;
+  color: #475569;
+  text-align: center;
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.gauge__ring {
+  width: clamp(38px, 11cqi, 58px);
+  height: clamp(38px, 11cqi, 58px);
+  border-radius: 50%;
+  border: clamp(2px, 0.6cqi, 3px) solid #0ea5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(18px, 4.2cqi, 24px);
+  font-weight: 800;
+  color: #1e3a8a;
+  box-shadow: inset 0 0 0 4px rgba(14, 165, 233, 0.1),
+              0 0 0 1px rgba(14, 165, 233, 0.15);
+  background: #fff;
+}
+
+// ── BI cell ────────────────────────────────────────────────────────────────────
+.bi-num {
+  font-size: clamp(20px, 5cqi, 26px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.08;
+}
+
+.bi-label {
+  font-size: clamp(11px, 2.4cqi, 12px);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bi-well {
+  font-size: clamp(13px, 3.2cqi, 15px);
+  font-weight: 700;
+  color: #fff;
+  margin-top: 2px;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+// ── Feet cell ──────────────────────────────────────────────────────────────────
+.feet-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.feet-value {
+  font-size: clamp(22px, 5.5cqi, 30px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.05;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.feet-icon {
+  flex-shrink: 0;
+
+  svg {
+    width: clamp(28px, 8cqi, 44px);
+    height: clamp(28px, 8cqi, 44px);
+    opacity: 0.85;
+  }
+}
+
+// ── Depth cell ─────────────────────────────────────────────────────────────────
+.depth-labels {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.depth-value {
+  font-size: clamp(24px, 6.1cqi, 34px);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.next-kpi__icon {
+  width: clamp(26px, 7cqi, 38px);
+  height: clamp(26px, 7cqi, 38px);
+  border-radius: clamp(6px, 1.5cqi, 10px);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: clamp(14px, 3.5cqi, 22px);
+    height: clamp(14px, 3.5cqi, 22px);
+  }
+}
+
+.next-kpi__content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.next-kpi__days {
+  font-size: clamp(18px, 3.8cqi, 21px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.next-kpi__days--positive {
+  color: #07f809;
+}
+
+.next-kpi__days--negative {
+  color: #fecaca;
+}
+
+.next-kpi__stats {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.8cqi, 14px);
+  margin-top: clamp(3px, 0.8cqi, 6px);
+  flex-wrap: wrap;
+}
+
+.next-kpi__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.next-kpi__stat-label {
+  font-size: clamp(10px, 2.2cqi, 11px);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.78);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.next-kpi__stat-value {
+  
+  color: #fff;
+  
+}
+
+// ── Previous / Next well text ─────────────────────────────────────────────────
+.well-name-val {
+  font-size: clamp(14px, 3.6cqi, 18px);
+  font-weight: 800;
+  color: #fff;
+  margin-top: 4px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+// ── ROP cell ───────────────────────────────────────────────────────────────────
+.cell--rop {
+  background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rop-value {
+  font-size: clamp(18px, 4.2cqi, 24px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.feet-icon mat-icon {
+  font-size: clamp(28px, 8cqi, 44px);
+  width: clamp(28px, 8cqi, 44px);
+  height: clamp(28px, 8cqi, 44px);
+  color: #fff;
+  opacity: 0.85;
+}
+
+// ── Operation summary & Next 24 Hr (full-width) ───────────────────────────────
+.cell--op-summary {
+  grid-column: 1 / -1;
+  background: var(--bg-card, #fff);
+  min-height: clamp(48px, 14cqi, 70px);
+  gap: clamp(3px, 1cqi, 7px);
+}
+
+.cell--next24 {
+  grid-column: 1 / -1;
+  background: var(--bg-surface, #f1f5f9);
+  min-height: clamp(48px, 14cqi, 70px);
+  gap: clamp(3px, 1cqi, 7px);
+  border: 1px solid var(--border);
+}
+
+.op-header {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 1.2cqi, 7px);
+
+  svg {
+    width: clamp(11px, 2.8cqi, 15px);
+    height: clamp(11px, 2.8cqi, 15px);
+    flex-shrink: 0;
+    color: #0ea5e9;
+  }
+}
+
+.op-header__label {
+  font-size: clamp(12px, 2.6cqi, 13px);
+  font-weight: 800;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.op-text {
+  font-size: clamp(14px, 3cqi, 16px);
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  line-height: 1.6;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+==
+/**
+ * MiscPresWellDataComponent — SMART
+ * Reads store.miscWellData() directly.
+ * No @Input needed.
+ */
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { DrillingDataStore } from '@store/drilling-data/drilling-data.store';
+
+@Component({
+  selector: 'app-misc-pres-well-data',
+  standalone: true,
+  imports: [DecimalPipe, MatIconModule],
+  templateUrl: './misc-pres-well-data.component.html',
+  styleUrl: './misc-pres-well-data.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class MiscPresWellDataComponent {
+  protected readonly store = inject(DrillingDataStore);
+
+  protected formatSpudDate(val: string): string {
+    if (!val || val === 'N/A') return val || 'N/A';
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  protected rigMoveTone(value: number | null): 'positive' | 'negative' | 'neutral' {
+    if (value == null) {
+      return 'neutral';
+    }
+
+    return value < 0 ? 'positive' : 'negative';
+  }
+}
+
+== dpth ==
+:host {
+  display: block;
+  flex: 0 0 8.4%;
+  height: 100%;
+}
+
+.depth-scale-svg {
+  display: block;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  width: 100%;
+  height: 100%;
+}
+
+
+
+:host ::ng-deep {
+  .axis-title {
+   
+    font-size: 10.5px; font-weight: 900;
+  
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .axis-line  { stroke: var(--text-muted); stroke-width: 1.5; fill: none; opacity: 0.6; }
+  .axis-arrow { fill: var(--text-muted); opacity: 0.6; }
+  .tick-line  { stroke: var(--text-muted); stroke-width: 1.2; opacity: 0.6; }
+  .tick-grid  { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2,3; opacity: 0.5; }
+  .tick-label {
+  
+    font-size: 18px; font-weight: 700;
+    text-anchor: end;
+  }
+  .total-depth-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 800;
+    fill: var(--accent); letter-spacing: 0.04em;
+  }
+}
+==
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  effect,
+  input,
+  viewChild,
+} from '@angular/core';
+import { select } from 'd3-selection';
+import { easeLinear } from 'd3-ease';
+import 'd3-transition';
+
+import { DrillingDataStore } from '@core/store/drilling-data/drilling-data.store';
+import { ANIM, DIAGRAM_LAYOUT } from 'src/app/core/models/well-design/wellbore-diagram.model';
+import { buildDepthTicks, createDepthScale, formatDepth } from 'src/app/shared/utils/wellbore-math.util';
+
+@Component({
+  selector: 'app-depth-scale',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './depth-scale.component.html',
+  styleUrl: './depth-scale.component.scss',
+})
+export class DepthScaleComponent {
+  protected readonly store = inject(DrillingDataStore);
+  readonly totalDepth = input.required<number>();
+  readonly animTrigger = input.required<number>();
+
+  private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('scaleSvg');
+
+  private readonly layout = DIAGRAM_LAYOUT;
+
+  constructor() {
+    effect(() => {
+      const svgEl = this.svgRef();
+      const depth = this.totalDepth();
+      this.animTrigger(); // track trigger so we redraw on every new well load
+
+      if (svgEl?.nativeElement) {
+        this.drawScale(depth, svgEl.nativeElement);
+      }
+    });
+  }
+
+
+
+  private drawScale(totalDepth: number, element: SVGSVGElement): void {
+    const { depthScaleWidth, svgHeight, marginTop, drawingHeight, depthAxisX } = this.layout;
+
+    const svg = select(element);
+    svg.selectAll('*').remove();
+
+    svg
+      .attr('width', '100%')
+      .attr('height', '100%')
+      .attr('viewBox', `0 0 ${depthScaleWidth} ${svgHeight}`)
+      .attr('preserveAspectRatio', 'none');
+
+    const g = svg.append('g').attr('transform', `translate(0,${marginTop})`);
+    const scale = createDepthScale(totalDepth, drawingHeight);
+    const ticks = buildDepthTicks(totalDepth, 500);
+
+    g.append('text')
+      .attr('class', 'axis-title')
+      .attr('x', depthAxisX)
+      .attr('y', -32)
+      .attr('text-anchor', 'middle')
+      .call((t) => {
+        t.append('tspan').attr('x', depthAxisX).attr('dy', 0).text('Depth');
+        t.append('tspan').attr('x', depthAxisX).attr('dy', 12).text('(ft bgl)');
+      });
+
+    const scaleTipY = scale(totalDepth); // === drawingHeight
+    const lineLen = scaleTipY;
+
+    g.append('line')
+      .attr('class', 'axis-line')
+      .attr('x1', depthAxisX).attr('x2', depthAxisX)
+      .attr('y1', 0).attr('y2', scaleTipY)
+      .attr('stroke-dasharray', lineLen)
+      .attr('stroke-dashoffset', lineLen)
+      .transition()
+      .duration(ANIM.SCALE_DURATION)
+      .ease(easeLinear)
+      .attr('stroke-dashoffset', 0);
+
+    ticks.forEach((depth: number) => {
+      const yPx = scale(depth);
+      const delay = (depth / totalDepth) * ANIM.SCALE_DURATION + ANIM.TICK_BASE_DELAY;
+
+      const tick = g.append('g')
+        .attr('class', 'tick')
+        .attr('transform', `translate(0,${yPx})`)
+        .style('opacity', 0);
+
+      tick.append('line')
+        .attr('class', 'tick-line')
+        .attr('x1', depthAxisX - 6).attr('x2', depthAxisX);
+
+      tick.append('text')
+        .attr('class', 'tick-label')
+        .attr('x', depthAxisX - 9)
+        .attr('dy', '0.32em')
+        .text(depth === 0 ? '0' : depth.toLocaleString());
+
+      tick.append('line')
+        .attr('class', 'tick-grid')
+        .attr('x1', depthAxisX).attr('x2', depthAxisX + 8);
+
+      tick.transition()
+        .delay(delay)
+        .duration(200)
+        .style('opacity', 1);
+    });
+
+    g.append('text')
+      .attr('class', 'total-depth-label')
+      .attr('x', depthAxisX)
+      .attr('y', drawingHeight + 26)
+      .attr('text-anchor', 'middle')
+      .style('opacity', 0)
+      .text(formatDepth(totalDepth))
+      .transition()
+      .delay(ANIM.SCALE_DURATION + 200)
+      .duration(300)
+      .style('opacity', 1);
+  }
 }
