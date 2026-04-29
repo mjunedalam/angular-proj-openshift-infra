@@ -1,181 +1,121 @@
-import { IWellData } from 'src/app/core/models/well-design/well-data.model';
+import { computed, inject } from '@angular/core';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { tapResponse } from '@ngrx/operators';
+import { pipe, switchMap, tap } from 'rxjs';
 
-export interface ApiResponse<T> {
-    statusCode: number;
-    error: boolean;
-    message: string;
-    data: T[];
-}
+import { WellDoc, WellDocsState } from '@models/well-design/well-docs.model';
+import { DocListResponse, UploadDocResponse } from '@shared/models/wwell/api-response.model';
+import { PresDocsService } from '@services/pres-docs.service';
+import { NotificationService } from '@shared/components/notification/notification.service';
+import { DUMMY_DOCS, initialWellDocsState } from './well-docs.state';
+import { selectCategories, selectDocsByCategory, selectTotalDocCount } from './well-docs.selectors';
+import { WellDocsActions, WellDocsEvents, LoadDocsPayload, UploadDocsPayload } from './well-docs.actions';
 
-export interface WellDetailsResponse {
-    readonly  statusCode: number;
-    readonly error: boolean;
-    readonly  message: string;
-    readonly data: IWellData[]
-}
+export const WellDocsStore = signalStore(
+  { providedIn: 'root' },
 
-export interface UploadDocResponse {
-    statusCode: number;
-    error: boolean;
-    message: string;
-    data: string;
-}
+  withState<WellDocsState>(initialWellDocsState),
 
-export interface DocListData {
-    totalFiles: string[];
-}
+  withComputed(({ docs }) => ({
+    docsByCategory: computed(() => selectDocsByCategory(docs())),
+    categories:     computed(() => selectCategories(docs())),
+    totalCount:     computed(() => selectTotalDocCount(docs())),
+  })),
 
-export interface DocListResponse {
-    statusCode: number;
-    error: boolean;
-    message: string | null;
-    data: DocListData;
-}
-==
-<div class="docs-container">
+  withMethods((store, svc = inject(PresDocsService), notify = inject(NotificationService)) => ({
+    loadDocs: rxMethod<LoadDocsPayload>(
+      pipe(
+        tap(() => patchState(store, { loading: true, error: null })),
+        switchMap(({ epANum, date }) =>
+          svc.getDocs(epANum, date).pipe(
+            tapResponse({
+              next: (docs: WellDoc[]) =>
+                patchState(store, {
+                  docs: docs.length > 0 ? docs : DUMMY_DOCS,
+                  loading: false,
+                }),
+              error: (err: unknown) => {
+                const msg = err instanceof Error ? err.message : 'Failed to load documents';
+                patchState(store, { docs: DUMMY_DOCS, loading: false, error: msg });
+                notify.error(msg);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
 
-  <!-- Header -->
-  <button class="docs-header" (click)="toggleCollapse()" type="button">
-    <div class="docs-header__title">
-      <div class="icon-box">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        </svg>
-      </div>
-      <span>Well Documents</span>
-    </div>
-    <div class="docs-header__right">
-      <div class="docs-header__badge" *ngIf="docsStore.docNames().length > 0">
-        {{ docsStore.docNames().length }}
-      </div>
-      <svg class="chevron" [class.chevron--open]="!collapsed()"
-           viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 12 15 18 9"/>
-      </svg>
-    </div>
-  </button>
+    uploadDocs: rxMethod<UploadDocsPayload>(
+      pipe(
+        tap(() => patchState(store, { uploading: true, error: null })),
+        switchMap(({ files, epANum, date }) =>
+          svc.uploadDocs(files, epANum, date).pipe(
+            tapResponse({
+              next: (responses: UploadDocResponse[]) => {
+                const failed = responses.filter(r => r.error);
+                if (failed.length) {
+                  const msg = failed.map(r => r.message).join('; ');
+                  patchState(store, { uploading: false, error: msg });
+                  notify.error(msg);
+                  return;
+                }
+                notify.info('Documents uploaded successfully.');
+                svc.getDocs(epANum, date).subscribe({
+                  next: docs =>
+                    patchState(store, { docs: docs.length > 0 ? docs : DUMMY_DOCS, uploading: false }),
+                  error: () =>
+                    patchState(store, { uploading: false }),
+                });
+              },
+              error: (err: unknown) => {
+                const msg = err instanceof Error ? err.message : 'Upload failed';
+                patchState(store, { uploading: false, error: msg });
+                notify.error(msg);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
 
-  <!-- Collapsible body -->
-  <div @expandCollapse *ngIf="!collapsed()" class="docs-body">
+    loadDocList: rxMethod<LoadDocsPayload>(
+      pipe(
+        tap(() => patchState(store, { listLoading: true, listError: null })),
+        switchMap(({ epANum, date }) =>
+          svc.getDocList(epANum, date).pipe(
+            tapResponse({
+              next: (res: DocListResponse) => {
+                if (res.error) {
+                  patchState(store, { docNames: [], listLoading: false, listError: res.message ?? 'Failed to load documents' });
+                  notify.error(res.message ?? 'Failed to load documents');
+                  return;
+                }
+                patchState(store, { docNames: res.data.totalFiles, listLoading: false });
+              },
+              error: (err: unknown) => {
+                const msg = err instanceof Error ? err.message : 'Failed to load documents';
+                patchState(store, { docNames: [], listLoading: false, listError: msg });
+                notify.error(msg);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
 
-    <!-- Loading -->
-    <div class="docs-state" *ngIf="docsStore.listLoading()">
-      <mat-spinner diameter="26" />
-      <span>Fetching documents…</span>
-    </div>
+    openViewer(doc: WellDoc): void {
+      patchState(store, { selectedDoc: doc, viewerOpen: true });
+    },
 
-    <!-- Error -->
-    <div class="docs-state docs-state--error"
-         *ngIf="docsStore.listError() && !docsStore.listLoading()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-           stroke-linecap="round" stroke-linejoin="round" class="state-icon">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <span>{{ docsStore.listError() }}</span>
-    </div>
+    closeViewer(): void {
+      patchState(store, { selectedDoc: null, viewerOpen: false });
+    },
 
-    <!-- Empty -->
-    <div class="docs-state docs-state--empty"
-         *ngIf="!docsStore.listLoading() && !docsStore.listError() && docsStore.docNames().length === 0">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-           stroke-linecap="round" stroke-linejoin="round" class="state-icon">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        <line x1="2" y1="2" x2="22" y2="22"/>
-      </svg>
-      <span>No documents for this well &amp; date</span>
-    </div>
+    clearDocs(): void {
+      patchState(store, initialWellDocsState);
+    },
+  })),
+);
 
-    <!-- Document list -->
-    <div class="docs-list" @listStagger
-         *ngIf="!docsStore.listLoading() && !docsStore.listError() && docsStore.docNames().length > 0">
-
-      <div class="doc-row" *ngFor="let docName of docsStore.docNames()">
-
-        <div class="doc-row__icon" [attr.data-type]="fileTypeClass(docName)">
-          <mat-icon>{{ fileIcon(docName) }}</mat-icon>
-        </div>
-
-        <div class="doc-row__title" [matTooltip]="docName">{{ docName }}</div>
-
-        <div class="doc-row__actions">
-          <button class="action-btn action-btn--view"
-                  [class.action-btn--loading]="isLoading(docName)"
-                  matTooltip="View"
-                  type="button"
-                  (click)="viewDoc(docName)">
-            <mat-spinner *ngIf="isLoading(docName)" diameter="14"></mat-spinner>
-            <mat-icon *ngIf="!isLoading(docName)">visibility</mat-icon>
-          </button>
-
-          <button class="action-btn action-btn--download"
-                  [class.action-btn--loading]="isLoading(docName)"
-                  matTooltip="Download"
-                  type="button"
-                  (click)="downloadDoc(docName)">
-            <mat-spinner *ngIf="isLoading(docName)" diameter="14"></mat-spinner>
-            <mat-icon *ngIf="!isLoading(docName)">download</mat-icon>
-          </button>
-        </div>
-
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- Viewer overlay -->
-<div class="viewer-backdrop" *ngIf="viewerDocName()" (click)="closeViewer()">
-  <div class="viewer-panel" (click)="$event.stopPropagation()">
-
-    <div class="viewer-panel__header">
-      <div class="viewer-header-meta">
-        <div class="viewer-doc-icon" [attr.data-type]="fileTypeClass(viewerDocName()!)">
-          <mat-icon>{{ fileIcon(viewerDocName()!) }}</mat-icon>
-        </div>
-        <div class="viewer-title-block">
-          <h3 class="viewer-title">{{ viewerDocName() }}</h3>
-        </div>
-      </div>
-      <div class="viewer-header-actions">
-        <button class="action-btn action-btn--download"
-                matTooltip="Download"
-                type="button"
-                (click)="downloadDoc(viewerDocName()!)">
-          <mat-icon>download</mat-icon>
-        </button>
-        <button class="viewer-close" (click)="closeViewer()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 6 6 18M6 6l12 12"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <div class="viewer-preview">
-      <iframe *ngIf="viewerDocType() === 'pdf'"
-              [src]="viewerBlobUrl()"
-              class="preview-frame"
-              title="Document preview"></iframe>
-      <img *ngIf="viewerDocType() === 'image'"
-           [src]="viewerBlobUrl()"
-           class="preview-image"
-           alt="Document preview" />
-      <div *ngIf="viewerDocType() === 'other'" class="preview-unsupported">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-             stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;opacity:0.4">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-        </svg>
-        <p>Preview not available for this file type.</p>
-        <button class="download-btn" type="button" (click)="downloadDoc(viewerDocName()!)">
-          <mat-icon style="font-size:16px;width:16px;height:16px">download</mat-icon>
-          Download File
-        </button>
-      </div>
-    </div>
-
-  </div>
-</div>
+export { WellDocsActions, WellDocsEvents };
