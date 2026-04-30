@@ -1,83 +1,138 @@
+package com.aramco.easd.dailyoperations.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.StreamSupport;
+
 @ApplicationScoped
-public class DummyDailyOperationService {
+public class DailyOperationService {
 
     private ObjectMapper mapper;
-    private List<JsonNode> allWells;   // from wwell-name-and-epANum.json
+    private List<JsonNode> wellIdentifiers;   // from wwell-name-and-epANum copy.json
+    private JsonNode fullWellData;            // the single well object from drlg-mr copy.json
 
     @PostConstruct
     public void init() {
         mapper = new ObjectMapper();
-        loadAllWellsFromFile();
+        loadWellIdentifiers();
+        loadFullWellData();
     }
 
-    private void loadAllWellsFromFile() {
-        try (InputStream is = getClass().getResourceAsStream("/wwell-name-and-epANum.json")) {
-            JsonNode root = mapper.readTree(is);
-            allWells = new ArrayList<>();
-            for (JsonNode entry : root.get("data")) {
-                allWells.add(entry);   // each entry is { "epANum": ..., "wellName": ... }
+    private void loadWellIdentifiers() {
+        try (InputStream is = getClass().getResourceAsStream("/wwell-name-and-epANum copy.json")) {
+            JsonNode array = mapper.readTree(is);
+            wellIdentifiers = new ArrayList<>();
+            array.forEach(wellIdentifiers::add);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load well identifiers JSON", e);
+        }
+    }
+
+    private void loadFullWellData() {
+        try (InputStream is = getClass().getResourceAsStream("/drlg-mr copy.json")) {
+            JsonNode array = mapper.readTree(is);
+            if (array.isArray() && array.size() > 0) {
+                fullWellData = array.get(0);   // only one well in the file
+            } else {
+                throw new RuntimeException("drlg-mr copy.json does not contain a well object");
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load wwell-name-and-epANum.json", e);
+            throw new RuntimeException("Failed to load full well data JSON", e);
         }
     }
 
-    // If you really need the full drlg-mr.json structure (nested), load that separately
-    public JsonNode getFullDrlgMrData() {
-        try (InputStream is = getClass().getResourceAsStream("/drlg-mr.json")) {
-            return mapper.readTree(is);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    /**
+     * Returns the complete list of well identifiers (epANum + wellName).
+     */
+    public List<JsonNode> getAllWellIdentifiers() {
+        return wellIdentifiers;
+    }
+
+    /**
+     * Returns the full well data if the requested epANum and date match the well's DRLG_OP_STATUS.
+     * Since only one well exists, we simply compare.
+     */
+    public JsonNode getFullWellDataIfMatches(long epANum, String date) {
+        JsonNode opStatus = fullWellData.get("DRLG_OP_STATUS");
+        if (opStatus != null && opStatus.isArray() && opStatus.size() > 0) {
+            long actualEpANum = opStatus.get(0).get("epANum").asLong();
+            String actualDate = opStatus.get(0).get("wActDt").asText();
+            if (actualEpANum == epANum && actualDate.startsWith(date)) {
+                return fullWellData;
+            }
         }
-    }
-
-    public List<JsonNode> getWellsByDate(String date) {
-        // For demo, just return the list from the second JSON (no real date filter)
-        // In real life, you'd filter based on date inside each well's DRLG_OP_STATUS.
-        // But if you only need to return the raw JSON as-is, ignore date.
-        return allWells;
-    }
-
-    public JsonNode getWellByEpANumAndDate(long epANum, String date) {
-        // Return the entry from wwell-name-and-epANum.json that matches epANum
-        return allWells.stream()
-                .filter(w -> w.get("epANum").asLong() == epANum)
-                .findFirst()
-                .orElse(null);
+        return null;
     }
 }
 ==
+package com.aramco.easd.dailyoperations.resource;
+
+import com.aramco.easd.dailyoperations.dto.ApiResponse;
+import com.aramco.easd.dailyoperations.service.DailyOperationService;
+import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import org.jboss.logging.Logger;
+import java.util.List;
+
 @Path("/daily-operation/api/v1")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class DailyOperationResource {
 
-    @Inject DummyDailyOperationService service;
+    private static final Logger LOG = Logger.getLogger(DailyOperationResource.class);
 
+    @Inject
+    DailyOperationService service;
+
+    /**
+     * GET /wwells?date=2024-05-08
+     * Returns the list of well identifiers (epANum, wellName) from wwell-name-and-epANum copy.json
+     */
     @GET
     @Path("/wwells")
-    public ApiResponse<List<JsonNode>> getWwells(@QueryParam("date") String date) {
+    public ApiResponse<List<JsonNode>> getWellIdentifiers(@QueryParam("date") String date) {
         if (date == null || date.isBlank()) {
-            return ApiResponse.error(400, "Missing date");
+            return ApiResponse.error(400, "Missing required query parameter: date (format yyyy-MM-dd)");
         }
-        List<JsonNode> wells = service.getWellsByDate(date);
-        if (wells.isEmpty()) {
-            return ApiResponse.error(404, "No wells found");
+        if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return ApiResponse.error(400, "Invalid date format. Expected yyyy-MM-dd");
         }
-        return ApiResponse.success(wells);
+
+        LOG.infof("Fetching well identifiers for date: %s (date ignored, returning full list)", date);
+        List<JsonNode> identifiers = service.getAllWellIdentifiers();
+        return ApiResponse.success(identifiers);
     }
 
+    /**
+     * GET /wwells?date=2024-05-08&epANum=98415
+     * Returns the complete well data (from drlg-mr copy.json) if the epANum and date match.
+     */
     @GET
     @Path("/wwells")
-    public ApiResponse<List<JsonNode>> getWwellsByDateAndEpANum(
-            @QueryParam("date") String date,
-            @QueryParam("epANum") Long epANum) {
-        if (date == null || epANum == null) {
-            return ApiResponse.error(400, "Missing date or epANum");
+    public ApiResponse<List<JsonNode>> getFullWellData(@QueryParam("date") String date,
+                                                       @QueryParam("epANum") Long epANum) {
+        if (date == null || date.isBlank()) {
+            return ApiResponse.error(400, "Missing required query parameter: date");
         }
-        JsonNode well = service.getWellByEpANumAndDate(epANum, date);
+        if (epANum == null) {
+            return ApiResponse.error(400, "Missing required query parameter: epANum");
+        }
+        if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return ApiResponse.error(400, "Invalid date format. Expected yyyy-MM-dd");
+        }
+
+        LOG.infof("Fetching full well data for date: %s, epANum: %d", date, epANum);
+        JsonNode well = service.getFullWellDataIfMatches(epANum, date);
         if (well == null) {
-            return ApiResponse.error(404, "Well not found");
+            return ApiResponse.error(404, "No well found matching the given date and epANum");
         }
-        return ApiResponse.success(List.of(well));
+        return ApiResponse.success(List.of(well));   // wrap in list because return type is List<JsonNode>
     }
 }
