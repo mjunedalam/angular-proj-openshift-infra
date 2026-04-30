@@ -1,1041 +1,699 @@
-@let d = store.miscWellData();
+<mat-card class="wwell-map-card">
+  <div class="wwell-map-header">
+    <div>
+      <h3 class="wwell-map-title">Map Of Active Water Wells</h3>
+    </div>
+  </div>
 
-@if (d) {
-  <div class="misc-card">
-    <div class="misc-grid">
-      <!-- ROW 1: (Well Name + Spud Date stacked) | Targeted Aquifer -->
-      <div class="stack-cell">
-        <div class="cell cell--well-name">
-          <span class="cell__label">Well Name</span>
-          <div class="cell__name">{{ d.wellName }}</div>
-          <div class="cell__sub">{{ d.rigName }}</div>
-        </div>
+  @if (errorMessage()) {
+    <div class="wwell-map-message">{{ errorMessage()! }}</div>
+  }
 
-        <div class="cell cell--spud">
-          <div class="spud-icon">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              stroke-width="2"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
-          </div>
-          <div>
-            <div class="cell__label-light">Spud Date</div>
-            <div class="spud-value">{{ formatSpudDate(d.spudDate) }}</div>
-          </div>
-        </div>
+  <div class="wwell-map-frame">
+    <div #mapViewNode class="wwell-map-canvas"></div>
+
+    <div class="wwell-map-legend">
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--owner">
+        Wells Ownership
       </div>
-
-      <div class="cell cell--aquifer">
-        <span class="cell__label cell__label--dark">Targeted<br />Aquifer</span>
-        <img
-          class="size-8"
-          src="assets/images/agwa-logo.svg"
-          alt="AGWA"
-          style="width: 20px"
-        />
-        <div class="aquifer-name">{{ d.targetedAquifer }}</div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--green">
+        3300
       </div>
-
-      <!-- ROW 2: Current Status | Days -->
-      <div class="cell cell--status">
-        <div class="status-left">
-          <span class="cell__label cell__label--dark">Current Status</span>
-          <div class="status-value">{{ d.currentStatus }}</div>
-        </div>
-        <div class="status-gear">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
-            />
-          </svg>
-        </div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--purple">
+        58
       </div>
-
-      <div class="cell cell--days">
-        <div class="days-cal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <path d="M16 2v4M8 2v4M3 10h18" />
-          </svg>
-        </div>
-        <div>
-          <div class="cell__label-light">Days</div>
-          <div class="days-value">
-            {{ d.daysSinceSpud | number: "1.2-2" }}/{{ d.targetDays }}
-          </div>
-        </div>
-      </div>
-
-      <!-- ROW 3: ROP | BI Supporting -->
-      <div class="cell cell--rop">
-        <div class="depth-labels">
-          <div class="rop-value">{{ d.rop | number }}</div>
-          <div class="cell__label-light">ROP</div>
-        </div>
-        <div class="feet-icon">
-          <mat-icon>speed</mat-icon>
-        </div>
-      </div>
-
-      <div class="cell cell--bi">
-        <div class="bi-num">BI{{ d.biNum }}</div>
-        <div class="bi-label">Supporting</div>
-        <div class="bi-well">Well {{ d.supportingWell }}</div>
-      </div>
-
-      <!-- ROW 4: Feet drilled | Previous Well -->
-      <div class="cell cell--feet">
-        <div class="feet-left">
-          <div class="feet-value">{{ d.feetDrilledToday | number }}</div>
-          <div class="cell__label-light">Feet</div>
-        </div>
-        <div class="feet-icon">
-          <svg
-            viewBox="0 0 40 40"
-            fill="none"
-            stroke="white"
-            stroke-width="1.8"
-          >
-            <path
-              d="M20 5v15M13 13l7 7 7-7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M5 25c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
-              opacity="0.6"
-            />
-            <path
-              d="M5 32c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
-              opacity="0.4"
-            />
-          </svg>
-        </div>
-      </div>
-
-      <div class="cell cell--prev">
-        <div class="cell__label-light">Previous Well</div>
-        <div class="well-name-val">{{ d.previousWell }}</div>
-      </div>
-
-      <!-- ROW 5: Current Depth + Rig Move | Next Well -->
-      <div class="stack-cell">
-        <div class="cell cell--depth">
-          <div class="depth-labels">
-            <div class="cell__label-light">Current</div>
-            <div class="cell__label-light">Depth</div>
-          </div>
-          <div class="depth-value">{{ d.currentDepth | number }}</div>
-        </div>
-
-        <div class="cell cell--next-kpi">
-          <div class="next-kpi__icon">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              stroke-width="2"
-            >
-              <path d="M7 7h10" stroke-linecap="round" />
-              <path d="M7 12h6" stroke-linecap="round" />
-              <path
-                d="M17 12l3 3-3 3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path d="M17 17H7" stroke-linecap="round" />
-            </svg>
-          </div>
-
-          <div class="cell cell--next-kpi">
-            <div class="next-kpi__content">
-              <div class="cell__label-light">Rig Move</div>
-              <div class="next-kpi__stat">
-                <span class="next-kpi__stat-label">Actual / KPI</span>
-                <span class="next-kpi__stat-value">
-                  <span
-                    [class.next-kpi__days--positive]="
-                      rigMoveTone(d.rigMoveDays) === 'positive'
-                    "
-                    [class.next-kpi__days--negative]="
-                      rigMoveTone(d.rigMoveDays) === 'negative'
-                    "
-                    >{{ d.actualRm | number: "1.0-2" }}</span
-                  >/{{ d.kpiRm | number: "1.0-2" }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="cell cell--next">
-        <div class="cell__label-light">Next Well</div>
-        <div class="well-name-val">{{ d.nextWell }}</div>
-      </div>
-
-      <!-- ROW 6: Operation Summary (full width) -->
-      <div class="cell cell--op-summary">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-            />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-            <polyline points="10 9 9 9 8 9" />
-          </svg>
-          <span class="op-header__label">Operation Summary</span>
-        </div>
-        <div class="op-text">{{ d.operationSummary }}</div>
-      </div>
-
-      <!-- ROW 7: Next 24 Hr Operation (full width) -->
-      <div class="cell cell--next24">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span class="op-header__label">Next 24 Hr Operation</span>
-        </div>
-        <div class="op-text">{{ d.next24HrOperation }}</div>
-      </div>
-      <!-- ROW 7: Drilling Summary Remark -->
-      <div class="cell cell--next24">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span class="op-header__label">Drilling Summary Remarks</span>
-        </div>
-        <div class="op-text">{{ d.drlgSmryRmk }}</div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--red">1514</div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--blue">60</div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--aquifer">
+        Aquifier
       </div>
     </div>
   </div>
-}
+</mat-card>
 ==
-// ── Outer card wrapper ─────────────────────────────────────────────────────────
-.misc-card {
-  padding: 10px;
-  height: 100%;
-  box-sizing: border-box;
-  container-type: inline-size;
-  container-name: misc;
-  font-family: var(--font-sans);
-}
-
-// ── 2-column grid ─────────────────────────────────────────────────────────────
-.misc-grid {
-  display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: clamp(4px, 1.5cqi, 10px);
-  width: 100%;
-}
-
-
-.stack-cell {
-  display: grid;
-  gap: clamp(4px, 1.5cqi, 10px);
-  min-width: 0;
-}
-
-// ── Base cell ─────────────────────────────────────────────────────────────────
-.cell {
-  border-radius: clamp(8px, 2.5cqi, 14px);
-  padding: clamp(8px, 2.2cqi, 16px) clamp(10px, 2.8cqi, 18px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-  border: 1px solid var(--border);
-  min-height: clamp(52px, 14cqi, 80px);
-}
-
-// ── Cell color variants ────────────────────────────────────────────────────────
-
-.cell--well-name {
-  background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
-  border: none;
-  color: #fff;
-  min-height: clamp(52px, 13cqi, 72px);
-}
-
-.cell--spud {
- background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
-  border: none;
-  color: #fff;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: clamp(4px, 1.5cqi, 10px);
-}
-
-.spud-icon {
-  width: clamp(26px, 7cqi, 38px);
-  height: clamp(26px, 7cqi, 38px);
-  border-radius: clamp(6px, 1.5cqi, 10px);
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  svg {
-    width: clamp(14px, 3.5cqi, 22px);
-    height: clamp(14px, 3.5cqi, 22px);
-  }
-}
-
-.spud-value {
-  font-size: clamp(14px, 3.2cqi, 17px);
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.1;
-  margin-top: 2px;
-  white-space: nowrap;
-}
-
-.cell--aquifer {
-  align-self: start;
-  background: var(--bg-card, #fff);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: clamp(4px, 1.5cqi, 10px);
-  padding: clamp(6px, 2cqi, 12px) clamp(8px, 2.5cqi, 14px);
-}
-
-.cell--status {
-  background: var(--bg-card, #fff);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: clamp(4px, 1.5cqi, 10px);
-}
-
-.cell--days {
-  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
-  border: none;
-  color: #fff;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: clamp(4px, 1.5cqi, 10px);
-}
-
-.cell--gauges {
-  background: var(--bg-card, #fff);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-around;
-  gap: clamp(4px, 1.5cqi, 10px);
-  padding: clamp(6px, 2cqi, 14px) clamp(4px, 1.5cqi, 12px);
-}
-
-.cell--bi {
-  background: linear-gradient(135deg, #2563eb 0%, #22d3ee 100%);
-  border: none;
-  color: #fff;
-  align-items: center;
-  text-align: center;
-  justify-content: center;
-  gap: clamp(1px, 0.5cqi, 3px);
-}
-
-.cell--feet {
-  background: linear-gradient(135deg, #0ea5e9 0%, #22d3ee 100%);
-  border: none;
-  color: #fff;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.cell--prev {
-  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
-  border: none;
-  color: #fff;
-}
-
-.cell--depth {
-  background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%);
-  border: none;
-  color: #fff;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: clamp(6px, 2cqi, 14px);
-}
-
-.cell--next {
-  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
-  border: none;
-  color: #fff;
-}
-
-.cell--next-kpi {
-  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
-  border: none;
-  color: #fff;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: clamp(4px, 1.5cqi, 10px);
-
-  &.cell--kpi-positive {
-    background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
-  }
-
-  &.cell--kpi-negative {
-    background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
-  }
-}
-
-// ── Text helpers ───────────────────────────────────────────────────────────────
-
-.cell__label {
-  font-size: clamp(12px, 2.6cqi, 13px);
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.92);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: clamp(3px, 0.6cqi, 6px);
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-.cell__label--dark {
-  color: #475569;
-  font-size: clamp(12px, 2.6cqi, 13px);
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-.cell__label-light {
-  font-size: clamp(12px, 2.6cqi, 13px);
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: clamp(2px, 0.5cqi, 4px);
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-.cell__name {
-  font-size: clamp(17px, 4.4cqi, 24px);
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.25;
-  margin-bottom: clamp(2px, 0.5cqi, 4px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cell__sub {
-  font-size: clamp(13px, 2.9cqi, 15px);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-// ── Aquifer cell ───────────────────────────────────────────────────────────────
-.aquifer-drop {
-  width: clamp(24px, 7cqi, 42px);
-  height: clamp(24px, 7cqi, 42px);
-  flex-shrink: 0;
-}
-
-.aquifer-name {
-  font-size: clamp(15px, 3.4cqi, 19px);
-  font-weight: 800;
-  color: #1e3a8a;
-  line-height: 1.35;
-  word-break: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-
-// ── Status cell ────────────────────────────────────────────────────────────────
-.status-left {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(2px, 0.8cqi, 5px);
-  min-width: 0;
-}
-
-.status-value {
-  font-size: clamp(16px, 3.4cqi, 19px);
-  font-weight: 800;
-  color: #0ea5e9;
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-.status-gear {
-  width: clamp(28px, 8cqi, 42px);
-  height: clamp(28px, 8cqi, 42px);
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0ea5e9, #2563eb);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
-
-  svg {
-    width: clamp(14px, 4cqi, 22px);
-    height: clamp(14px, 4cqi, 22px);
-  }
-}
-
-// ── Days cell ──────────────────────────────────────────────────────────────────
-.days-cal {
-  width: clamp(26px, 7cqi, 38px);
-  height: clamp(26px, 7cqi, 38px);
-  border-radius: clamp(6px, 1.5cqi, 10px);
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  svg {
-    width: clamp(14px, 3.5cqi, 22px);
-    height: clamp(14px, 3.5cqi, 22px);
-  }
-}
-
-.days-value {
-  font-size: clamp(18px, 3.8cqi, 21px);
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.1;
-  margin-top: 2px;
-  white-space: nowrap;
-}
-
-// ── Gauge internals ────────────────────────────────────────────────────────────
-.gauge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(3px, 1cqi, 7px);
-}
-
-.gauge__label {
-  font-size: clamp(11px, 2.4cqi, 12px);
-  font-weight: 800;
-  color: #475569;
-  text-align: center;
-  line-height: 1.35;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.gauge__ring {
-  width: clamp(38px, 11cqi, 58px);
-  height: clamp(38px, 11cqi, 58px);
-  border-radius: 50%;
-  border: clamp(2px, 0.6cqi, 3px) solid #0ea5e9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(18px, 4.2cqi, 24px);
-  font-weight: 800;
-  color: #1e3a8a;
-  box-shadow: inset 0 0 0 4px rgba(14, 165, 233, 0.1),
-              0 0 0 1px rgba(14, 165, 233, 0.15);
-  background: #fff;
-}
-
-// ── BI cell ────────────────────────────────────────────────────────────────────
-.bi-num {
-  font-size: clamp(20px, 5cqi, 26px);
-  font-weight: 900;
-  color: #fff;
-  line-height: 1.08;
-}
-
-.bi-label {
-  font-size: clamp(11px, 2.4cqi, 12px);
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.9);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.bi-well {
-  font-size: clamp(13px, 3.2cqi, 15px);
-  font-weight: 700;
-  color: #fff;
-  margin-top: 2px;
-  line-height: 1.4;
-  word-break: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-// ── Feet cell ──────────────────────────────────────────────────────────────────
-.feet-left {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.feet-value {
-  font-size: clamp(22px, 5.5cqi, 30px);
-  font-weight: 900;
-  color: #fff;
-  line-height: 1.05;
-  margin-bottom: 2px;
-  white-space: nowrap;
-}
-
-.feet-icon {
-  flex-shrink: 0;
-
-  svg {
-    width: clamp(28px, 8cqi, 44px);
-    height: clamp(28px, 8cqi, 44px);
-    opacity: 0.85;
-  }
-}
-
-// ── Depth cell ─────────────────────────────────────────────────────────────────
-.depth-labels {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-
-.depth-value {
-  font-size: clamp(24px, 6.1cqi, 34px);
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: -0.5px;
-  line-height: 1.05;
-  white-space: nowrap;
-}
-
-.next-kpi__icon {
-  width: clamp(26px, 7cqi, 38px);
-  height: clamp(26px, 7cqi, 38px);
-  border-radius: clamp(6px, 1.5cqi, 10px);
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  svg {
-    width: clamp(14px, 3.5cqi, 22px);
-    height: clamp(14px, 3.5cqi, 22px);
-  }
-}
-
-.next-kpi__content {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.next-kpi__days {
-  font-size: clamp(18px, 3.8cqi, 21px);
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.1;
-  margin-top: 2px;
-  white-space: nowrap;
-}
-
-.next-kpi__days--positive {
-  color: #07f809;
-}
-
-.next-kpi__days--negative {
-  color: #fecaca;
-}
-
-.next-kpi__stats {
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1.8cqi, 14px);
-  margin-top: clamp(3px, 0.8cqi, 6px);
-  flex-wrap: wrap;
-}
-
-.next-kpi__stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.next-kpi__stat-label {
-  font-size: clamp(10px, 2.2cqi, 11px);
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.78);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
-.next-kpi__stat-value {
-  
-  color: #fff;
-  
-}
-
-// ── Previous / Next well text ─────────────────────────────────────────────────
-.well-name-val {
-  font-size: clamp(14px, 3.6cqi, 18px);
-  font-weight: 800;
-  color: #fff;
-  margin-top: 4px;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  word-break: break-word;
-}
-
-// ── ROP cell ───────────────────────────────────────────────────────────────────
-.cell--rop {
-  background: linear-gradient(135deg, #0891b2 0%, #0ea5e9 100%);
-  border: none;
-  color: #fff;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.rop-value {
-  font-size: clamp(18px, 4.2cqi, 24px);
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.feet-icon mat-icon {
-  font-size: clamp(28px, 8cqi, 44px);
-  width: clamp(28px, 8cqi, 44px);
-  height: clamp(28px, 8cqi, 44px);
-  color: #fff;
-  opacity: 0.85;
-}
-
-// ── Operation summary & Next 24 Hr (full-width) ───────────────────────────────
-.cell--op-summary {
-  grid-column: 1 / -1;
-  background: var(--bg-card, #fff);
-  min-height: clamp(48px, 14cqi, 70px);
-  gap: clamp(3px, 1cqi, 7px);
-}
-
-.cell--next24 {
-  grid-column: 1 / -1;
-  background: var(--bg-surface, #f1f5f9);
-  min-height: clamp(48px, 14cqi, 70px);
-  gap: clamp(3px, 1cqi, 7px);
-  border: 1px solid var(--border);
-}
-
-.op-header {
-  display: flex;
-  align-items: center;
-  gap: clamp(4px, 1.2cqi, 7px);
-
-  svg {
-    width: clamp(11px, 2.8cqi, 15px);
-    height: clamp(11px, 2.8cqi, 15px);
-    flex-shrink: 0;
-    color: #0ea5e9;
-  }
-}
-
-.op-header__label {
-  font-size: clamp(12px, 2.6cqi, 13px);
-  font-weight: 800;
-  color: #334155;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
-.op-text {
-  font-size: clamp(14px, 3cqi, 16px);
-  font-weight: 700;
-  color: var(--text-primary, #1e293b);
-  line-height: 1.6;
-  word-break: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-==
-/**
- * MiscPresWellDataComponent — SMART
- * Reads store.miscWellData() directly.
- * No @Input needed.
- */
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
-import { MatIconModule } from '@angular/material/icon';
-import { DrillingDataStore } from '@store/drilling-data/drilling-data.store';
-
-@Component({
-  selector: 'app-misc-pres-well-data',
-  standalone: true,
-  imports: [DecimalPipe, MatIconModule],
-  templateUrl: './misc-pres-well-data.component.html',
-  styleUrl: './misc-pres-well-data.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class MiscPresWellDataComponent {
-  protected readonly store = inject(DrillingDataStore);
-
-  protected formatSpudDate(val: string): string {
-    if (!val || val === 'N/A') return val || 'N/A';
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  }
-
-  protected rigMoveTone(value: number | null): 'positive' | 'negative' | 'neutral' {
-    if (value == null) {
-      return 'neutral';
-    }
-
-    return value < 0 ? 'positive' : 'negative';
-  }
-}
-
-== dpth ==
 :host {
+  --map-card-bg: color-mix(in srgb, var(--bg-card) 88%, white 12%);
+  --map-border: var(--border);
+  --map-header-text: var(--text-primary);
+  --map-muted: var(--text-secondary);
+  --map-panel: color-mix(in srgb, var(--bg-surface) 90%, white 10%);
   display: block;
-  flex: 0 0 8.4%;
-  height: 100%;
 }
 
-.depth-scale-svg {
+.wwell-map-card {
+  overflow: hidden;
+  border: 1px solid var(--map-border);
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--map-card-bg) 92%, white 8%), var(--map-card-bg)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 12%, transparent), transparent 30%);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
+}
+
+.wwell-map-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.wwell-map-eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.wwell-map-title {
+  margin: 0;
+  color: var(--map-header-text);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.wwell-map-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #0f766e 20%), color-mix(in srgb, var(--accent) 65%, #0f4c81 35%));
+  color: #fff;
+}
+
+.wwell-map-stat__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.wwell-map-stat__label {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+
+.wwell-map-message {
   display: block;
-  background: var(--bg-card);
-  border-right: 1px solid var(--border);
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, white);
+  color: var(--danger);
+}
+
+.wwell-map-frame {
+  position: relative;
+  min-height: 90vh;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--map-border) 80%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--map-panel) 88%, white 12%), var(--map-panel));
+}
+
+.wwell-map-canvas {
+  height: 90vh;
   width: 100%;
-  height: 100%;
 }
 
+.wwell-map-legend {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  max-width: min(34rem, calc(100% - 2rem));
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--map-border) 85%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--map-card-bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+}
 
+.wwell-map-legend__chip {
+  min-width: 4rem;
+  padding: 0.42rem 0.7rem;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
 
-:host ::ng-deep {
-  .axis-title {
-   
-    font-size: 10.5px; font-weight: 900;
-  
-    letter-spacing: 0.06em; text-transform: uppercase;
+.wwell-map-legend__chip--owner {
+  background: #cedf5f;
+  color: #35530a;
+}
+
+.wwell-map-legend__chip--green {
+  background: #84cc16;
+}
+
+.wwell-map-legend__chip--purple {
+  background: #c084fc;
+}
+
+.wwell-map-legend__chip--red {
+  background: #f87171;
+}
+
+.wwell-map-legend__chip--blue {
+  background: #60a5fa;
+}
+
+.wwell-map-legend__chip--aquifer {
+  background: #22b8e6;
+}
+
+:host ::ng-deep .wwell-map-card {
+  padding: 1.25rem;
+}
+
+@media (max-width: 720px) {
+  .wwell-map-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
-  .axis-line  { stroke: var(--text-muted); stroke-width: 1.5; fill: none; opacity: 0.6; }
-  .axis-arrow { fill: var(--text-muted); opacity: 0.6; }
-  .tick-line  { stroke: var(--text-muted); stroke-width: 1.2; opacity: 0.6; }
-  .tick-grid  { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2,3; opacity: 0.5; }
-  .tick-label {
-  
-    font-size: 18px; font-weight: 700;
-    text-anchor: end;
+
+  .wwell-map-stat {
+    align-items: flex-start;
   }
-  .total-depth-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px; font-weight: 800;
-    fill: var(--accent); letter-spacing: 0.04em;
+
+  .wwell-map-legend {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    max-width: none;
   }
 }
 ==
+import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
-  inject,
   effect,
-  input,
-  viewChild,
+  ElementRef,
+  Inject,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+  ViewChild,
 } from '@angular/core';
-import { select } from 'd3-selection';
-import { easeLinear } from 'd3-ease';
-import 'd3-transition';
+import Graphic from '@arcgis/core/Graphic';
+import { watch as reactiveWatch, watch } from '@arcgis/core/core/reactiveUtils';
+import Point from '@arcgis/core/geometry/Point';
+import Polyline from '@arcgis/core/geometry/Polyline';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import MapImageLayer from '@arcgis/core/layers/MapImageLayer';
+import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
+import TextSymbol from '@arcgis/core/symbols/TextSymbol';
+import { MatCardModule } from '@angular/material/card';
+import { Subject, takeUntil } from 'rxjs';
+import { MorningReport } from 'src/app/core/models/morning-report/morning-report.model';
+import { MorningReportService } from 'src/app/core/services/morning-report.service';
+import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
+import {
+  bottomPolygonTemplate,
+  lineSymbol,
+  locationTextSymbol,
+  MAP_BOUNDS,
+  MAP_CONFIG,
+  MAX_WIDTH,
+  STYLE,
+  tilesMap,
+  topPolygonTemplate,
+  WWell,
+  wwellIdTextSymbol,
+} from 'src/app/shared/models/config/agwa-map.config';
+import { createLegendLayer, findNonOverlappingPosition, translatePolygon } from 'src/app/shared/utils/wwell-placement-utils';
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
 
-import { DrillingDataStore } from '@core/store/drilling-data/drilling-data.store';
-import { ANIM, DIAGRAM_LAYOUT } from 'src/app/core/models/well-design/wellbore-diagram.model';
-import { buildDepthTicks, createDepthScale, formatDepth } from 'src/app/shared/utils/wellbore-math.util';
+const WWELL_MAP_BOOT_TASK = 'arcgis-map';
 
 @Component({
-  selector: 'app-depth-scale',
+  selector: 'app-wwellmap',
   standalone: true,
+  imports: [MatCardModule],
+  templateUrl: './wwell-map.component.html',
+  styleUrl: './wwell-map.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './depth-scale.component.html',
-  styleUrl: './depth-scale.component.scss',
 })
-export class DepthScaleComponent {
-  protected readonly store = inject(DrillingDataStore);
-  readonly totalDepth = input.required<number>();
-  readonly animTrigger = input.required<number>();
+export class WwellmapComponent implements OnInit, OnDestroy {
+  @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
+  private mapView?: __esri.MapView;
 
-  private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('scaleSvg');
+  protected readonly wwells = signal<WWell[]>([]);
+  protected readonly errorMessage = signal<string | null>(null);
+  protected readonly mapReady = signal<boolean>(false);
+  private readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
 
-  private readonly layout = DIAGRAM_LAYOUT;
+  private placedBubbles: { x: number; y: number; radius: number }[] = [];
+  private readonly destroy$ = new Subject<void>();
+  private stationaryWatchHandle?: __esri.WatchHandle;
+  private legendLayer: GraphicsLayer | undefined;
+  private bootTaskRegistered = false;
 
-  constructor() {
+  constructor(
+    @Inject(PLATFORM_ID) private readonly platformId: object,
+    private readonly morningService: MorningReportService,
+    private readonly extConfigService: ExternalConfigService,
+    private readonly loader: LoaderService,
+  ) {
     effect(() => {
-      const svgEl = this.svgRef();
-      const depth = this.totalDepth();
-      this.animTrigger(); // track trigger so we redraw on every new well load
-
-      if (svgEl?.nativeElement) {
-        this.drawScale(depth, svgEl.nativeElement);
-      }
+      this.wwells();          // reactive read
+      if (!this.mapReady()) return;        // map not ready yet
+      const wwellLayer = this.getLayerById('WWell-icons') as GraphicsLayer;
+      if (!wwellLayer) return;
+      this.drawWWellIcons(wwellLayer).catch(e =>
+        console.error('drawWWellIcons failed', e)
+      );
+    });
+    effect(() => {
+      this.wwells();                 // creates a dependency on the data
+      const bubbleLayer = this.bubbleLayerReady(); // creates a dependency on the layer
+      if (!bubbleLayer) return;                    // layer not ready yet
+      // Synchronous layout – no await inside the effect
+      this.layoutBubbles(bubbleLayer);
     });
   }
 
+  ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.registerBootTask();
+    this.fetchMorningReports();
+  }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.stationaryWatchHandle?.remove();
+    this.mapView?.destroy();
+    this.resolveBootTask();
+  }
 
-  private drawScale(totalDepth: number, element: SVGSVGElement): void {
-    const { depthScaleWidth, svgHeight, marginTop, drawingHeight, depthAxisX } = this.layout;
+  private fetchMorningReports(): void {
+    this.errorMessage.set(null);
+    this.morningService
+      .getMorningReportForKSA()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data: MorningReport[]) => {
+          this.buildWWellSignal(data);
+          this.initMap().catch((e) => {
+            console.error('initMap error', e);
+            this.resolveBootTask();
+          });
+        },
+        error: (err) => {
+          console.error('Failed to fetch morning report', err);
+          this.errorMessage.set('Unable to load well data.');
+          this.resolveBootTask();
+        },
+      });
+  }
 
-    const svg = select(element);
-    svg.selectAll('*').remove();
+  private buildWWellSignal(data: MorningReport[]): void {
+    const safeNum = (s?: string | null): number => {
+      const n = Number.parseFloat(s ?? '');
+      return Number.isNaN(n) ? 0 : n;
+    };
 
-    svg
-      .attr('width', '100%')
-      .attr('height', '100%')
-      .attr('viewBox', `0 0 ${depthScaleWidth} ${svgHeight}`)
-      .attr('preserveAspectRatio', 'none');
+    const wells: WWell[] = data
+      .map((r) => ({
+        wwellId: r.wGnrName ?? 'N/A',
+        lat: safeNum(r.racEstDdLatCord),
+        lng: safeNum(r.racEstDdLonCord),
+        location: r.trgtRsvrCd ?? 'N/A',
+        label: r.biNum ?? 'N/A',
+      }))
+      .filter((w) => w.lat !== 0 && w.lng !== 0);
 
-    const g = svg.append('g').attr('transform', `translate(0,${marginTop})`);
-    const scale = createDepthScale(totalDepth, drawingHeight);
-    const ticks = buildDepthTicks(totalDepth, 500);
+    this.wwells.set(wells);
+  }
 
-    g.append('text')
-      .attr('class', 'axis-title')
-      .attr('x', depthAxisX)
-      .attr('y', -32)
-      .attr('text-anchor', 'middle')
-      .call((t) => {
-        t.append('tspan').attr('x', depthAxisX).attr('dy', 0).text('Depth');
-        t.append('tspan').attr('x', depthAxisX).attr('dy', 12).text('(ft bgl)');
+  private getLayerById(id: string): GraphicsLayer | undefined {
+    return this.mapView?.map?.layers.find((l) => l.id === id) as
+      | GraphicsLayer
+      | undefined;
+  }
+
+  private async initMap(): Promise<void> {
+    let MapMod: typeof __esri.Map;
+    let MapViewMod: typeof __esri.MapView;
+    let MapImageLayerMod: typeof MapImageLayer;
+
+    try {
+      const [{ default: MapTmp },
+        { default: MapViewTmp },
+        { default: MapImageLayerTmp }
+      ] = await Promise.all([
+        import('@arcgis/core/Map'),
+        import('@arcgis/core/views/MapView'),
+        import('@arcgis/core/layers/MapImageLayer'),
+      ]);
+      MapMod = MapTmp;
+      MapViewMod = MapViewTmp;
+      MapImageLayerMod = MapImageLayerTmp;
+
+    } catch (e) {
+      console.error("Failed to load core ARcGIS module..", e);
+      this.errorMessage.set('Map could not be initialized');
+      this.resolveBootTask();
+      return;
+    }
+    const map = new MapMod({ basemap: 'topo-vector' });
+    this.mapView = new MapViewMod({
+      container: this.mapViewEl?.nativeElement,
+      map,
+      center: MAP_CONFIG.center,
+      zoom: 2,
+      constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom }
+    });
+
+    const mapServerUrl = `${this.extConfigService.settings.mapServerUrl}`
+
+    await this.mapView.when();
+    const view = this.mapView;
+    if (!view) {
+      this.resolveBootTask();
+      return;
+    }
+    const viewMap = view.map;
+    if (!viewMap) {
+      this.resolveBootTask();
+      return;
+    }
+
+    const explorerLayer = new MapImageLayerMod({
+      url: mapServerUrl,
+      sublayers: [
+        {
+          id: 6, // “Oil Wells”
+          visible: true,
+        },
+        {
+          id: 5, // “Gas Pipelines”
+          visible: true,
+        },
+      ],
+      opacity: 0.8,
+      title: 'Explorer (Oil & Gas)',
+    });
+
+    this.legendLayer = createLegendLayer(view);
+    viewMap.add(this.legendLayer);
+    const wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
+    const bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
+    map.addMany([explorerLayer, wwellLayer, bubbleLayer]);
+    this.mapReady.set(true);
+    this.bubbleLayerReady.set(bubbleLayer);
+    await this.waitForInitialMapRender();
+    this.resolveBootTask();
+
+    this.stationaryWatchHandle = reactiveWatch(
+      () => this.mapView?.stationary,
+      (isStationary) => {
+        if (isStationary) {
+          const layer = this.bubbleLayerReady();
+          if (layer) this.layoutBubbles(layer);
+        }
+      }
+    );
+  }
+
+  private async waitForInitialMapRender(): Promise<void> {
+    if (!this.mapView) return;
+    if (!this.mapView.updating) {
+      await new Promise(requestAnimationFrame);
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const handle = watch(
+        () => this.mapView?.updating ?? false,
+        (updating) => {
+          if (!updating) {
+            handle.remove();
+            requestAnimationFrame(() => resolve());
+          }
+        }
+      );
+    });
+  }
+
+  private async drawWWellIcons(layer: GraphicsLayer): Promise<void> {
+    layer.removeAll();
+    const { default: Point } = await import('@arcgis/core/geometry/Point');
+    const { default: PictureMarkerSymbol } = await import('@arcgis/core/symbols/PictureMarkerSymbol');
+    const wells = this.wwells();
+    for (const wwell of wells) {
+      const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
+      const symbol = new PictureMarkerSymbol({
+        url: STYLE.markerIcon,
+        width: STYLE.markerSize,
+        height: STYLE.markerSize
+      });
+      layer.add(
+        new Graphic({
+          geometry: point,
+          symbol,
+          attributes: {
+            wwellId: wwell.wwellId,
+            Location: wwell.location
+          },
+        })
+      );
+    }
+  }
+
+  private layoutBubbles(layer: GraphicsLayer): void {
+    if (!this.mapView) return;
+    layer.removeAll();
+    this.placedBubbles = [];
+
+    const view = this.mapView;
+    const viewW = view.width;
+    const viewH = view.height;
+
+    const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
+    const iconRadius = STYLE.markerSize / 2;
+    const graphics: Graphic[] = [];
+    const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: { wkid: 4326 } });
+
+    const wells: WWell[] = this.wwells();
+    for (const wwell of wells) {
+      // ---- 3.1  Anchor point (screen → map) --------------------
+      anchorPt.latitude = wwell.lat;
+      anchorPt.longitude = wwell.lng;
+
+      const sp = view.toScreen(anchorPt);
+      if (!sp) continue;
+
+      // keep the bubble inside the view margins
+      sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
+      sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
+
+      // ---- 3.2  Find a non‑overlapping screen position ----------
+      const obstacles = [
+        ...this.placedBubbles,
+        { x: sp.x, y: sp.y, radius: iconRadius + 6 },
+      ];
+      const finalScreen = findNonOverlappingPosition(
+        sp.x,
+        sp.y,
+        obstacles,
+        bubblePixelRadius
+      );
+
+      // ---- 3.3  Remember the placed bubble for the next iterations
+      this.placedBubbles.push({
+        x: finalScreen.x,
+        y: finalScreen.y,
+        radius: bubblePixelRadius,
       });
 
-    const scaleTipY = scale(totalDepth); // === drawingHeight
-    const lineLen = scaleTipY;
+      // ---- 3.4  Convert back to map coordinates -----------------
+      let finalMapPoint = view.toMap(finalScreen) as __esri.Point | null;
+      if (!finalMapPoint) finalMapPoint = anchorPt.clone();
 
-    g.append('line')
-      .attr('class', 'axis-line')
-      .attr('x1', depthAxisX).attr('x2', depthAxisX)
-      .attr('y1', 0).attr('y2', scaleTipY)
-      .attr('stroke-dasharray', lineLen)
-      .attr('stroke-dashoffset', lineLen)
-      .transition()
-      .duration(ANIM.SCALE_DURATION)
-      .ease(easeLinear)
-      .attr('stroke-dashoffset', 0);
+      // ---- 3.5  Small offset so the bubble never sits on the oil well
+      const offsetLat = 3;
+      const offsetLng = 2;
+      finalMapPoint.latitude = Math.min(
+        Math.max(finalMapPoint.latitude! + offsetLat, MAP_BOUNDS.minLat),
+        MAP_BOUNDS.maxLat
+      );
+      finalMapPoint.longitude = Math.min(
+        Math.max(finalMapPoint.longitude! + offsetLng, MAP_BOUNDS.minLng),
+        MAP_BOUNDS.maxLng
+      );
+      // 4.1  Stick (polyline from oil‑well to bubble)
+      const stick = new Graphic({
+        geometry: new Polyline({
+          paths: [
+            [
+              [wwell.lng, wwell.lat],
+              [finalMapPoint.longitude!, finalMapPoint.latitude!],
+            ],
+          ],
+          spatialReference: { wkid: 4326 },
+        }),
+        symbol: lineSymbol(tilesMap.get(wwell.label)!.color),
+      });
 
-    ticks.forEach((depth: number) => {
-      const yPx = scale(depth);
-      const delay = (depth / totalDepth) * ANIM.SCALE_DURATION + ANIM.TICK_BASE_DELAY;
+      // 4.2  Top rectangle (bubble “head”)
+      const topPoly = translatePolygon(
+        topPolygonTemplate,
+        finalMapPoint.longitude!,
+        finalMapPoint.latitude!
+      );
+      const bubbleTop = new Graphic({
+        geometry: topPoly,
+        symbol: new SimpleFillSymbol({
+          color: tilesMap.get(wwell.label)!.color,
+          outline: { color: [0, 0, 0], width: 1 },
+        }),
+      });
 
-      const tick = g.append('g')
-        .attr('class', 'tick')
-        .attr('transform', `translate(0,${yPx})`)
-        .style('opacity', 0);
+      // 4.3  Bottom rectangle (bubble “tail”)
+      const bottomPoly = translatePolygon(
+        bottomPolygonTemplate,
+        finalMapPoint.longitude!,
+        finalMapPoint.latitude!
+      );
+      const bubbleBottom = new Graphic({
+        geometry: bottomPoly,
+        symbol: new SimpleFillSymbol({
+          color: [0, 191, 255, 0.9],
+          outline: { color: [0, 0, 0], width: 1 },
+        }),
+      });
 
-      tick.append('line')
-        .attr('class', 'tick-line')
-        .attr('x1', depthAxisX - 6).attr('x2', depthAxisX);
+      // Inside the loop, after you have `finalMapPoint`:
+      const wwellIdLabel = new Graphic({
+        geometry: finalMapPoint,
+        // No clone – we keep the concrete TextSymbol type
+        symbol: wwellIdTextSymbol(STYLE.textFont),
+      });
+      (wwellIdLabel.symbol as TextSymbol).text = `${wwell.wwellId}`;
+      (wwellIdLabel.symbol as TextSymbol).verticalAlignment = "middle";
+      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = "center";
 
-      tick.append('text')
-        .attr('class', 'tick-label')
-        .attr('x', depthAxisX - 9)
-        .attr('dy', '0.32em')
-        .text(depth === 0 ? '0' : depth.toLocaleString());
+      const locationLabel = new Graphic({
+        geometry: finalMapPoint,
+        symbol: locationTextSymbol(STYLE.textFont),
+      });
+      (locationLabel.symbol as TextSymbol).text = `${wwell.location}`;
+      (locationLabel.symbol as TextSymbol).horizontalAlignment = "center";
+      (locationLabel.symbol as TextSymbol).verticalAlignment = "middle";
+      graphics.push(stick, bubbleTop, bubbleBottom, wwellIdLabel, locationLabel);
+    }
+    layer.addMany(graphics);
+  }
 
-      tick.append('line')
-        .attr('class', 'tick-grid')
-        .attr('x1', depthAxisX).attr('x2', depthAxisX + 8);
+  async saveMapImage(): Promise<void> {
 
-      tick.transition()
-        .delay(delay)
-        .duration(200)
-        .style('opacity', 1);
+
+    // Download
+    const base64 = await this.captureMapAsBase64();
+    this.downloadBase64(base64, 'water-wells-map.png');
+  }
+
+  async captureMapAsBase64() {
+    if (!this.mapView) return;
+
+    // Show the legend
+    this.legendLayer!.visible = true;
+
+    // Wait for the layer view to finish drawing
+    await this.waitForLegendRender();
+
+    // Capture screenshot
+    const base64 = await this.getScreenshotBase64();
+
+    // Hide the legend again (so the UI stays clean)
+    this.legendLayer!.visible = false;
+    return base64;
+
+  }
+
+  private async waitForLegendRender(): Promise<void> {
+    const layerView = await this.mapView!.whenLayerView(this.legendLayer!);
+    if (!layerView.updating) {
+      await new Promise(requestAnimationFrame);
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const handle = watch(() => layerView.updating,
+        (updating) => {
+          if (!updating) {
+            handle.remove();
+            requestAnimationFrame(() => resolve());
+          }
+        })
+    });
+  }
+
+  private async getScreenshotBase64(): Promise<string> {
+    const screenshot = await this.mapView!.takeScreenshot({
+      format: 'png',
+      quality: 1,
+    });
+    const [, rawBase64] = screenshot.dataUrl.split(',');
+    if (!rawBase64) throw new Error('Failed to extract Base‑64 payload');
+
+    // Resize (optional)
+    const img = new Image();
+    img.src = `data:image/png;base64,${rawBase64}`;
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
     });
 
-    g.append('text')
-      .attr('class', 'total-depth-label')
-      .attr('x', depthAxisX)
-      .attr('y', drawingHeight + 26)
-      .attr('text-anchor', 'middle')
-      .style('opacity', 0)
-      .text(formatDepth(totalDepth))
-      .transition()
-      .delay(ANIM.SCALE_DURATION + 200)
-      .duration(300)
-      .style('opacity', 1);
+    const scale = Math.min(1, MAX_WIDTH / img.width);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Small pause to let the browser finish any pending paint
+    await new Promise((r) => setTimeout(r, 300));
+
+    const resizedDataUrl = canvas.toDataURL('image/jpeg', 1);
+    const [, resizedBase64] = resizedDataUrl.split(',');
+    return resizedBase64;
   }
+
+  private downloadBase64(base64: string | undefined, fileName: string): void {
+    const a = document.createElement('a');
+    a.href = `data:image/png;base64,${base64}`;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  private registerBootTask(): void {
+    if (this.bootTaskRegistered) return;
+    this.bootTaskRegistered = true;
+    this.loader.registerBootTask(WWELL_MAP_BOOT_TASK);
+  }
+
+  private resolveBootTask(): void {
+    if (!this.bootTaskRegistered) return;
+    this.bootTaskRegistered = false;
+    this.loader.resolveBootTask(WWELL_MAP_BOOT_TASK);
+  }
+
 }
