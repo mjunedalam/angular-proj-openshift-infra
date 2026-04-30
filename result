@@ -1,71 +1,83 @@
-package com.aramco.easd.dailyoperations.dto;
+@ApplicationScoped
+public class DummyDailyOperationService {
 
-import jakarta.ws.rs.core.Response;
+    private ObjectMapper mapper;
+    private List<JsonNode> allWells;   // from wwell-name-and-epANum.json
 
-public class ApiResponse <T> {
-
-    private final int statusCode;
-    private final boolean error;
-    private final String message;
-    private final T data;
-
-    private ApiResponse(ApiResponseBuilder<T> builder) {
-        this.statusCode = builder.statusCode;
-        this.error = builder.error;
-        this.message = builder.message;
-        this.data = builder.data;
+    @PostConstruct
+    public void init() {
+        mapper = new ObjectMapper();
+        loadAllWellsFromFile();
     }
 
-    public int getStatusCode() {
-        return statusCode;
-    }
-
-    public boolean isError() {
-        return error;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public T getData() {
-        return data;
-    }
-
-    public Response buildResponse() {
-        return Response.status(statusCode).entity(this).build();
-    }
-
-    public static class ApiResponseBuilder<T> {
-        private int statusCode;
-        private boolean error;
-        private String message;
-        private T data;
-
-        public ApiResponseBuilder<T> withStatusCode(int statusCode) {
-            this.statusCode = statusCode;
-            return this;
+    private void loadAllWellsFromFile() {
+        try (InputStream is = getClass().getResourceAsStream("/wwell-name-and-epANum.json")) {
+            JsonNode root = mapper.readTree(is);
+            allWells = new ArrayList<>();
+            for (JsonNode entry : root.get("data")) {
+                allWells.add(entry);   // each entry is { "epANum": ..., "wellName": ... }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load wwell-name-and-epANum.json", e);
         }
+    }
 
-        public ApiResponseBuilder<T> withError(boolean error) {
-            this.error = error;
-            return this;
+    // If you really need the full drlg-mr.json structure (nested), load that separately
+    public JsonNode getFullDrlgMrData() {
+        try (InputStream is = getClass().getResourceAsStream("/drlg-mr.json")) {
+            return mapper.readTree(is);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+    }
 
-        public ApiResponseBuilder<T> withMessage(String message) {
-            this.message = message;
-            return this;
-        }
+    public List<JsonNode> getWellsByDate(String date) {
+        // For demo, just return the list from the second JSON (no real date filter)
+        // In real life, you'd filter based on date inside each well's DRLG_OP_STATUS.
+        // But if you only need to return the raw JSON as-is, ignore date.
+        return allWells;
+    }
 
-        public ApiResponseBuilder<T> withData(T data) {
-            this.data = data;
-            return this;
-        }
-
-        public ApiResponse<T> build() {
-            return new ApiResponse<>(this);
-        }
+    public JsonNode getWellByEpANumAndDate(long epANum, String date) {
+        // Return the entry from wwell-name-and-epANum.json that matches epANum
+        return allWells.stream()
+                .filter(w -> w.get("epANum").asLong() == epANum)
+                .findFirst()
+                .orElse(null);
     }
 }
+==
+@Path("/daily-operation/api/v1")
+@Produces(MediaType.APPLICATION_JSON)
+public class DailyOperationResource {
 
-import com.fasterxml.jackson.databind.JsonNode;
+    @Inject DummyDailyOperationService service;
+
+    @GET
+    @Path("/wwells")
+    public ApiResponse<List<JsonNode>> getWwells(@QueryParam("date") String date) {
+        if (date == null || date.isBlank()) {
+            return ApiResponse.error(400, "Missing date");
+        }
+        List<JsonNode> wells = service.getWellsByDate(date);
+        if (wells.isEmpty()) {
+            return ApiResponse.error(404, "No wells found");
+        }
+        return ApiResponse.success(wells);
+    }
+
+    @GET
+    @Path("/wwells")
+    public ApiResponse<List<JsonNode>> getWwellsByDateAndEpANum(
+            @QueryParam("date") String date,
+            @QueryParam("epANum") Long epANum) {
+        if (date == null || epANum == null) {
+            return ApiResponse.error(400, "Missing date or epANum");
+        }
+        JsonNode well = service.getWellByEpANumAndDate(epANum, date);
+        if (well == null) {
+            return ApiResponse.error(404, "Well not found");
+        }
+        return ApiResponse.success(List.of(well));
+    }
+}
