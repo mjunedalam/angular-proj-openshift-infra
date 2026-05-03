@@ -1,27 +1,179 @@
- PROCEDURE mr_wells
-  (
-   result_crs IN OUT result_crs_type,
-   p_dt IN DATE 
-  )
-  IS
-    
-  BEGIN
-    
-        OPEN result_crs FOR
-      SELECT d.ep_a_num, d.rac_num, w.w_gnr_name
-        FROM drlg_op_status d
-        LEFT JOIN rac r ON r.rac_num = d.rac_num
-        LEFT JOIN well_master w ON d.ep_a_num = w.ep_a_num
-       WHERE 1 = 1
-         AND r.w_drlg_wtyp_cd IN ('WC', 'WC-O', 'WI', 'WP', 'WS', 'WSEV')
-         AND UPPER(r.w_rig_cd) NOT LIKE '%LSTK%'
-         AND (UPPER(r.drlg_plan_well_desc) LIKE '%WATER%' OR UPPER(r.drlg_plan_well_desc) LIKE '%WSW%')
-         AND TRUNC(d.w_act_dt) = TRUNC(p_dt)
-       ORDER By 1, 2;          
-  
-  END mr_wells;
-PROCEDURE mr_wells
-  (
-   result_crs IN OUT result_crs_type,
-   p_dt IN DATE 
-  )
+package com.example.wells.service;
+
+import com.example.wells.mapper.WellMapper;
+import com.example.wells.model.Well;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Service layer that calls the mr_wells stored procedure and returns results.
+ */
+@ApplicationScoped
+public class WellService {
+
+    private static final Logger LOG = Logger.getLogger(WellService.class);
+
+    @Inject
+    WellMapper wellMapper;
+
+    /**
+     * Retrieves wells active on the given date by delegating to
+     * the mr_wells Oracle stored procedure.
+     *
+     * @param date  the operational date to filter on (maps to p_dt IN DATE)
+     * @return      list of Well records from the procedure cursor
+     */
+    @SuppressWarnings("unchecked")
+    public List<Well> getWells(LocalDate date) {
+        LOG.debugf("Calling mr_wells for date: %s", date);
+
+        // Convert LocalDate → java.util.Date (Oracle DATE)
+        Date oracleDate = Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+        // Build the parameter map; MyBatis populates "resultCrs" after the call
+        Map<String, Object> params = new HashMap<>();
+        params.put("pDt", oracleDate);
+
+        wellMapper.callMrWells(params);
+
+        List<Well> results = (List<Well>) params.get("resultCrs");
+        LOG.debugf("mr_wells returned %d row(s)", results == null ? 0 : results.size());
+
+        return results == null ? List.of() : results;
+    }
+}
+==
+package com.example.wells.mapper;
+
+import com.example.wells.model.Well;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * MyBatis mapper for the MR_WELLS Oracle stored procedure.
+ *
+ * The procedure opens a SYS_REFCURSOR; MyBatis handles the cursor
+ * via a resultMap defined in WellMapper.xml (statementType=CALLABLE).
+ */
+@Mapper
+public interface WellMapper {
+
+    /**
+     * Calls:  { call mr_wells( #{resultCrs, mode=OUT, jdbcType=CURSOR,
+     *                                      javaType=ResultSet, resultMap=wellResultMap},
+     *                          #{pDt, mode=IN, jdbcType=DATE} ) }
+     *
+     * MyBatis populates the map with key "resultCrs" as a List<Well>
+     * after the cursor is consumed.
+     *
+     * @param params  mutable Map with entry "pDt" → java.util.Date (IN)
+     *                After the call the map will also contain "resultCrs" → List<Well>
+     */
+    void callMrWells(Map<String, Object> params);
+}
+==
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.wells.mapper.WellMapper">
+
+    <!--
+        ResultMap: maps Oracle cursor columns to Well POJO.
+
+        Column names returned by the SELECT inside mr_wells:
+            EP_A_NUM   → epANum
+            RAC_NUM    → racNum
+            W_GNR_NAME → wGnrName
+    -->
+    <resultMap id="wellResultMap" type="com.example.wells.model.Well">
+        <result property="epANum"   column="EP_A_NUM"   />
+        <result property="racNum"   column="RAC_NUM"    />
+        <result property="wGnrName" column="W_GNR_NAME" />
+    </resultMap>
+
+    <!--
+        Stored-procedure call.
+
+        - statementType="CALLABLE"  → JDBC CallableStatement
+        - resultSets (optional)     → not needed; cursor is an OUT param
+        - #{resultCrs}              → OUT SYS_REFCURSOR, consumed by resultMap
+        - #{pDt}                    → IN  DATE parameter
+    -->
+    <select id="callMrWells"
+            statementType="CALLABLE"
+            parameterType="map">
+        {
+            call mr_wells(
+                #{resultCrs,
+                  mode=OUT,
+                  jdbcType=CURSOR,
+                  javaType=java.sql.ResultSet,
+                  resultMap=wellResultMap},
+                #{pDt,
+                  mode=IN,
+                  jdbcType=DATE}
+            )
+        }
+    </select>
+
+</mapper>
+==
+package com.example.wells.model;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+/**
+ * Maps to the SELECT columns returned by the mr_wells cursor:
+ *   d.ep_a_num, d.rac_num, w.w_gnr_name
+ */
+public class Well {
+
+    @JsonProperty("epANum")
+    private String epANum;
+
+    @JsonProperty("racNum")
+    private String racNum;
+
+    @JsonProperty("wGnrName")
+    private String wGnrName;
+
+    /* ── constructors ─────────────────────────────────────── */
+
+    public Well() {}
+
+    public Well(String epANum, String racNum, String wGnrName) {
+        this.epANum   = epANum;
+        this.racNum   = racNum;
+        this.wGnrName = wGnrName;
+    }
+
+    /* ── getters / setters ───────────────────────────────── */
+
+    public String getEpANum()               { return epANum;   }
+    public void   setEpANum(String v)       { this.epANum = v; }
+
+    public String getRacNum()               { return racNum;   }
+    public void   setRacNum(String v)       { this.racNum = v; }
+
+    public String getWGnrName()             { return wGnrName;   }
+    public void   setWGnrName(String v)     { this.wGnrName = v; }
+
+    @Override
+    public String toString() {
+        return "Well{epANum='" + epANum + "', racNum='" + racNum
+                + "', wGnrName='" + wGnrName + "'}";
+    }
+}
