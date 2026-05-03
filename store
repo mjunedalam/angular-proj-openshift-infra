@@ -1,48 +1,51 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-        <!DOCTYPE mapper
-                PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-                "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.aramco.easd.dailyoperations.mappers.DailyOperationsMapper">
+package com.aramco.easd.dailyoperations.dto;
 
-    <!--
-        ResultMap: maps Oracle cursor columns to Well POJO.
+public class ApiResponse<T> {
+    private final int statusCode;
+    private final boolean error;
+    private final String message;
+    private final T data;
 
-        Column names returned by the SELECT inside mr_wells:
-            EP_A_NUM   → epANum
-            RAC_NUM    → racNum
-            W_GNR_NAME → wGnrName
-    -->
-    <resultMap id="wwellEntryResultMap" type="com.aramco.easd.dailyoperations.models.WwellEntry">
-        <result property="epANum"   column="EP_A_NUM"   />
-        <result property="racNum"   column="RAC_NUM"    />
-        <result property="wGnrName" column="W_GNR_NAME" />
-    </resultMap>
+    private ApiResponse(ApiResponseBuilder<T> builder) {
+        this.statusCode = builder.statusCode;
+        this.error = builder.error;
+        this.message = builder.message;
+        this.data = builder.data;
+    }
 
-    <!--
-        Stored-procedure call.
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponseBuilder<T>()
+                .withStatusCode(200)
+                .withError(false)
+                .withMessage("Success")
+                .withData(data)
+                .build();
+    }
 
-        - statementType="CALLABLE"  → JDBC CallableStatement
-        - resultSets (optional)     → not needed; cursor is an OUT param
-        - #{resultCrs}              → OUT SYS_REFCURSOR, consumed by resultMap
-        - #{pDt}                    → IN  DATE parameter
-    -->
-    <select id="fetchWwellEntries"
-            statementType="CALLABLE"
-            parameterType="map">
-        {
-            call mr_wells(
-                #{resultCrs,
-                  mode=OUT,
-                  jdbcType=CURSOR,
-                  javaType=java.sql.ResultSet,
-                  resultMap=wwellEntryResultMapp},
-                #{pDt,
-                  mode=IN,
-                  jdbcType=DATE}
-                 )
-            }
-    </select>
+    public static <T> ApiResponse<T> error(int statusCode, String message) {
+        return new ApiResponseBuilder<T>()
+                .withStatusCode(statusCode)
+                .withError(true)
+                .withMessage(message)
+                .withData(null)
+                .build();
+    }
 
-</mapper>
-### Error querying database.  Cause: java.lang.IllegalArgumentException: Result Maps collection does not contain value for wwellEntryResultMapp
-### Cause: java.lang.IllegalArgumentException: Result Maps collection does not contain value for wwellEntryResultMapp
+    // getters omitted for brevity (but required for JSON serialization)
+    public int getStatusCode() { return statusCode; }
+    public boolean isError() { return error; }
+    public String getMessage() { return message; }
+    public T getData() { return data; }
+
+    public static class ApiResponseBuilder<T> {
+        private int statusCode;
+        private boolean error;
+        private String message;
+        private T data;
+        public ApiResponseBuilder<T> withStatusCode(int statusCode) { this.statusCode = statusCode; return this; }
+        public ApiResponseBuilder<T> withError(boolean error) { this.error = error; return this; }
+        public ApiResponseBuilder<T> withMessage(String message) { this.message = message; return this; }
+        public ApiResponseBuilder<T> withData(T data) { this.data = data; return this; }
+        public ApiResponse<T> build() { return new ApiResponse<>(this); }
+    }
+}
