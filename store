@@ -1,263 +1,150 @@
-{
-  "statusCode": 200,
-  "error": false,
-  "message": "Success",
-  "data": [
-    {
-      "REFERENCE": [
-        {
-          "irSeq": 3353,
-          "prewapSeq": 100530,
-          "epAnum": 97882
-        }
-      ],
-      "RIG_ACTIVITY": [
-        {
-          "drlgOpTypCd": "NEW",
-          "wDrlgTypeDesc": "NEW WELL",
-          "wWellTypeDesc": "PRODUCER",
-          "biNum": "MOB",
-          "biNumDesc": "MOBILIZATION",
-          "wellName": "*MOBILIZATION*",
-          "spuddate": "@",
-          "wRigCd": "ON-54",
-          "wDrlgLocDesc": "MHWZ-950",
-          "welltype": "WTR",
-          "wDrlgTrgtDay": 7,
-          "wDrlgEndDt": "05/10/2024"
-        }
-      ],
-      "WELL_MASTER": [
-        {
-          "well": "HABA-821",
-          "offshore": "Onshore",
-          "utmNorth": 2996562,
-          "utmEast": 710642,
-          "lon": 47.1241166,
-          "lat": 27.075004
-        }
-      ],
-      "RIG_IDENTIFICATION": [
-        {
-          "rigname": "AD-71",
-          "code": "ON-54",
-          "rigHeight": 37.2
-        }
-      ],
-      "CONTACT": [
-        {
-          "rigContNum": "0135767891",
-          "description": "RIG FORMAN VSAT"
-        },
-        {
-          "rigContNum": "0135767856",
-          "description": "CONTRACTOR/CLERK VSAT"
-        }
-      ],
-      "DRLG_OP_STATUS": [
-        {
-          "epANum": null,
-          "wActDt": "2024-05-05T00:00:00",
-          "wPrsntDpth": 0,
-          "wCsgBotDpth": null,
-          "wCsgOdSz": null,
-          "wDpthChgDis": null,
-          "wDrlgEngName": "Albakhurji, Abdullah Bassam",
-          "wFmanName": "Meshal, Mohammed Abdullah",
-          "wMudCircPc": null,
-          "wPrevDpth": 0,
-          "wSpudOprDay": 0,
-          "wOpRmk": "MOBILIZATION",
-          "wDrlgSmryRmk": null,
-          "wDrlgSuptName": "Yami, Fahad Mane",
-          "wLnrOdSz": null,
-          "wLnrBotDpth": null,
-          "nxt24HrPlanRmk": "MOBILIZATION",
-          "fuelTypCd": "DSEL",
-          "fuelDayRem": null,
-          "fuelShipStatus": null,
-          "fuelTrckOnJob": null,
-          "fuelTrckIdle": null,
-          "spuddays": 0,
-          "bopdate": null,
-          "footage": 0,
-          "targetDepth": null
-        }
-      ],
-      "DRLG_FM_TOPS": [],
-      "DRLG_FD_TDAY": [
-        {
-          "footage": null
-        }
-      ],
-      "ROP_DATA": [
-        {
-          "rop": 0
-        }
-      ],
-      "NEXT_2_WELL_ACTIVITY": [
-        {
-          "nextWellActivity": "MHWZ-950",
-          "nextLocation": 92179,
-          "nextBiNum": "1514"
-        }
-      ],
-      "NEW_TARGET_DAYS": [
-        {
-          "targetDays": null
-        }
-      ],
-      "actualRm": 0,
-      "kpiRm": 0,
-      "rigMoveDays": 0,
-      "DRLG_OP_SMRY": [
-        {
-          "wOpCd": "RU",
-          "wEvntTime": "0500",
-          "wHolSz": null,
-          "wOpRmk": "AD-71 RIG MOBILIZATION OPERATION\n\n> RIG UP OPERATIONS\n> R/U TDS & SERVICE LOOP.\n> BOP WINCHES/SUPERSACKS LOAD TESTING.DONE.\n> COMPLETE GROUNDING LOOP..ONGOING.\n> GLG INSPECTIO.\n> R/U WELL CONTROL EQUIPMENT.\n> KOOMEY UNIT RIG UP & COMMISIONING..ONGOING.\n> TESTING GDS & CASCADE SYSTEM.\n> R/U MUD TANK LINES.\n> ON JOB TRAINING FOR ALL RIG TEAMS.\n> WORK ON CLOSING ACTION TRACKER FINDINGS.",
-          "holSecTypCd": "PRE",
-          "wActvDrlgFlg": "N",
-          "wMajOpCd": "MAIN",
-          "wHoleStaDpth": null,
-          "wHoleEndDpth": null,
-          "wDrlgOpDttm": "2024-05-04T05:00:00",
-          "toTm": "0500"
-        }
-      ],
-      "EXAD_GWD_IR_HEADER": [
-        {
-          "dtRemarks": "Provide AramcoLink on-site to pick casing points and formation tops remotely.",
-          "mudRemarks": null,
-          "loggingRemarks": "Not required"
-        }
-      ],
-      "EXAD_GWD_IR_TOPS": [
-        {
-          "stLongCd": "DMMM",
-          "planTvdDepth": 215,
-          "planSsDepth": 851
-        },
-        {
-          "stLongCd": "RUS",
-          "planTvdDepth": 395,
-          "planSsDepth": 671
-        },
-        {
-          "stLongCd": "UMER",
-          "planTvdDepth": 460,
-          "planSsDepth": 606
-        },
-        {
-          "stLongCd": "ARUM",
-          "planTvdDepth": 1625,
-          "planSsDepth": -559
-        }
-      ],
-      "EXAD_GWD_IR_CASING": [
-        {
-          "csgSize": "24",
-          "csgType": "Conductor",
-          "csgDepth": 100,
-          "csgRemarks": null
-        },
-        {
-          "csgSize": "18 5/8",
-          "csgType": "Casing",
-          "csgDepth": 250,
-          "csgRemarks": "20 ft into DMMM"
-        },
-        {
-          "csgSize": "13 3/8",
-          "csgType": "Casing",
-          "csgDepth": 970,
-          "csgRemarks": "340 ft into UMER"
-        }
-      ],
-      "EXAD_GWD_IR_HYDROGEOLOGY": [
-        {
-          "flowType": "N",
-          "estTargetAquifier": "UMER",
-          "estStaticWaterLevel": 240,
-          "estWaterQuality": 6000,
-          "estProductivity": 500,
-          "estH2s": "No"
-        }
-      ],
-      "EXAD_GWD_IR_WATER": [
-        {
-          "offsetWaterWell": "HABA_810",
-          "distance": 13.9,
-          "direction": "NW",
-          "aquifer": "UMER",
-          "td": 1600,
-          "flowRate": 700,
-          "rpm": 1600,
-          "staticWaterLevel": 287.3,
-          "specificCapacity": 2,
-          "drawDown": 350.3,
-          "fieldTds": 3910,
-          "h2s": 0,
-          "testDuration": 330
-        },
-        {
-          "offsetWaterWell": "HABA_816",
-          "distance": 14.7,
-          "direction": "W",
-          "aquifer": "UMER",
-          "td": 1580,
-          "flowRate": 930,
-          "rpm": 1700,
-          "staticWaterLevel": 232.8,
-          "specificCapacity": 30.3,
-          "drawDown": 30.7,
-          "fieldTds": 3270,
-          "h2s": 0,
-          "testDuration": 210
-        }
-      ],
-      "EXAD_RCD_PREWAP": [
-        {
-          "surfaceElevation": 1069,
-          "estTargetDepth": 1550,
-          "targetFormation": "UMER",
-          "supportedBusiness": "HABA-14"
-        }
-      ],
-      "MUD_CIRC": [
-        {
-          "wPrsntDpth": 120,
-          "wMudCircPc": "100",
-          "wDpthChgDis": 120
-        },
-        {
-          "wPrsntDpth": 250,
-          "wMudCircPc": "100",
-          "wDpthChgDis": 130
-        },
-        {
-          "wPrsntDpth": 450,
-          "wMudCircPc": "0",
-          "wDpthChgDis": 200
-        },
-        {
-          "wPrsntDpth": 970,
-          "wMudCircPc": "90",
-          "wDpthChgDis": 520
-        },
-        {
-          "wPrsntDpth": 1555,
-          "wMudCircPc": "0",
-          "wDpthChgDis": 585
-        },
-        {
-          "wPrsntDpth": 1585,
-          "wMudCircPc": "0",
-          "wDpthChgDis": 30
-        }
-      ],
-      "EXAD_GWD_WELL_TESTS": [],
-      "EXAD_GWD_DAILY_REMARKS": []
-    }
-  ]
+  &--na {
+    border-color: rgba(239, 68, 68, 0.7);
+    background: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
+
+    &::placeholder { color: rgba(252, 165, 165, 0.7); }
+    &:focus { background: rgba(239, 68, 68, 0.32); }
+  }
+
+==
+ [class.card-header__status-input--na]="report.rigStatus === 'NA'"
+==
+export function pickTickInterval(totalDepth: number): number {
+  if (totalDepth <= 2000) return 100;
+  if (totalDepth <= 5000) return 200;
+  return 500;
+}
+==
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  effect,
+  input,
+  viewChild,
+} from '@angular/core';
+import { select } from 'd3-selection';
+import { easeLinear } from 'd3-ease';
+import 'd3-transition';
+
+import { PresentationStore } from '../store/presentation.store';
+import { ANIM, DIAGRAM_LAYOUT } from 'src/app/core/models/well-design/wellbore-diagram.model';
+import { buildDepthTicks, createDepthScale, formatDepth, pickTickInterval } from 'src/app/shared/utils/wellbore-math.util';
+
+@Component({
+  selector: 'app-depth-scale',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './depth-scale.component.html',
+  styleUrl: './depth-scale.component.scss',
+})
+export class DepthScaleComponent {
+  protected readonly store = inject(PresentationStore);
+  readonly totalDepth = input.required<number>();
+  readonly animTrigger = input.required<number>();
+
+  private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('scaleSvg');
+
+  private readonly layout = DIAGRAM_LAYOUT;
+
+  constructor() {
+    effect(() => {
+      const svgEl = this.svgRef();
+      const depth = this.totalDepth();
+      this.animTrigger(); // track trigger so we redraw on every new well load
+
+      if (svgEl?.nativeElement) {
+        this.drawScale(depth, svgEl.nativeElement);
+      }
+    });
+  }
+
+
+
+  private drawScale(totalDepth: number, element: SVGSVGElement): void {
+    const { depthScaleWidth, svgHeight, marginTop, drawingHeight, depthAxisX } = this.layout;
+    const tickHalfLength = 10;
+    const tickLabelGap = 6;
+    const tickLeftX = depthAxisX - tickHalfLength;
+    const tickRightX = depthAxisX + tickHalfLength;
+    const tickLabelX = tickLeftX - tickLabelGap;
+
+    const svg = select(element);
+    svg.selectAll('*').remove();
+
+    svg
+      .attr('width', '100%')
+      .attr('height', '100%')
+      .attr('viewBox', `0 0 ${depthScaleWidth} ${svgHeight}`)
+      .attr('preserveAspectRatio', 'none');
+
+    const g = svg.append('g').attr('transform', `translate(0,${marginTop})`);
+    const scale = createDepthScale(totalDepth, drawingHeight);
+    const ticks = buildDepthTicks(totalDepth, pickTickInterval(totalDepth));
+
+    g.append('text')
+      .attr('class', 'axis-title')
+      .attr('x', depthAxisX)
+      .attr('y', -34)
+      .attr('text-anchor', 'middle')
+      .call((t) => {
+        t.append('tspan').attr('x', depthAxisX).attr('dy', 0).text('Depth');
+        t.append('tspan').attr('x', depthAxisX).attr('dy', 16).text('(ft bgl)');
+      });
+
+    const scaleTipY = scale(totalDepth); // === drawingHeight
+    const lineLen = scaleTipY;
+
+    g.append('line')
+      .attr('class', 'axis-line')
+      .attr('x1', depthAxisX).attr('x2', depthAxisX)
+      .attr('y1', 0).attr('y2', scaleTipY)
+      .attr('stroke-dasharray', lineLen)
+      .attr('stroke-dashoffset', lineLen)
+      .transition()
+      .duration(ANIM.SCALE_DURATION)
+      .ease(easeLinear)
+      .attr('stroke-dashoffset', 0);
+
+    ticks.forEach((depth: number) => {
+      const yPx = scale(depth);
+      const delay = (depth / totalDepth) * ANIM.SCALE_DURATION + ANIM.TICK_BASE_DELAY;
+
+      const tick = g.append('g')
+        .attr('class', 'tick')
+        .attr('transform', `translate(0,${yPx})`)
+        .style('opacity', 0);
+
+      tick.append('line')
+        .attr('class', 'tick-line')
+        .attr('x1', tickLeftX).attr('x2', tickRightX)
+        .attr('y1', 0).attr('y2', 0);
+
+      tick.append('text')
+        .attr('class', 'tick-label')
+        .attr('x', tickLabelX)
+        .attr('y', 0)
+        .attr('dominant-baseline', 'middle')
+        .text(depth === 0 ? '0' : depth.toLocaleString());
+
+      tick.transition()
+        .delay(delay)
+        .duration(200)
+        .style('opacity', 1);
+    });
+
+    g.append('text')
+      .attr('class', 'total-depth-label')
+      .attr('x', depthAxisX)
+      .attr('y', drawingHeight + 32)
+      .attr('text-anchor', 'middle')
+      .style('opacity', 0)
+      .text(formatDepth(totalDepth))
+      .transition()
+      .delay(ANIM.SCALE_DURATION + 200)
+      .duration(300)
+      .style('opacity', 1);
+  }
 }
