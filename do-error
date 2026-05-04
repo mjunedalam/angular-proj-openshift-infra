@@ -1,304 +1,284 @@
-store
+Classification: Saudi Aramco: Company General Use 
 
-import { inject } from '@angular/core';
-import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
-import { computed } from '@angular/core';
-import { EmailRequest } from 'src/app/shared/models/email/email-request.model';
-import { EmailService } from '@services/email/email.service';
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"agwa-dailyoperations","app.kubernetes.io/part-of":"agwa-dailyoperations","app.kubernetes.io/version":"1.0.0-SNAPSHOT","app.openshift.io/runtime":"quarkus"},"name":"agwa-dailyoperations","namespace":"easd-gdsd-agwa-test"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"agwa-dailyoperations","app.kubernetes.io/part-of":"agwa-dailyoperations","app.openshift.io/runtime":"quarkus"}},"template":{"metadata":{"annotations":{"sidecar.istio.io/inject":"true"},"labels":{"app":"agwa-dailyoperations","app.kubernetes.io/part-of":"agwa-dailyoperations","app.openshift.io/runtime":"quarkus"}},"spec":{"containers":[{"env":[{"name":"oracle.jdbc.javaNetNio","value":"false"}],"envFrom":[{"secretRef":{"name":"agwa-dailyoperations-datasource-credentials-secret"}},{"configMapRef":{"name":"datasource-configmap"}}],"image":"image-registry.openshift-image-registry.svc:5000/easd-gdsd-agwa-test/agwa-dailyoperations@sha256:7d39eedf034fd7af914c1ea6384f1a60e2531e682b962b8d9890012ce3d1f4b7","imagePullPolicy":"IfNotPresent","livenessProbe":{"failureThreshold":3,"httpGet":{"path":"/q/health/live","port":"http","scheme":"HTTP"},"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1},"name":"agwa-dailyoperations","ports":[{"containerPort":8080,"name":"http","protocol":"TCP"}],"readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/q/health/ready","port":"http","scheme":"HTTP"},"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1},"resources":{"limits":{"cpu":"100m","memory":"150Mi"},"requests":{"cpu":"50m","memory":"110Mi"}},"startupProbe":{"failureThreshold":3,"httpGet":{"path":"/q/health/started","port":"http","scheme":"HTTP"},"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1},"volumeMounts":[{"mountPath":"/well-presentation-docs","name":"agwa-dailyoperations-presentation-docs-pvc"}]}],"volumes":[{"name":"agwa-dailyoperations-presentation-docs-pvc","persistentVolumeClaim":{"claimName":"agwa-dailyoperations-presentation-docs-pvc"}}]}}}}
+  resourceVersion: '1804687175'
+  name: agwa-dailyoperations
+  uid: 21d51952-1781-4c04-9879-b28162fb1caf
+  creationTimestamp: '2026-05-04T14:18:58Z'
+  generation: 1
+  managedFields:
+    - manager: kube-controller-manager
+      operation: Update
+      apiVersion: apps/v1
+      time: '2026-05-04T14:18:58Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:deployment.kubernetes.io/revision': {}
+        'f:status':
+          'f:conditions':
+            .: {}
+            'k:{"type":"Available"}':
+              .: {}
+              'f:lastTransitionTime': {}
+              'f:lastUpdateTime': {}
+              'f:message': {}
+              'f:reason': {}
+              'f:status': {}
+              'f:type': {}
+            'k:{"type":"Progressing"}':
+              .: {}
+              'f:lastTransitionTime': {}
+              'f:lastUpdateTime': {}
+              'f:message': {}
+              'f:reason': {}
+              'f:status': {}
+              'f:type': {}
+          'f:observedGeneration': {}
+          'f:replicas': {}
+          'f:unavailableReplicas': {}
+          'f:updatedReplicas': {}
+      subresource: status
+    - manager: kubectl-client-side-apply
+      operation: Update
+      apiVersion: apps/v1
+      time: '2026-05-04T14:18:58Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            .: {}
+            'f:kubectl.kubernetes.io/last-applied-configuration': {}
+          'f:labels':
+            .: {}
+            'f:app': {}
+            'f:app.kubernetes.io/part-of': {}
+            'f:app.kubernetes.io/version': {}
+            'f:app.openshift.io/runtime': {}
+        'f:spec':
+          'f:progressDeadlineSeconds': {}
+          'f:replicas': {}
+          'f:revisionHistoryLimit': {}
+          'f:selector': {}
+          'f:strategy':
+            'f:rollingUpdate':
+              .: {}
+              'f:maxSurge': {}
+              'f:maxUnavailable': {}
+            'f:type': {}
+          'f:template':
+            'f:metadata':
+              'f:annotations':
+                .: {}
+                'f:sidecar.istio.io/inject': {}
+              'f:labels':
+                .: {}
+                'f:app': {}
+                'f:app.kubernetes.io/part-of': {}
+                'f:app.openshift.io/runtime': {}
+            'f:spec':
+              'f:containers':
+                'k:{"name":"agwa-dailyoperations"}':
+                  'f:envFrom': {}
+                  'f:image': {}
+                  'f:startupProbe':
+                    .: {}
+                    'f:failureThreshold': {}
+                    'f:httpGet':
+                      .: {}
+                      'f:path': {}
+                      'f:port': {}
+                      'f:scheme': {}
+                    'f:periodSeconds': {}
+                   'f:successThreshold': {}
+                    'f:timeoutSeconds': {}
+                  'f:volumeMounts':
+                    .: {}
+                    'k:{"mountPath":"/well-presentation-docs"}':
+                      .: {}
+                      'f:mountPath': {}
+                      'f:name': {}
+                  'f:terminationMessagePolicy': {}
+                  .: {}
+                  'f:resources':
+                    .: {}
+                    'f:limits':
+                      .: {}
+                     'f:cpu': {}
+                      'f:memory': {}
+                    'f:requests':
+                      .: {}
+                      'f:cpu': {}
+                      'f:memory': {}
+                  'f:livenessProbe':
+                    .: {}
+                    'f:failureThreshold': {}
+                    'f:httpGet':
+                      .: {}
+                      'f:path': {}
+                      'f:port': {}
+                      'f:scheme': {}
+                    'f:periodSeconds': {}
+                    'f:successThreshold': {}
+                    'f:timeoutSeconds': {}
+                  'f:env':
+                    .: {}
+                    'k:{"name":"oracle.jdbc.javaNetNio"}':
+                      .: {}
+                      'f:name': {}
+                      'f:value': {}
+                  'f:readinessProbe':
+                    .: {}
+                    'f:failureThreshold': {}
+                    'f:httpGet':
+                      .: {}
+                      'f:path': {}
+                      'f:port': {}
+                      'f:scheme': {}
+                    'f:periodSeconds': {}
+                    'f:successThreshold': {}
+                    'f:timeoutSeconds': {}
+                  'f:terminationMessagePath': {}
+                  'f:imagePullPolicy': {}
+                  'f:ports':
+                    .: {}
+                    'k:{"containerPort":8080,"protocol":"TCP"}':
+                      .: {}
+                      'f:containerPort': {}
+                      'f:name': {}
+                      'f:protocol': {}
+                  'f:name': {}
+              'f:dnsPolicy': {}
+              'f:restartPolicy': {}
+              'f:schedulerName': {}
+              'f:securityContext': {}
+              'f:terminationGracePeriodSeconds': {}
+              'f:volumes':
+                .: {}
+                'k:{"name":"agwa-dailyoperations-presentation-docs-pvc"}':
+                  .: {}
+                  'f:name': {}
+                  'f:persistentVolumeClaim':
+                    .: {}
+                    'f:claimName': {}
+  namespace: easd-gdsd-agwa-test
+  labels:
+   app: agwa-dailyoperations
+    app.kubernetes.io/part-of: agwa-dailyoperations
+    app.kubernetes.io/version: 1.0.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agwa-dailyoperations
+      app.kubernetes.io/part-of: agwa-dailyoperations
+      app.openshift.io/runtime: quarkus
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: agwa-dailyoperations
+        app.kubernetes.io/part-of: agwa-dailyoperations
+        app.openshift.io/runtime: quarkus
+      annotations:
+        sidecar.istio.io/inject: 'true'
+    spec:
+      volumes:
+        - name: agwa-dailyoperations-presentation-docs-pvc
+          persistentVolumeClaim:
+            claimName: agwa-dailyoperations-presentation-docs-pvc
+      containers:
+        - resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 50m
+              memory: 110Mi
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          name: agwa-dailyoperations
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: oracle.jdbc.javaNetNio
+              value: 'false'
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+            - name: agwa-dailyoperations-presentation-docs-pvc
+              mountPath: /well-presentation-docs
+          terminationMessagePolicy: File
+          envFrom:
+            - secretRef:
+                name: agwa-dailyoperations-datasource-credentials-secret
+            - configMapRef:
+                name: datasource-configmap
+          image: 'image-registry.openshift-image-registry.svc:5000/easd-gdsd-agwa-test/agwa-dailyoperations@sha256:7d39eedf034fd7af914c1ea6384f1a60e2531e682b962b8d9890012ce3d1f4b7'
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+status:
+  observedGeneration: 1
+  replicas: 1
+  updatedReplicas: 1
+  unavailableReplicas: 1
+  conditions:
+    - type: Available
+      status: 'False'
+      lastUpdateTime: '2026-05-04T14:18:58Z'
+      lastTransitionTime: '2026-05-04T14:18:58Z'
+      reason: MinimumReplicasUnavailable
+      message: Deployment does not have minimum availability.
+    - type: Progressing
+      status: 'True'
+      lastUpdateTime: '2026-05-04T14:18:58Z'
+      lastTransitionTime: '2026-05-04T14:18:58Z'
+      reason: ReplicaSetUpdated
+      message: ReplicaSet "agwa-dailyoperations-58d5555d84" is progressing.
 
-interface EmailState {
-  status: 'idle' | 'sending' | 'sent' | 'failed';
-  error: string | null;
-}
-
-const initialState: EmailState = {
-  status: 'idle',
-  error: null
-};
-
-export const EmailStore = signalStore(
-  withState(initialState),
-  withComputed((store) => ({
-    isSending: computed(() => store.status() === 'sending'),
-    isSent: computed(() => store.status() === 'sent'),
-    hasFailed: computed(() => store.status() === 'failed'),
-    isIdle: computed(() => store.status() === 'idle'),
-  })),
-  withMethods((store, emailService = inject(EmailService)) => ({
-    sendEmail(request: EmailRequest) {
-      patchState(store, { status: 'sending', error: null });
-      emailService.sendEmail(request).
-        subscribe({
-          next: (statusCode) => {
-            if (statusCode === 200) {
-              patchState(store, { status: 'sent' });
-            } else {
-              patchState(store, { status: 'failed', error: 'Unexpected response from server' });
-            }
-          },
-          error: () => {
-            patchState(store, { status: 'failed', error: 'Failed to send email' });
-          }
-        });
-    }
-  }))
-);
-
-===
-
-import { inject, Injectable } from '@angular/core';
-import { EmailRequest } from 'src/app/shared/models/email/email-request.model';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { MorningReport } from '@models/morning-report/morning-report.model';
-import { EMAIL_SUBJECT, EMAIL_TEMPLATE_NAME } from 'src/app/shared/models/config/email.config';
-import { WaterWellTestResult } from 'src/app/shared/models/wwell/wwell-test-result.model';
-import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
-@Injectable({
-  providedIn: 'root'
-})
-export class EmailService {
-
-  private extConfigService = inject(ExternalConfigService);
-  private http = inject(HttpClient);
-  private apiUrl = `${this.extConfigService.settings.emailServiceUrl}` + "/send-email";
-
-
-  sendEmail(emailRequest: EmailRequest): Observable<number> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http.post(this.apiUrl, emailRequest, { headers, responseType: 'text', observe: 'response' }).pipe(
-      map(res => res.status)
-    );
-  }
-
-  buildEmailRequest(
-    reports: MorningReport[],
-    mapImageData: string,
-    recipientEmail: string,
-    waterWellTestResults?: WaterWellTestResult[],
-  ): EmailRequest {
-    return {
-      subject: EMAIL_SUBJECT,
-      from: recipientEmail,
-      to: [recipientEmail],
-      cc: [recipientEmail],
-      bcc: [recipientEmail],
-      replyTo: '',
-      templateName: EMAIL_TEMPLATE_NAME,
-      generatePdf: false,
-      templateData: {
-        morningReport: reports,
-        mapImageData: mapImageData,
-        waterWellTestResults
-      }
-    };
-  }
-}
-
-==
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  DestroyRef,
-  effect,
-  inject,
-  Injector,
-  OnDestroy,
-  OnInit,
-  signal,
-  ViewChild,
-} from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { ActivatedRoute, ParamMap, Router } from '@angular/router';
-
-import { AuthStore } from 'src/app/features/auth/store/auth.store';
-import { EmailStore } from 'src/app/core/store/email/email.store';
-import { EmailService } from '@services/email/email.service';
-import { DEFAULT_NOTIFICATION_DURATION_MS, NotificationService } from '@shared/components/notification/notification.service';
-import { WwellmapComponent } from '../wwell-map/wwell-map.component';
-import { formatDateForInput, getTodayAtMidnight, parseDateFromInput } from 'src/app/shared/utils/date.util';
-import { MorningReportStore } from './store/morning-report.store';
-
-const MORNING_REPORT_NOTIFICATION_DURATION_MS = 12000;
-
-@Component({
-  selector: 'app-morningreport',
-  standalone: true,
-  imports: [
-    WwellmapComponent,
-    FormsModule,
-    MatCardModule,
-    MatProgressBarModule,
-  ],
-  templateUrl: './morning-report.component.html',
-  styleUrl: './morning-report.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class MorningReportComponent implements OnInit, OnDestroy {
-  @ViewChild('wwellMap') protected wwellMap!: WwellmapComponent;
-
-  protected readonly store = inject(MorningReportStore);
-  private readonly authStore = inject(AuthStore);
-  private readonly emailStore = inject(EmailStore);
-  private readonly emailService = inject(EmailService);
-  private readonly notificationService = inject(NotificationService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly injector = inject(Injector);
-  private readonly destroyRef = inject(DestroyRef);
-
-  protected readonly morningReport = this.store.morningReport;
-  protected readonly hasError = this.store.hasError;
-  protected readonly errorMessage = this.store.errorMessage;
-  protected readonly waterWelltestResult = this.store.waterWellTestResult;
-  protected readonly statusCode = this.store.statusCode;
-  protected readonly pageMessage = computed(() => {
-    if (this.hasError() || this.store.isLoading()) {
-      return null;
-    }
-
-    return this.morningReport().length === 0
-      ? (this.hasDateQueryParam() ? 'Data is not available for this date' : 'Data is not available for the given date')
-      : null;
-  });
-
-  protected readonly maxDateString = formatDateForInput(getTodayAtMidnight());
-  protected selectedDateString = this.maxDateString;
-
-  private readonly urlSyncReady = signal(false);
-  private readonly hasDateQueryParam = signal(false);
-
-  private emailSendInitiated = false;
-
-  constructor() {
-    effect(() => {
-      if (this.emailStore.isSending()) {
-        this.emailSendInitiated = true;
-      }
-
-      if (!this.emailSendInitiated) return;
-
-      if (this.emailStore.isSent()) {
-        this.emailSendInitiated = false;
-        this.notificationService.info('Email sent successfully.');
-      } else if (this.emailStore.hasFailed()) {
-        this.emailSendInitiated = false;
-        this.notificationService.error(this.emailStore.error() ?? 'Failed to send email.');
-      }
-    }, { injector: this.injector });
-
-    effect(() => {
-      if (!this.urlSyncReady()) {
-        return;
-      }
-
-      const date = formatDateForInput(this.store.selectedDate());
-
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: {
-          date,
-          epANum: null,
-        },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
-    }, { injector: this.injector });
-  }
-
-  ngOnInit(): void {
-    this.store.setNotificationDuration(MORNING_REPORT_NOTIFICATION_DURATION_MS);
-
-    this.applyDateFromQueryParams(this.route.snapshot.queryParamMap, true);
-    this.urlSyncReady.set(true);
-
-    this.route.queryParamMap
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((params) => this.applyDateFromQueryParams(params));
-
-    this.store.loadWaterWellTestResults();
-  }
-
-  ngOnDestroy(): void {
-    this.store.setNotificationDuration(DEFAULT_NOTIFICATION_DURATION_MS);
-  }
-
-  protected onDateChange(value: string): void {
-    if (!value) return;
-
-    const selectedDate = parseDateFromInput(value);
-    if (Number.isNaN(selectedDate.getTime()) || selectedDate > getTodayAtMidnight()) {
-      return;
-    }
-
-    this.selectedDateString = value;
-    this.hasDateQueryParam.set(true);
-    this.urlSyncReady.set(true);
-    this.store.setDate(value);
-  }
-
-  protected async sendEmail(): Promise<void> {
-    try {
-      const recipientEmail = this.authStore.userEmail();
-
-      if (!recipientEmail) {
-        this.showError('Unable to determine the logged-in user email.');
-        return;
-      }
-
-      const morningReport = this.morningReport();
-      const mapData = await this.wwellMap.captureMapAsBase64();
-      const waterWelltestResults = this.waterWelltestResult();
-      const emailRequest = this.emailService.buildEmailRequest(
-        morningReport,
-        mapData!,
-        recipientEmail,
-        waterWelltestResults,
-      );
-      this.emailStore.sendEmail(emailRequest);
-    } catch {
-      this.showError('Failed to send email. Please try again.');
-    }
-  }
-
-  protected downloadReport(): void {
-    this.wwellMap.saveMapImage();
-  }
-
-  private showError(message: string): void {
-    this.store.setUiError(message);
-  }
-
-  private normalizeDateParam(value: string | null): string {
-    if (!value) {
-      return this.maxDateString;
-    }
-
-    const parsed = parseDateFromInput(value);
-
-    if (Number.isNaN(parsed.getTime()) || parsed > getTodayAtMidnight()) {
-      return this.maxDateString;
-    }
-
-    return value;
-  }
-
-  private applyDateFromQueryParams(params: ParamMap, forceLoad = false): void {
-    const requestedDate = this.normalizeDateParam(params.get('date'));
-    const currentDate = formatDateForInput(this.store.selectedDate());
-
-    this.selectedDateString = requestedDate;
-    this.hasDateQueryParam.set(params.has('date'));
-
-    if (!forceLoad && requestedDate === currentDate) {
-      return;
-    }
-
-    this.store.loadMorningReportData(requestedDate);
-  }
-}
+This email has been classified as Saudi Aramco: Company General Use on 5/4/2026 5:21 PM
