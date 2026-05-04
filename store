@@ -1,150 +1,545 @@
-  &--na {
-    border-color: rgba(239, 68, 68, 0.7);
-    background: rgba(239, 68, 68, 0.22);
-    color: #fca5a5;
+<div class="upload-card">
+  <div class="upload-card__header">
+    <span class="upload-card__header-icon-wrap">
+      <mat-icon>cloud_upload</mat-icon>
+    </span>
+    <span class="upload-card__header-text">File Uploader</span>
+  </div>
 
-    &::placeholder { color: rgba(252, 165, 165, 0.7); }
-    &:focus { background: rgba(239, 68, 68, 0.32); }
+  <div class="upload-card__body">
+    <label class="dropzone">
+      <input type="file" multiple class="dropzone__input" (change)="onFileChange($event)"
+             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+      <span class="dropzone__icon-wrap">
+        <mat-icon class="dropzone__icon">cloud_upload</mat-icon>
+      </span>
+      <span class="dropzone__title">Click to upload or drag &amp; drop</span>
+      <span class="dropzone__hint">PDF · DOC · DOCX · JPG · PNG</span>
+    </label>
+
+    @if (files().length) {
+      <ul class="file-list">
+        @for (item of files(); track item.id) {
+          <li [class]="'file-row file-row--' + fileTypeClass(item.file) + (item.uploaded ? ' file-row--uploaded' : '')">
+            <span class="file-row__icon-wrap">
+              @if (item.uploaded) {
+                <mat-icon class="file-row__type-icon file-row__type-icon--done">check_circle</mat-icon>
+              } @else {
+                <mat-icon class="file-row__type-icon">{{ fileIcon(item.file) }}</mat-icon>
+              }
+            </span>
+            <div class="file-row__info">
+              <span class="file-row__name" [title]="item.file.name">{{ item.file.name }}</span>
+              <span class="file-row__meta">
+                @if (item.uploaded) {
+                  <span class="file-uploaded-badge">Uploaded</span>
+                } @else {
+                  <span class="file-type-ext">{{ fileExt(item.file) }}</span>
+                }
+                <span class="file-row__size">{{ fileSizeLabel(item.file.size) }}</span>
+              </span>
+            </div>
+            <div class="file-row__actions">
+              <button mat-icon-button class="action-btn action-btn--view"
+                      matTooltip="Preview"
+                      (click)="previewFile(item.file)"
+                      aria-label="Preview file">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button mat-icon-button class="action-btn action-btn--delete"
+                      matTooltip="Remove"
+                      (click)="removeFile(item.id)"
+                      aria-label="Remove file"
+                      [disabled]="docsStore.uploading()">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+
+      <div class="upload-footer">
+        @if (pendingCount() > 0) {
+          <span class="upload-count">{{ pendingCount() }} file{{ pendingCount() !== 1 ? 's' : '' }} ready</span>
+          <button mat-flat-button color="primary" class="upload-submit-btn"
+                  (click)="submitUpload()"
+                  [disabled]="docsStore.uploading()">
+            @if (docsStore.uploading()) {
+              <mat-spinner diameter="14" class="upload-spinner"></mat-spinner>
+              <span>Uploading…</span>
+            } @else {
+              <ng-container>
+                <mat-icon>upload</mat-icon>
+                <span>Upload</span>
+              </ng-container>
+            }
+          </button>
+        } @else {
+          <span class="upload-count">{{ files().length }} file{{ files().length !== 1 ? 's' : '' }} uploaded</span>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <mat-icon class="empty-state__icon">inbox</mat-icon>
+        <span>No files attached yet</span>
+      </div>
+    }
+  </div>
+</div>
+===
+// ── Card shell ──────────────────────────────────────────────────────────────
+.upload-card {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+// ── Header ───────────────────────────────────────────────────────────────────
+.upload-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.875rem;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+.upload-card__header-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 0.95rem;
+    width: 0.95rem;
+    height: 0.95rem;
+    line-height: 0.95rem;
+    color: #fff;
+    overflow: visible;
+  }
+}
+
+.upload-card__header-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+// ── Body ─────────────────────────────────────────────────────────────────────
+.upload-card__body {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  background: #f8fafc;
+}
+
+// ── Dropzone ─────────────────────────────────────────────────────────────────
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 7.5rem;
+  padding: 1.25rem 0.75rem;
+  border: 2px dashed #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease, box-shadow 200ms ease;
+
+  &:hover {
+    border-color: #3b82f6;
+    background: #dbeafe;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
   }
 
-==
- [class.card-header__status-input--na]="report.rigStatus === 'NA'"
-==
-export function pickTickInterval(totalDepth: number): number {
-  if (totalDepth <= 2000) return 100;
-  if (totalDepth <= 5000) return 200;
-  return 500;
+  &:hover .dropzone__icon {
+    transform: translateY(-3px);
+    color: #2563eb;
+  }
+}
+
+.dropzone__input { display: none; }
+
+.dropzone__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  margin-bottom: 0.1rem;
+
+  .dropzone:hover & {
+    background: #bfdbfe;
+    border-color: #93c5fd;
+  }
+}
+
+.dropzone__icon {
+  font-size: 1.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  line-height: 1.5rem;
+  overflow: visible;
+  color: #3b82f6;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), color 200ms ease;
+}
+
+.dropzone__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.dropzone__hint {
+  font-size: 0.63rem;
+  color: #64748b;
+  letter-spacing: 0.03em;
+}
+
+// ── File list ────────────────────────────────────────────────────────────────
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+// ── File row ─────────────────────────────────────────────────────────────────
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.5rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    border-color: #bfdbfe;
+    box-shadow: 0 1px 6px rgba(59, 130, 246, 0.1);
+  }
+
+  &--pdf   .file-row__icon-wrap { background: #fef2f2; border-color: #fecaca; }
+  &--pdf   .file-row__type-icon  { color: #ef4444; }
+  &--pdf   .file-type-ext        { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+  &--image .file-row__icon-wrap { background: #f0fdf4; border-color: #bbf7d0; }
+  &--image .file-row__type-icon  { color: #16a34a; }
+  &--image .file-type-ext        { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+  &--doc   .file-row__icon-wrap { background: #faf5ff; border-color: #e9d5ff; }
+  &--doc   .file-row__type-icon  { color: #9333ea; }
+  &--doc   .file-type-ext        { background: #faf5ff; color: #7c3aed; border-color: #e9d5ff; }
+
+  &--other .file-row__icon-wrap { background: #f8fafc; border-color: #e2e8f0; }
+  &--other .file-row__type-icon  { color: #64748b; }
+  &--other .file-type-ext        { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+}
+
+.file-row__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  transition: background 150ms ease;
+}
+
+.file-row__type-icon {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+  line-height: 1rem;
+  overflow: visible;
+}
+
+.file-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.file-row__name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.file-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.file-type-ext {
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+}
+
+.file-row__size {
+  font-size: 0.62rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.file-row__actions {
+  display: flex;
+  gap: 0.1rem;
+  flex-shrink: 0;
+}
+
+// ── Action buttons ────────────────────────────────────────────────────────────
+.action-btn {
+  --mdc-icon-button-state-layer-size: 1.75rem;
+  --mdc-icon-button-icon-size: 1rem;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  transition: background 150ms ease, color 150ms ease !important;
+
+  .mat-mdc-button-touch-target { width: 1.75rem !important; height: 1.75rem !important; }
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    line-height: 1rem;
+    overflow: visible;
+  }
+}
+
+.action-btn--view {
+  color: #0284c7 !important;
+  &:hover { background: rgba(2, 132, 199, 0.08) !important; }
+}
+
+.action-btn--delete {
+  color: #ef4444 !important;
+  &:hover { background: rgba(239, 68, 68, 0.08) !important; }
+}
+
+// ── Uploaded row state ────────────────────────────────────────────────────────
+.file-row--uploaded {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+
+  &:hover {
+    border-color: #86efac;
+    box-shadow: 0 1px 6px rgba(22, 163, 74, 0.1);
+  }
+
+  .file-row__name { color: #15803d; }
+}
+
+.file-row__type-icon--done {
+  color: #16a34a !important;
+}
+
+.file-uploaded-badge {
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+}
+
+// ── Upload footer ─────────────────────────────────────────────────────────────
+.upload-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.1rem;
+}
+
+.upload-count {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.upload-submit-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  height: 1.875rem !important;
+  padding: 0 0.75rem !important;
+  border-radius: 8px !important;
+  letter-spacing: 0.02em !important;
+
+  mat-icon {
+    font-size: 0.85rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    line-height: 0.85rem;
+    overflow: visible;
+  }
+}
+
+.upload-spinner { display: inline-flex; }
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0 0.25rem;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 500;
+
+  &__icon {
+    font-size: 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    line-height: 1.4rem;
+    overflow: visible;
+    opacity: 0.5;
+  }
 }
 ==
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  inject,
-  effect,
-  input,
-  viewChild,
-} from '@angular/core';
-import { select } from 'd3-selection';
-import { easeLinear } from 'd3-ease';
-import 'd3-transition';
-
-import { PresentationStore } from '../store/presentation.store';
-import { ANIM, DIAGRAM_LAYOUT } from 'src/app/core/models/well-design/wellbore-diagram.model';
-import { buildDepthTicks, createDepthScale, formatDepth, pickTickInterval } from 'src/app/shared/utils/wellbore-math.util';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { UploadFileItem } from '@models/active-wwell/active-wwell-view.model';
+import { WellDocsStore } from '@store/well-docs/well-docs.store';
+import { FilePreviewDialogComponent } from './file-preview-dialog/file-preview-dialog.component';
 
 @Component({
-  selector: 'app-depth-scale',
+  selector: 'app-file-upload',
   standalone: true,
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, MatProgressSpinnerModule],
+  templateUrl: './file-upload.component.html',
+  styleUrl: './file-upload.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './depth-scale.component.html',
-  styleUrl: './depth-scale.component.scss',
 })
-export class DepthScaleComponent {
-  protected readonly store = inject(PresentationStore);
-  readonly totalDepth = input.required<number>();
-  readonly animTrigger = input.required<number>();
+export class FileUploadComponent {
+  readonly epANum = input<number | null>(null);
+  readonly date = input<string>('');
 
-  private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('scaleSvg');
+  private readonly dialog = inject(MatDialog);
+  protected readonly docsStore = inject(WellDocsStore);
 
-  private readonly layout = DIAGRAM_LAYOUT;
+  protected readonly files = signal<UploadFileItem[]>([]);
+  protected readonly pendingCount = computed(() => this.files().filter(i => !i.uploaded).length);
 
-  constructor() {
-    effect(() => {
-      const svgEl = this.svgRef();
-      const depth = this.totalDepth();
-      this.animTrigger(); // track trigger so we redraw on every new well load
+  protected onFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const selected = Array.from(input?.files ?? []);
 
-      if (svgEl?.nativeElement) {
-        this.drawScale(depth, svgEl.nativeElement);
-      }
+    if (!selected.length) return;
+
+    this.files.update((existing) => [
+      ...existing,
+      ...selected.map((file, index) => ({
+        file,
+        id: `${file.name}-${file.size}-${existing.length + index}`,
+      })),
+    ]);
+
+    if (input) input.value = '';
+  }
+
+  protected previewFile(file: File): void {
+    this.dialog.open(FilePreviewDialogComponent, {
+      data: file,
+      width: '60vw',
+      height: '70vh',
+      maxWidth: '98vw',
+      maxHeight: '98vh',
+      panelClass: 'file-preview-panel',
+      autoFocus: false,
+      enterAnimationDuration: '220ms',
     });
   }
 
+  protected removeFile(id: string): void {
+    this.files.update((items) => items.filter((item) => item.id !== id));
+  }
 
+  protected submitUpload(): void {
+    const epANum = this.epANum();
+    const date = this.date();
+    const pending = this.files().filter(item => !item.uploaded);
+    if (epANum == null || !date || !pending.length) return;
 
-  private drawScale(totalDepth: number, element: SVGSVGElement): void {
-    const { depthScaleWidth, svgHeight, marginTop, drawingHeight, depthAxisX } = this.layout;
-    const tickHalfLength = 10;
-    const tickLabelGap = 6;
-    const tickLeftX = depthAxisX - tickHalfLength;
-    const tickRightX = depthAxisX + tickHalfLength;
-    const tickLabelX = tickLeftX - tickLabelGap;
+    const rawFiles = pending.map(item => item.file);
+    this.docsStore.uploadDocs({ files: rawFiles, epANum, date });
+    this.files.update(items =>
+      items.map(item => item.uploaded ? item : { ...item, uploaded: true }),
+    );
+  }
 
-    const svg = select(element);
-    svg.selectAll('*').remove();
+  protected fileSizeLabel(size: number): string {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
-    svg
-      .attr('width', '100%')
-      .attr('height', '100%')
-      .attr('viewBox', `0 0 ${depthScaleWidth} ${svgHeight}`)
-      .attr('preserveAspectRatio', 'none');
+  protected fileIcon(file: File): string {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const mime = file.type.toLowerCase();
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+    if (mime === 'application/pdf' || ext === 'pdf') return 'picture_as_pdf';
+    if (['doc', 'docx'].includes(ext)) return 'article';
+    return 'insert_drive_file';
+  }
 
-    const g = svg.append('g').attr('transform', `translate(0,${marginTop})`);
-    const scale = createDepthScale(totalDepth, drawingHeight);
-    const ticks = buildDepthTicks(totalDepth, pickTickInterval(totalDepth));
+  protected fileTypeClass(file: File): string {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const mime = file.type.toLowerCase();
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+    if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+    if (['doc', 'docx'].includes(ext)) return 'doc';
+    return 'other';
+  }
 
-    g.append('text')
-      .attr('class', 'axis-title')
-      .attr('x', depthAxisX)
-      .attr('y', -34)
-      .attr('text-anchor', 'middle')
-      .call((t) => {
-        t.append('tspan').attr('x', depthAxisX).attr('dy', 0).text('Depth');
-        t.append('tspan').attr('x', depthAxisX).attr('dy', 16).text('(ft bgl)');
-      });
-
-    const scaleTipY = scale(totalDepth); // === drawingHeight
-    const lineLen = scaleTipY;
-
-    g.append('line')
-      .attr('class', 'axis-line')
-      .attr('x1', depthAxisX).attr('x2', depthAxisX)
-      .attr('y1', 0).attr('y2', scaleTipY)
-      .attr('stroke-dasharray', lineLen)
-      .attr('stroke-dashoffset', lineLen)
-      .transition()
-      .duration(ANIM.SCALE_DURATION)
-      .ease(easeLinear)
-      .attr('stroke-dashoffset', 0);
-
-    ticks.forEach((depth: number) => {
-      const yPx = scale(depth);
-      const delay = (depth / totalDepth) * ANIM.SCALE_DURATION + ANIM.TICK_BASE_DELAY;
-
-      const tick = g.append('g')
-        .attr('class', 'tick')
-        .attr('transform', `translate(0,${yPx})`)
-        .style('opacity', 0);
-
-      tick.append('line')
-        .attr('class', 'tick-line')
-        .attr('x1', tickLeftX).attr('x2', tickRightX)
-        .attr('y1', 0).attr('y2', 0);
-
-      tick.append('text')
-        .attr('class', 'tick-label')
-        .attr('x', tickLabelX)
-        .attr('y', 0)
-        .attr('dominant-baseline', 'middle')
-        .text(depth === 0 ? '0' : depth.toLocaleString());
-
-      tick.transition()
-        .delay(delay)
-        .duration(200)
-        .style('opacity', 1);
-    });
-
-    g.append('text')
-      .attr('class', 'total-depth-label')
-      .attr('x', depthAxisX)
-      .attr('y', drawingHeight + 32)
-      .attr('text-anchor', 'middle')
-      .style('opacity', 0)
-      .text(formatDepth(totalDepth))
-      .transition()
-      .delay(ANIM.SCALE_DURATION + 200)
-      .duration(300)
-      .style('opacity', 1);
+  protected fileExt(file: File): string {
+    return file.name.split('.').pop()?.toUpperCase() ?? 'FILE';
   }
 }
