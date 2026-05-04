@@ -20,22 +20,14 @@
     @if (files().length) {
       <ul class="file-list">
         @for (item of files(); track item.id) {
-          <li [class]="'file-row file-row--' + fileTypeClass(item.file) + (item.uploaded ? ' file-row--uploaded' : '')">
+          <li [class]="'file-row file-row--' + fileTypeClass(item.file)">
             <span class="file-row__icon-wrap">
-              @if (item.uploaded) {
-                <mat-icon class="file-row__type-icon file-row__type-icon--done">check_circle</mat-icon>
-              } @else {
-                <mat-icon class="file-row__type-icon">{{ fileIcon(item.file) }}</mat-icon>
-              }
+              <mat-icon class="file-row__type-icon">{{ fileIcon(item.file) }}</mat-icon>
             </span>
             <div class="file-row__info">
               <span class="file-row__name" [title]="item.file.name">{{ item.file.name }}</span>
               <span class="file-row__meta">
-                @if (item.uploaded) {
-                  <span class="file-uploaded-badge">Uploaded</span>
-                } @else {
-                  <span class="file-type-ext">{{ fileExt(item.file) }}</span>
-                }
+                <span class="file-type-ext">{{ fileExt(item.file) }}</span>
                 <span class="file-row__size">{{ fileSizeLabel(item.file.size) }}</span>
               </span>
             </div>
@@ -59,29 +51,64 @@
       </ul>
 
       <div class="upload-footer">
-        @if (pendingCount() > 0) {
-          <span class="upload-count">{{ pendingCount() }} file{{ pendingCount() !== 1 ? 's' : '' }} ready</span>
-          <button mat-flat-button color="primary" class="upload-submit-btn"
-                  (click)="submitUpload()"
-                  [disabled]="docsStore.uploading()">
-            @if (docsStore.uploading()) {
-              <mat-spinner diameter="14" class="upload-spinner"></mat-spinner>
-              <span>Uploading…</span>
-            } @else {
-              <ng-container>
-                <mat-icon>upload</mat-icon>
-                <span>Upload</span>
-              </ng-container>
-            }
-          </button>
-        } @else {
-          <span class="upload-count">{{ files().length }} file{{ files().length !== 1 ? 's' : '' }} uploaded</span>
-        }
+        <span class="upload-count">{{ files().length }} file{{ files().length !== 1 ? 's' : '' }} ready</span>
+        <button mat-flat-button color="primary" class="upload-submit-btn"
+                (click)="submitUpload()"
+                [disabled]="docsStore.uploading()">
+          @if (docsStore.uploading()) {
+            <mat-spinner diameter="14" class="upload-spinner"></mat-spinner>
+            <span>Uploading…</span>
+          } @else {
+            <ng-container>
+              <mat-icon>upload</mat-icon>
+              <span>Upload</span>
+            </ng-container>
+          }
+        </button>
       </div>
     } @else {
       <div class="empty-state">
         <mat-icon class="empty-state__icon">inbox</mat-icon>
         <span>No files attached yet</span>
+      </div>
+    }
+
+    @if (uploadedFiles().length) {
+      <div class="uploaded-section">
+        <div class="uploaded-section__header">
+          <mat-icon class="uploaded-section__header-icon">check_circle</mat-icon>
+          <span>Uploaded ({{ uploadedFiles().length }})</span>
+        </div>
+        <ul class="file-list">
+          @for (item of uploadedFiles(); track item.id) {
+            <li [class]="'file-row file-row--uploaded file-row--' + fileTypeClass(item.file)">
+              <span class="file-row__icon-wrap">
+                <mat-icon class="file-row__type-icon file-row__type-icon--done">check_circle</mat-icon>
+              </span>
+              <div class="file-row__info">
+                <span class="file-row__name" [title]="item.file.name">{{ item.file.name }}</span>
+                <span class="file-row__meta">
+                  <span class="file-uploaded-badge">Uploaded</span>
+                  <span class="file-row__size">{{ fileSizeLabel(item.file.size) }}</span>
+                </span>
+              </div>
+              <div class="file-row__actions">
+                <button mat-icon-button class="action-btn action-btn--view"
+                        matTooltip="Preview"
+                        (click)="previewFile(item.file)"
+                        aria-label="Preview file">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button mat-icon-button class="action-btn action-btn--delete"
+                        matTooltip="Remove"
+                        (click)="removeUploaded(item.id)"
+                        aria-label="Remove from list">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
       </div>
     }
   </div>
@@ -418,6 +445,36 @@
 
 .upload-spinner { display: inline-flex; }
 
+// ── Uploaded section ──────────────────────────────────────────────────────────
+.uploaded-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 0.1rem;
+}
+
+.uploaded-section__header {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #15803d;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.uploaded-section__header-icon {
+  font-size: 0.85rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  line-height: 0.85rem;
+  overflow: visible;
+  color: #16a34a;
+}
+
 // ── Empty state ───────────────────────────────────────────────────────────────
 .empty-state {
   display: flex;
@@ -439,7 +496,8 @@
   }
 }
 ==
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+==
+import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -466,7 +524,7 @@ export class FileUploadComponent {
   protected readonly docsStore = inject(WellDocsStore);
 
   protected readonly files = signal<UploadFileItem[]>([]);
-  protected readonly pendingCount = computed(() => this.files().filter(i => !i.uploaded).length);
+  protected readonly uploadedFiles = signal<UploadFileItem[]>([]);
 
   protected onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement | null;
@@ -505,14 +563,16 @@ export class FileUploadComponent {
   protected submitUpload(): void {
     const epANum = this.epANum();
     const date = this.date();
-    const pending = this.files().filter(item => !item.uploaded);
+    const pending = this.files();
     if (epANum == null || !date || !pending.length) return;
 
-    const rawFiles = pending.map(item => item.file);
-    this.docsStore.uploadDocs({ files: rawFiles, epANum, date });
-    this.files.update(items =>
-      items.map(item => item.uploaded ? item : { ...item, uploaded: true }),
-    );
+    this.docsStore.uploadDocs({ files: pending.map(i => i.file), epANum, date });
+    this.uploadedFiles.update(existing => [...existing, ...pending]);
+    this.files.set([]);
+  }
+
+  protected removeUploaded(id: string): void {
+    this.uploadedFiles.update(items => items.filter(item => item.id !== id));
   }
 
   protected fileSizeLabel(size: number): string {
