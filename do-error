@@ -1,225 +1,195 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
-  OnInit,
   computed,
+  DestroyRef,
   effect,
   inject,
+  Injector,
+  OnDestroy,
+  OnInit,
+  signal,
+  ViewChild,
 } from '@angular/core';
-import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { DrillingDataStore } from '@store/drilling-data/drilling-data.store';
-import { formatDateForInput } from 'src/app/shared/utils/date.util';
-import { CasingInfoComponent } from '../casing-info/casing-info.component';
-import { DatabaseInfoComponent } from '../database-info/database-info.component';
-import { FormationTopsAndCasingComponent } from '../formation-tops-and-casing/formation-tops-and-casing.component';
-import { OperationSummaryComponent } from '../operation-summary/operation-summary.component';
-import { WwellHeaderComponent } from '../wwell-header/wwell-header.component';
-import { WwellTestComponent } from '../wwell-test/wwell-test.component';
-import { ActiveWwellUiStore } from '../active-wwell-ui.store';
-import {
-  ACTIVE_WWELL_FALLBACK,
-  deriveStatusLabel,
-} from '../active-wwell.helpers';
-import { displayValue, selectLatestFormation } from '@store/active-wwell/active-wwell.selectors';
-import { AddStatusDialogComponent } from '../add-status-dialog/add-status-dialog.component';
-import { FileUploadComponent } from '@shared/components/file-upload/file-upload.component';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 
-const AREAS = [
-  { value: 'RAK' },
-  { value: 'Central' },
-  { value: 'North West' },
-  { value: 'Jafurah' },
-  { value: 'GH' },
-] as const;
+import { AuthStore } from 'src/app/features/auth/store/auth.store';
+import { EmailStore } from 'src/app/core/store/email/email.store';
+import { EmailService } from '@services/email/email.service';
+import { DEFAULT_NOTIFICATION_DURATION_MS, NotificationService } from '@shared/components/notification/notification.service';
+import { WwellmapComponent } from '../wwell-map/wwell-map.component';
+import { formatDateForInput, getTodayAtMidnight, parseDateFromInput } from 'src/app/shared/utils/date.util';
+import { MorningReportStore } from './store/morning-report.store';
 
-const ADD_NEW_SENTINEL = '__ADD_NEW__';
+const MORNING_REPORT_NOTIFICATION_DURATION_MS = 12000;
 
 @Component({
-  selector: 'app-active-wwell-view',
+  selector: 'app-morningreport',
   standalone: true,
   imports: [
-    NgClass,
+    WwellmapComponent,
     FormsModule,
-    MatChipsModule,
-    MatFormFieldModule,
-    MatIconModule,
+    MatCardModule,
     MatProgressBarModule,
-    MatSelectModule,
-    WwellHeaderComponent,
-    OperationSummaryComponent,
-    DatabaseInfoComponent,
-    CasingInfoComponent,
-    FormationTopsAndCasingComponent,
-    WwellTestComponent,
-    FileUploadComponent,
   ],
-  templateUrl: './active-wwell-view.component.html',
-  styleUrl: './active-wwell-view.component.scss',
+  templateUrl: './morning-report.component.html',
+  styleUrl: './morning-report.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [ActiveWwellUiStore],
 })
-export class ActiveWwellViewComponent implements OnInit {
-  protected readonly ADD_NEW_SENTINEL = ADD_NEW_SENTINEL;
-  protected readonly areas = AREAS;
+export class MorningReportComponent implements OnInit, OnDestroy {
+  @ViewChild('wwellMap') protected wwellMap!: WwellmapComponent;
 
-  protected readonly store = inject(DrillingDataStore);
-  protected readonly uiStore = inject(ActiveWwellUiStore);
-
+  protected readonly store = inject(MorningReportStore);
+  private readonly authStore = inject(AuthStore);
+  private readonly emailStore = inject(EmailStore);
+  private readonly emailService = inject(EmailService);
+  private readonly notificationService = inject(NotificationService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly dialog = inject(MatDialog);
 
-  protected readonly wells = computed(() => this.store.uniqueWellNames());
-  protected readonly statusOptions = this.uiStore.statusOptions;
-  protected readonly selectedArea = this.uiStore.selectedArea;
-  protected readonly selectedStatus = computed(() => {
-    const epANum = this.store.selectedEpANum();
-    return this.uiStore.statusForWell(epANum) ?? deriveStatusLabel(this.store.selectedWell());
+  protected readonly morningReport = this.store.morningReport;
+  protected readonly hasError = this.store.hasError;
+  protected readonly errorMessage = this.store.errorMessage;
+  protected readonly waterWelltestResult = this.store.waterWellTestResult;
+  protected readonly statusCode = this.store.statusCode;
+  protected readonly pageMessage = computed(() => {
+    if (this.hasError() || this.store.isLoading()) {
+      return null;
+    }
+
+    return this.morningReport().length === 0
+      ? (this.hasDateQueryParam() ? 'Data is not available for this date' : 'Data is not available for the given date')
+      : null;
   });
 
-  protected readonly summaryStats = computed(() => {
-    const details = this.store.selectedWell();
-    const latestFormation = selectLatestFormation(details);
+  protected readonly maxDateString = formatDateForInput(getTodayAtMidnight());
+  protected selectedDateString = this.maxDateString;
 
-    return {
-      formationDrilling:
-        latestFormation?.stLongCd ??
-        details?.EXAD_RCD_PREWAP?.[0]?.targetFormation ??
-        ACTIVE_WWELL_FALLBACK,
-      bitSize: details?.BITINFO?.[0]?.bitSz ?? ACTIVE_WWELL_FALLBACK,
-      circulation: details?.DRLG_OP_STATUS?.[0]?.wMudCircPc ?? ACTIVE_WWELL_FALLBACK,
-      mudWeight: details?.actualRm ?? ACTIVE_WWELL_FALLBACK,
-      avgRop: details?.ROP_DATA?.[0]?.rop ?? ACTIVE_WWELL_FALLBACK,
-    };
-  });
-
-  protected readonly drillingRemarks = computed(() => {
-    const details = this.store.selectedWell();
-    return details?.DRLG_OP_STATUS?.[0]?.wOpRmk ?? details?.DRLG_OP_SMRY?.[0]?.wOpRmk ?? '';
-  });
-
-  protected readonly displayValue = displayValue;
+  private readonly urlSyncReady = signal(false);
+  private readonly hasDateQueryParam = signal(false);
 
   constructor() {
     effect(() => {
-      const epANum = this.store.selectedEpANum();
-      const selectedDate = this.store.selectedDate();
+      if (this.emailStore.isSent()) {
+        this.notificationService.info('Email sent successfully.');
+      } else if (this.emailStore.hasFailed()) {
+        this.notificationService.error(this.emailStore.error() ?? 'Failed to send email.');
+      }
+    }, { injector: this.injector });
 
-      if (epANum == null) {
+    effect(() => {
+      if (!this.urlSyncReady()) {
         return;
       }
+
+      const date = formatDateForInput(this.store.selectedDate());
 
       this.router.navigate([], {
         relativeTo: this.route,
         queryParams: {
-          epANum,
-          date: formatDateForInput(selectedDate),
+          date,
+          epANum: null,
         },
         queryParamsHandling: 'merge',
         replaceUrl: true,
       });
-    });
-
-    effect(() => {
-      const epANum = this.store.selectedEpANum();
-      const details = this.store.selectedWell();
-      const detailsEpANum = details?.DRLG_OP_STATUS?.[0]?.epANum ?? null;
-
-      if (epANum == null || epANum !== detailsEpANum) {
-        return;
-      }
-
-      this.uiStore.ensureStatusForWell(epANum, deriveStatusLabel(details));
-    });
+    }, { injector: this.injector });
   }
 
   ngOnInit(): void {
-    this.store.loadWellNames();
+    this.store.setNotificationDuration(MORNING_REPORT_NOTIFICATION_DURATION_MS);
 
-    const params = this.route.snapshot.queryParamMap;
-    const rawEpANum = params.get('epANum');
+    this.applyDateFromQueryParams(this.route.snapshot.queryParamMap, true);
+    this.urlSyncReady.set(true);
 
-    if (!rawEpANum) {
-      return;
-    }
-
-    const epANum = Number.parseInt(rawEpANum, 10);
-
-    if (!Number.isNaN(epANum)) {
-      this.store.selectWell({ epANum });
-    }
-  }
-
-  protected onWellSelect(epANum: number): void {
-    this.store.selectWell({ epANum });
-  }
-
-  protected onSelect(status: string): void {
-    if (status === ADD_NEW_SENTINEL) {
-      this.openAddDialog();
-      return;
-    }
-
-    this.uiStore.setStatusForWell(this.store.selectedEpANum(), status);
-  }
-
-  protected onAreaChange(area: string): void {
-    this.uiStore.setSelectedArea(area);
-  }
-
-  private openAddDialog(): void {
-    const dialogRef = this.dialog.open(AddStatusDialogComponent, {
-      width: '280px',
-      data: { name: '' },
-      disableClose: true,
-    });
-
-    dialogRef
-      .afterClosed()
+    this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((name?: string) => {
-        if (!name) {
-          return;
-        }
+      .subscribe((params) => this.applyDateFromQueryParams(params));
 
-        this.uiStore.setStatusForWell(this.store.selectedEpANum(), name);
-      });
+    this.store.loadWaterWellTestResults();
+  }
+
+  ngOnDestroy(): void {
+    this.store.setNotificationDuration(DEFAULT_NOTIFICATION_DURATION_MS);
+  }
+
+  protected onDateChange(value: string): void {
+    if (!value) return;
+
+    const selectedDate = parseDateFromInput(value);
+    if (Number.isNaN(selectedDate.getTime()) || selectedDate > getTodayAtMidnight()) {
+      return;
+    }
+
+    this.selectedDateString = value;
+    this.hasDateQueryParam.set(true);
+    this.urlSyncReady.set(true);
+    this.store.setDate(value);
+  }
+
+  protected async sendEmail(): Promise<void> {
+    try {
+      const recipientEmail = this.authStore.userEmail();
+
+      if (!recipientEmail) {
+        this.showError('Unable to determine the logged-in user email.');
+        return;
+      }
+
+      const morningReport = this.morningReport();
+      const mapData = await this.wwellMap.captureMapAsBase64();
+      const waterWelltestResults = this.waterWelltestResult();
+      const emailRequest = this.emailService.buildEmailRequest(
+        morningReport,
+        mapData!,
+        recipientEmail,
+        waterWelltestResults,
+      );
+      this.emailStore.sendEmail(emailRequest);
+    } catch {
+      this.showError('Failed to send email. Please try again.');
+    }
+  }
+
+  protected downloadReport(): void {
+    this.wwellMap.saveMapImage();
+  }
+
+  private showError(message: string): void {
+    this.store.setUiError(message);
+  }
+
+  private normalizeDateParam(value: string | null): string {
+    if (!value) {
+      return this.maxDateString;
+    }
+
+    const parsed = parseDateFromInput(value);
+
+    if (Number.isNaN(parsed.getTime()) || parsed > getTodayAtMidnight()) {
+      return this.maxDateString;
+    }
+
+    return value;
+  }
+
+  private applyDateFromQueryParams(params: ParamMap, forceLoad = false): void {
+    const requestedDate = this.normalizeDateParam(params.get('date'));
+    const currentDate = formatDateForInput(this.store.selectedDate());
+
+    this.selectedDateString = requestedDate;
+    this.hasDateQueryParam.set(params.has('date'));
+
+    if (!forceLoad && requestedDate === currentDate) {
+      return;
+    }
+
+    this.store.loadMorningReportData(requestedDate);
   }
 }
-==
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { DrillingDataStore } from '@store/drilling-data/drilling-data.store';
-import { ActiveWwellUiStore } from '../active-wwell-ui.store';
-import { deriveStatusLabel } from '../active-wwell.helpers';
-
-@Component({
-  selector: 'app-wwell-header',
-  standalone: true,
-  imports: [],
-  templateUrl: './wwell-header.component.html',
-  styleUrl: './wwell-header.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class WwellHeaderComponent {
-  private readonly store = inject(DrillingDataStore);
-  private readonly uiStore = inject(ActiveWwellUiStore);
-
-  protected readonly data = this.store.wellHeaderData;
-
-  protected readonly currentStatus = computed(() => {
-    const epANum = this.store.selectedEpANum();
-    return this.uiStore.statusForWell(epANum) ?? deriveStatusLabel(this.store.selectedWell());
-  });
-}
-===
