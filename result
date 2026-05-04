@@ -1,333 +1,381 @@
-@let d = store.miscWellData();
+CREATE OR REPLACE PACKAGE BODY exad_agwa_iud_pkg IS
 
-@if (d) {
-  <div class="misc-card">
-    <div class="misc-grid">
-      <!-- ROW 1: (Well Name + Spud Date stacked) | Targeted Aquifer -->
-      <div class="stack-cell">
-        <div class="cell cell--well-name">
-          <span class="cell__label">Well Name</span>
-          <div class="cell__name">{{ d.wellName }}</div>
-          <div class="cell__sub">{{ d.rigName }}</div>
-        </div>
+  -- NoFormat Start
 
-        <div class="cell cell--spud">
-          <div class="spud-icon">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              stroke-width="2"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
-          </div>
-          <div>
-            <div class="cell__label-light">Spud Date</div>
-            <div class="spud-value">{{ formatSpudDate(d.spudDate) }}</div>
-          </div>
-        </div>
-      </div>
+  /**********************************************************************
+    Procedure : insert_gwd_well_test
+    Purpose   : Create new gwd well test record
 
-      <div class="cell cell--aquifer">
-        <span class="cell__label cell__label--dark">Targeted<br />Aquifer</span>
-        <img
-          class="size-8"
-          src="assets/images/agwa-logo.svg"
-          alt="AGWA"
-          style="width: 20px"
-        />
-        <div class="aquifer-name">{{ d.targetedAquifer }}</div>
-      </div>
+    Change history:
+    03/15/26  Nasier Fakier      Created
+  ************************************************************************ */  
+  PROCEDURE insert_gwd_well_test
+  (
+    p_ep_a_num          IN exad_gwd_well_tests.ep_a_num%TYPE,
+    p_rsvr_cd           IN exad_gwd_well_tests.rsvr_cd%TYPE,
+    p_w_hyd_test_typ_cd IN exad_gwd_well_tests.w_hyd_test_typ_cd%TYPE,
+    p_w_test_sta_dt     IN exad_gwd_well_tests.w_test_sta_dt%TYPE,
+    p_w_temp            IN exad_gwd_well_tests.w_temp%TYPE,
+    p_w_hyd_h2s_cnc     IN exad_gwd_well_tests.w_hyd_h2s_cnc%TYPE,
+    p_w_wtr_sa_tds_cnc  IN exad_gwd_well_tests.w_wtr_sa_tds_cnc%TYPE,
+    p_w_rpm             IN exad_gwd_well_tests.w_rpm%TYPE,
+    p_siwhp             IN exad_gwd_well_tests.siwhp%TYPE,
+    p_w_hyd_pmp_dpth    IN exad_gwd_well_tests.w_hyd_pmp_dpth%TYPE,
+    p_w_hyd_prod_rt     IN exad_gwd_well_tests.w_hyd_prod_rt%TYPE,
+    p_w_stat_wlvl       IN exad_gwd_well_tests.w_stat_wlvl%TYPE,
+    p_w_dync_wlvl       IN exad_gwd_well_tests.w_dync_wlvl%TYPE,
+    p_tester_network_id IN exad_gwd_well_tests.tester_network_id%TYPE,
+    p_w_hyd_product     IN exad_gwd_well_tests.w_hyd_product%TYPE,
+    p_duration          IN exad_gwd_well_tests.duration%TYPE,
+    p_do_commit         IN VARCHAR2 DEFAULT 'Y',
+    p_egwt_id          OUT exad_gwd_well_tests.egwt_id%TYPE,
+    p_return_value      OUT VARCHAR2
+  ) IS
 
-      <!-- ROW 2: Current Status | Days -->
-      <div class="cell cell--status">
-        <div class="status-left">
-          <span class="cell__label cell__label--dark">Current Status</span>
-          <div class="status-value">{{ d.currentStatus }}</div>
-        </div>
-        <div class="status-gear">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
-            />
-          </svg>
-        </div>
-      </div>
+  BEGIN
 
-      <div class="cell cell--days">
-        <div class="days-cal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <path d="M16 2v4M8 2v4M3 10h18" />
-          </svg>
-        </div>
-        <div>
-          <div class="cell__label-light">Days</div>
-          <div class="days-value">
-            {{ d.daysSinceSpud | number: "1.2-2" }}/{{ d.targetDays }}
-          </div>
-        </div>
-      </div>
+    exad_log_pkg.debug( '  p_ep_a_num=' || p_ep_a_num ||
+                        ', p_rsvr_cd=' || p_rsvr_cd ||
+                        ', p_w_hyd_test_typ_cd=' || p_w_hyd_test_typ_cd ||
+                        ', p_w_test_sta_dt=' || p_w_test_sta_dt ||
+                        ', p_w_temp=' || p_w_temp ||
+                        ', p_w_hyd_h2s_cnc=' || p_w_hyd_h2s_cnc ||
+                        ', p_w_wtr_sa_tds_cnc=' || p_w_wtr_sa_tds_cnc ||
+                        ', p_w_rpm=' || p_w_rpm ||
+                        ', p_siwhp=' || p_siwhp ||
+                        ', p_w_hyd_pmp_dpth=' || p_w_hyd_pmp_dpth ||
+                        ', p_w_hyd_prod_rt=' || p_w_hyd_prod_rt ||
+                        ', p_w_stat_wlvl=' || p_w_stat_wlvl ||
+                        ', p_w_dync_wlvl=' || p_w_dync_wlvl ||
+                        ', p_tester_network_id=' || p_tester_network_id ||
+                        ', p_w_hyd_product=' || p_w_hyd_product ||
+                        ', p_duration=' || p_duration ||
+                        ', p_do_commit=' || p_do_commit);
 
-      <!-- ROW 3: ROP | BI Supporting -->
-      <div class="cell cell--rop">
-        <div class="depth-labels">
-          <div class="rop-value">{{ d.rop | number }}</div>
-          <div class="cell__label-light">ROP</div>
-        </div>
-        <div class="feet-icon">
-          <mat-icon>speed</mat-icon>
-        </div>
-      </div>
+      INSERT INTO exad_gwd_well_tests
+        (ep_a_num,
+         rsvr_cd,
+         w_hyd_test_typ_cd,
+         w_test_sta_dt,
+         w_temp,
+         w_hyd_h2s_cnc,
+         w_wtr_sa_tds_cnc,
+         w_rpm,
+         siwhp,
+         w_hyd_pmp_dpth,
+         w_hyd_prod_rt,
+         w_stat_wlvl,
+         w_dync_wlvl,
+         tester_network_id,
+         w_hyd_product,
+         duration)
+      VALUES
+        (p_ep_a_num,
+         p_rsvr_cd,
+         p_w_hyd_test_typ_cd,
+         p_w_test_sta_dt,
+         p_w_temp,
+         p_w_hyd_h2s_cnc,
+         p_w_wtr_sa_tds_cnc,
+         p_w_rpm,
+         p_siwhp,
+         p_w_hyd_pmp_dpth,
+         p_w_hyd_prod_rt,
+         p_w_stat_wlvl,
+         p_w_dync_wlvl,
+         p_tester_network_id,
+         p_w_hyd_product,
+         p_duration)
+       RETURNING
+          egwt_id INTO p_egwt_id;
 
-      <div class="cell cell--bi">
-        <div class="bi-num">BI{{ d.biNum }}</div>
-        <div class="bi-label">Supporting</div>
-        <div class="bi-well">Well {{ d.supportingWell }}</div>
-      </div>
+    exad_util_pkg.do_commit(p_do_commit);
 
-      <!-- ROW 4+5: (Feet + Depth stacked) | (Previous Well + Next Well stacked) -->
-      <div class="stack-cell">
-        <div class="cell cell--feet">
-          <div class="feet-left">
-            <div class="feet-value">{{ d.feetDrilledToday | number }}</div>
-            <div class="cell__label-light">Feet</div>
-          </div>
-          <div class="feet-icon">
-            <svg
-              viewBox="0 0 40 40"
-              fill="none"
-              stroke="white"
-              stroke-width="1.8"
-            >
-              <path
-                d="M20 5v15M13 13l7 7 7-7"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M5 25c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
-                opacity="0.6"
-              />
-              <path
-                d="M5 32c3.75 0 3.75 3 7.5 3s3.75-3 7.5-3 3.75 3 7.5 3 3.75-3 7.5-3"
-                opacity="0.4"
-              />
-            </svg>
-          </div>
-        </div>
+  EXCEPTION
+    WHEN OTHERS THEN
+      ROLLBACK;
+      exad_log_pkg.error(SQLCODE, SQLERRM);
+      p_return_value := exad_util_pkg.user_err_msg(SQLERRM);
+      RETURN;
+    
+  END insert_gwd_well_test;
+  
 
-        <div class="cell cell--depth">
-          <div class="depth-labels">
-            <div class="cell__label-light">Current</div>
-            <div class="cell__label-light">Depth</div>
-          </div>
-          <div class="depth-value">{{ d.currentDepth | number }}</div>
-        </div>
-      </div>
+  /**********************************************************************
+    Procedure : update_gwd_well_test
+    Purpose   : Update gwd well test record
 
-      <div class="stack-cell">
-        <div class="cell cell--prev">
-          <div class="cell__label-light">Previous Well</div>
-          <div class="well-name-val">{{ d.previousWell }}</div>
-        </div>
+    Change history:
+    03/15/26  Nasier Fakier      Created
+  ************************************************************************ */  
+  PROCEDURE update_gwd_well_test
+  (
+    p_ep_a_num          IN exad_gwd_well_tests.ep_a_num%TYPE,
+    p_rsvr_cd           IN exad_gwd_well_tests.rsvr_cd%TYPE,
+    p_w_hyd_test_typ_cd IN exad_gwd_well_tests.w_hyd_test_typ_cd%TYPE,
+    p_w_test_sta_dt     IN exad_gwd_well_tests.w_test_sta_dt%TYPE,
+    p_w_temp            IN exad_gwd_well_tests.w_temp%TYPE,
+    p_w_hyd_h2s_cnc     IN exad_gwd_well_tests.w_hyd_h2s_cnc%TYPE,
+    p_w_wtr_sa_tds_cnc  IN exad_gwd_well_tests.w_wtr_sa_tds_cnc%TYPE,
+    p_w_rpm             IN exad_gwd_well_tests.w_rpm%TYPE,
+    p_siwhp             IN exad_gwd_well_tests.siwhp%TYPE,
+    p_w_hyd_pmp_dpth    IN exad_gwd_well_tests.w_hyd_pmp_dpth%TYPE,
+    p_w_hyd_prod_rt     IN exad_gwd_well_tests.w_hyd_prod_rt%TYPE,
+    p_w_stat_wlvl       IN exad_gwd_well_tests.w_stat_wlvl%TYPE,
+    p_w_dync_wlvl       IN exad_gwd_well_tests.w_dync_wlvl%TYPE,
+    p_tester_network_id IN exad_gwd_well_tests.tester_network_id%TYPE,
+    p_w_hyd_product     IN exad_gwd_well_tests.w_hyd_product%TYPE,
+    p_duration          IN exad_gwd_well_tests.duration%TYPE,
+    p_egwt_id          IN exad_gwd_well_tests.egwt_id%TYPE,
+    p_do_commit         IN VARCHAR2 DEFAULT 'Y',
+    p_return_value      OUT VARCHAR2
+  ) IS
 
-        <div class="cell cell--next">
-          <div class="next-well__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-              <circle cx="12" cy="12" r="10" opacity="0.25" fill="white" stroke="none"/>
-              <path d="M5 12h14" stroke-linecap="round"/>
-              <path d="M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <div class="next-well__body">
-            <div class="cell__label-light">Next Well</div>
-            <div class="well-name-val">{{ d.nextWell }}</div>
-          </div>
-        </div>
-      </div>
+  BEGIN
 
-      <!-- ROW 5b: Rig Move KPI | Hole Size -->
-      <div class="cell cell--next-kpi">
-        <div class="next-kpi__icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            stroke-width="2"
-          >
-            <path d="M7 7h10" stroke-linecap="round" />
-            <path d="M7 12h6" stroke-linecap="round" />
-            <path
-              d="M17 12l3 3-3 3"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <path d="M17 17H7" stroke-linecap="round" />
-          </svg>
-        </div>
+    exad_log_pkg.debug( '  p_ep_a_num=' || p_ep_a_num ||
+                        ', p_rsvr_cd=' || p_rsvr_cd ||
+                        ', p_w_hyd_test_typ_cd=' || p_w_hyd_test_typ_cd ||
+                        ', p_w_test_sta_dt=' || p_w_test_sta_dt ||
+                        ', p_w_temp=' || p_w_temp ||
+                        ', p_w_hyd_h2s_cnc=' || p_w_hyd_h2s_cnc ||
+                        ', p_w_wtr_sa_tds_cnc=' || p_w_wtr_sa_tds_cnc ||
+                        ', p_w_rpm=' || p_w_rpm ||
+                        ', p_siwhp=' || p_siwhp ||
+                        ', p_w_hyd_pmp_dpth=' || p_w_hyd_pmp_dpth ||
+                        ', p_w_hyd_prod_rt=' || p_w_hyd_prod_rt ||
+                        ', p_w_stat_wlvl=' || p_w_stat_wlvl ||
+                        ', p_w_dync_wlvl=' || p_w_dync_wlvl ||
+                        ', p_tester_network_id=' || p_tester_network_id ||
+                        ', p_w_hyd_product=' || p_w_hyd_product ||
+                        ', p_egwt_id=' || p_egwt_id ||
+                        ', p_do_commit=' || p_do_commit);
 
-        <div class="next-kpi__content">
-          <div class="cell__label-light">Rig Move</div>
-          <div class="next-kpi__stat">
-            <span class="next-kpi__stat-label">Actual / KPI</span>
-            <span class="next-kpi__stat-value">
-              <span
-                [class.next-kpi__days--positive]="rigMoveTone(d.rigMoveDays) === 'positive'"
-                [class.next-kpi__days--negative]="rigMoveTone(d.rigMoveDays) === 'negative'"
-              >{{ d.actualRm | number: "1.0-2" }}</span>/{{ d.kpiRm | number: "1.0-2" }}
-            </span>
-          </div>
-        </div>
-      </div>
+ 
+    UPDATE exad_gwd_well_tests
+       SET ep_a_num          = p_ep_a_num,
+           rsvr_cd           = p_rsvr_cd,
+           w_hyd_test_typ_cd = p_w_hyd_test_typ_cd,
+           w_test_sta_dt     = p_w_test_sta_dt,
+           w_temp            = p_w_temp,
+           w_hyd_h2s_cnc     = p_w_hyd_h2s_cnc,
+           w_wtr_sa_tds_cnc  = p_w_wtr_sa_tds_cnc,
+           w_rpm             = p_w_rpm,
+           siwhp             = p_siwhp,
+           w_hyd_pmp_dpth    = p_w_hyd_pmp_dpth,
+           w_hyd_prod_rt     = p_w_hyd_prod_rt,
+           w_stat_wlvl       = p_w_stat_wlvl,
+           w_dync_wlvl       = p_w_dync_wlvl,
+           tester_network_id = p_tester_network_id,
+           w_hyd_product     = p_w_hyd_product,
+           duration          = p_duration
+    WHERE  egwt_id = p_egwt_id;       
 
-      <div class="cell cell--hole-size">
-        <div class="hole-size__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <circle cx="12" cy="12" r="8" stroke-dasharray="4 2" />
-            <circle cx="12" cy="12" r="3" fill="white" opacity="0.3" stroke="none" />
-            <path d="M12 4v2M12 18v2M4 12h2M18 12h2" stroke-linecap="round" />
-          </svg>
-        </div>
-        <div class="hole-size__body">
-          <div class="cell__label-light">Hole Size</div>
-          <div class="hole-size__value">{{ d.holeSize ?? '—' }}"</div>
-        </div>
-      </div>
 
-      <!-- ROW 6: Operation Summary (full width) -->
-      @if (d.operationSummary) {
-      <div class="cell cell--op-summary">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-            />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-            <polyline points="10 9 9 9 8 9" />
-          </svg>
-          <span class="op-header__label">Operation Summary</span>
-        </div>
-        <div class="op-text">{{ d.operationSummary }}</div>
-      </div>
-      }
+    exad_util_pkg.do_commit(p_do_commit);
 
-      <!-- ROW 7: Next 24 Hr Operation (full width) -->
-      @if (d.next24HrOperation) {
-      <div class="cell cell--next24">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span class="op-header__label">Next 24 Hr Operation</span>
-        </div>
-        <div class="op-text">{{ d.next24HrOperation }}</div>
-      </div>
-      }
+  EXCEPTION
+    WHEN OTHERS THEN
+      ROLLBACK;
+      exad_log_pkg.error(SQLCODE, SQLERRM);
+      p_return_value := exad_util_pkg.user_err_msg(SQLERRM);
+      RETURN;
+    
+  END update_gwd_well_test;
 
-      <!-- ROW 7: Drilling Summary Remark -->
-      @if (d.drlgSmryRmk) {
-      <div class="cell cell--next24">
-        <div class="op-header">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-          <span class="op-header__label">Drilling Summary Remark</span>
-        </div>
-        <div class="op-text">{{ d.drlgSmryRmk }}</div>
-      </div>
-      }
-    </div>
-  </div>
-}
 
-===
+  /**********************************************************************
+    Procedure : delete_gwd_well_test
+    Purpose   : Delete gwd well test record
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-} from '@angular/core';
-import { Router } from '@angular/router';
+    Change history:
+    03/15/26  Nasier Fakier      Created
+  ************************************************************************ */  
+  PROCEDURE delete_gwd_well_test
+  (
+    p_egwt_id          IN exad_gwd_well_tests.egwt_id%TYPE,
+    p_do_commit        IN VARCHAR2 DEFAULT 'Y',
+    p_return_value     OUT VARCHAR2
+  ) IS
 
-interface QuickListItem {
-  label: string;
-  route: string;
-  iconPaths: string[];
-  color: string;
-}
+  BEGIN
 
-@Component({
-  selector: 'app-home',
-  standalone: true,
-  imports: [],
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class HomeComponent {
-  private readonly router = inject(Router);
+    exad_log_pkg.debug( '  p_egwt_id=' || p_egwt_id ||
+                        ', p_do_commit=' || p_do_commit);
 
-  protected readonly quickItems: QuickListItem[] = [
-    {
-      label: 'Reports',
-      route: 'morning-report',
-      iconPaths: [
-        'M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V8l-5-5H5a2 2 0 00-2 2v13a2 2 0 002 2z',
-      ],
-      color: '#3b82f6',
-    },
-    {
-      label: 'Active Water Well Map',
-      route: 'active-wwell',
-      iconPaths: [
-        'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-        'M12 11.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z',
-      ],
-      color: '#06b6d4',
-    },
-    {
-      label: 'Presentation',
-      route: 'presentations',
-      iconPaths: [
-        'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
-        'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
-      ],
-      color: '#22d3ee',
-    },
-  ];
+ 
+    DELETE
+      FROM exad_gwd_well_tests
+    WHERE  egwt_id = p_egwt_id;       
 
-  protected navigate(route: string): void {
-    this.router.navigate(['main', route]);
-  }
-}
+    exad_util_pkg.do_commit(p_do_commit);
+
+  EXCEPTION
+    WHEN OTHERS THEN
+      ROLLBACK;
+      exad_log_pkg.error(SQLCODE, SQLERRM);
+      p_return_value := exad_util_pkg.user_err_msg(SQLERRM);
+      RETURN;
+    
+  END delete_gwd_well_test;
+  
+
+  /**********************************************************************
+    Procedure : insert_gwd_daily_remark
+    Purpose   : Create new gwd daily_remark record
+
+    Change history:
+    04/21/26  Nasier Fakier      Created
+  ************************************************************************ */  
+  PROCEDURE insert_gwd_daily_remark
+  (
+    p_ep_a_num           IN exad_gwd_daily_remarks.ep_a_num%TYPE,
+    p_w_act_dt           IN exad_gwd_daily_remarks.w_act_dt%TYPE,
+    p_area               IN exad_gwd_daily_remarks.area%TYPE,
+    p_status             IN exad_gwd_daily_remarks.status%TYPE,
+    p_w_op_rmk           IN exad_gwd_daily_remarks.w_op_rmk%TYPE,
+    p_nxt_24_hr_plan_rmk IN exad_gwd_daily_remarks.nxt_24_hr_plan_rmk%TYPE,
+    p_w_drlg_smry_rmk    IN exad_gwd_daily_remarks.w_drlg_smry_rmk%TYPE,
+    p_do_commit          IN VARCHAR2 DEFAULT 'Y',
+    p_egdr_id            OUT exad_gwd_daily_remarks.egdr_id%TYPE,
+    p_return_value       OUT VARCHAR2
+  ) IS
+
+  BEGIN
+
+    exad_log_pkg.debug( '  p_ep_a_num=' || p_ep_a_num ||
+                        ', p_w_act_dt=' || p_w_act_dt ||
+                        ', p_area=' || p_area ||
+                        ', p_status=' || p_status ||
+                        ', p_w_op_rmk=' || p_w_op_rmk ||
+                        ', p_nxt_24_hr_plan_rmk=' || p_nxt_24_hr_plan_rmk ||
+                        ', p_w_drlg_smry_rmk=' || p_w_drlg_smry_rmk ||
+                        ', p_do_commit=' || p_do_commit);
+
+      INSERT INTO exad_gwd_daily_remarks
+        (ep_a_num,
+         w_act_dt,
+         area,
+         status,
+         w_op_rmk,
+         nxt_24_hr_plan_rmk,
+         w_drlg_smry_rmk)
+      VALUES
+        (p_ep_a_num,
+         p_w_act_dt,
+         p_area,
+         p_status,
+         p_w_op_rmk,
+         p_nxt_24_hr_plan_rmk,
+         p_w_drlg_smry_rmk)
+       RETURNING
+          egdr_id INTO p_egdr_id;
+
+    exad_util_pkg.do_commit(p_do_commit);
+
+  EXCEPTION
+    WHEN OTHERS THEN
+      ROLLBACK;
+      exad_log_pkg.error(SQLCODE, SQLERRM);
+      p_return_value := exad_util_pkg.user_err_msg(SQLERRM);
+      RETURN;
+    
+  END insert_gwd_daily_remark;
+  
+
+  /**********************************************************************
+    Procedure : update_gwd_daily_remark
+    Purpose   : Update gwd daily_remark record
+
+    Change history:
+    04/21/26  Nasier Fakier      Created
+  ************************************************************************ */  
+  PROCEDURE update_gwd_daily_remark
+  (
+    p_ep_a_num           IN exad_gwd_daily_remarks.ep_a_num%TYPE,
+    p_w_act_dt           IN exad_gwd_daily_remarks.w_act_dt%TYPE,
+    p_area               IN exad_gwd_daily_remarks.area%TYPE,
+    p_status             IN exad_gwd_daily_remarks.status%TYPE,
+    p_w_op_rmk           IN exad_gwd_daily_remarks.w_op_rmk%TYPE,
+    p_nxt_24_hr_plan_rmk IN exad_gwd_daily_remarks.nxt_24_hr_plan_rmk%TYPE,
+    p_w_drlg_smry_rmk    IN exad_gwd_daily_remarks.w_drlg_smry_rmk%TYPE,
+    p_egdr_id            IN exad_gwd_daily_remarks.egdr_id%TYPE,
+    p_do_commit          IN VARCHAR2 DEFAULT 'Y',
+    p_return_value       OUT VARCHAR2
+  ) IS
+
+  BEGIN
+
+
+    exad_log_pkg.debug( '  p_ep_a_num=' || p_ep_a_num ||
+                        ', p_w_act_dt=' || p_w_act_dt ||
+                        ', p_area=' || p_area ||
+                        ', p_status=' || p_status ||
+                        ', p_w_op_rmk=' || p_w_op_rmk ||
+                        ', p_nxt_24_hr_plan_rmk=' || p_nxt_24_hr_plan_rmk ||
+                        ', p_w_drlg_smry_rmk=' || p_w_drlg_smry_rmk ||
+                        ', p_egdr_id=' || p_egdr_id ||
+                        ', p_do_commit=' || p_do_commit);
+
+    UPDATE exad_gwd_daily_remarks
+       SET ep_a_num = p_ep_a_num,
+           w_act_dt = p_w_act_dt,
+           area = p_area,
+           status = p_status,
+           w_op_rmk = p_w_op_rmk,
+           nxt_24_hr_plan_rmk = p_nxt_24_hr_plan_rmk,
+           w_drlg_smry_rmk = p_w_drlg_smry_rmk
+     WHERE egdr_id = p_egdr_id;     
+
+    exad_util_pkg.do_commit(p_do_commit);
+
+  EXCEPTION
+    WHEN OTHERS THEN
+      ROLLBACK;
+      exad_log_pkg.error(SQLCODE, SQLERRM);
+      p_return_value := exad_util_pkg.user_err_msg(SQLERRM);
+      RETURN;
+    
+  END update_gwd_daily_remark;
+
+
+  /**********************************************************************
+    Procedure : delete_gwd_daily_remark
+    Purpose   : Delete gwd daily remark record
+
+    Change history:
+    04/21/26  Nasier Fakier      Created
+  ************************************************************************ */  
+  PROCEDURE delete_gwd_daily_remark
+  (
+    p_egdr_id           IN exad_gwd_daily_remarks.egdr_id%TYPE,
+    p_do_commit         IN VARCHAR2 DEFAULT 'Y',
+    p_return_value      OUT VARCHAR2
+  ) IS
+
+  BEGIN
+
+    exad_log_pkg.debug( '  p_egdr_id=' || p_egdr_id ||
+                        ', p_do_commit=' || p_do_commit);
+
+ 
+    DELETE
+      FROM exad_gwd_daily_remarks
+     WHERE egdr_id = p_egdr_id;     
+
+    exad_util_pkg.do_commit(p_do_commit);
+
+  EXCEPTION
+    WHEN OTHERS THEN
+      ROLLBACK;
+      exad_log_pkg.error(SQLCODE, SQLERRM);
+      p_return_value := exad_util_pkg.user_err_msg(SQLERRM);
+      RETURN;
+    
+  END delete_gwd_daily_remark;
+
+
+  -- NoFormat End
+
+
+END exad_agwa_iud_pkg;
