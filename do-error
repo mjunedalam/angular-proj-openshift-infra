@@ -1,284 +1,364 @@
-Classification: Saudi Aramco: Company General Use 
-
-kind: Deployment
-apiVersion: apps/v1
-metadata:
-  annotations:
-    deployment.kubernetes.io/revision: '1'
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"agwa-dailyoperations","app.kubernetes.io/part-of":"agwa-dailyoperations","app.kubernetes.io/version":"1.0.0-SNAPSHOT","app.openshift.io/runtime":"quarkus"},"name":"agwa-dailyoperations","namespace":"easd-gdsd-agwa-test"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"agwa-dailyoperations","app.kubernetes.io/part-of":"agwa-dailyoperations","app.openshift.io/runtime":"quarkus"}},"template":{"metadata":{"annotations":{"sidecar.istio.io/inject":"true"},"labels":{"app":"agwa-dailyoperations","app.kubernetes.io/part-of":"agwa-dailyoperations","app.openshift.io/runtime":"quarkus"}},"spec":{"containers":[{"env":[{"name":"oracle.jdbc.javaNetNio","value":"false"}],"envFrom":[{"secretRef":{"name":"agwa-dailyoperations-datasource-credentials-secret"}},{"configMapRef":{"name":"datasource-configmap"}}],"image":"image-registry.openshift-image-registry.svc:5000/easd-gdsd-agwa-test/agwa-dailyoperations@sha256:7d39eedf034fd7af914c1ea6384f1a60e2531e682b962b8d9890012ce3d1f4b7","imagePullPolicy":"IfNotPresent","livenessProbe":{"failureThreshold":3,"httpGet":{"path":"/q/health/live","port":"http","scheme":"HTTP"},"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1},"name":"agwa-dailyoperations","ports":[{"containerPort":8080,"name":"http","protocol":"TCP"}],"readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/q/health/ready","port":"http","scheme":"HTTP"},"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1},"resources":{"limits":{"cpu":"100m","memory":"150Mi"},"requests":{"cpu":"50m","memory":"110Mi"}},"startupProbe":{"failureThreshold":3,"httpGet":{"path":"/q/health/started","port":"http","scheme":"HTTP"},"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1},"volumeMounts":[{"mountPath":"/well-presentation-docs","name":"agwa-dailyoperations-presentation-docs-pvc"}]}],"volumes":[{"name":"agwa-dailyoperations-presentation-docs-pvc","persistentVolumeClaim":{"claimName":"agwa-dailyoperations-presentation-docs-pvc"}}]}}}}
-  resourceVersion: '1804687175'
-  name: agwa-dailyoperations
-  uid: 21d51952-1781-4c04-9879-b28162fb1caf
-  creationTimestamp: '2026-05-04T14:18:58Z'
-  generation: 1
-  managedFields:
-    - manager: kube-controller-manager
-      operation: Update
-      apiVersion: apps/v1
-      time: '2026-05-04T14:18:58Z'
-      fieldsType: FieldsV1
-      fieldsV1:
-        'f:metadata':
-          'f:annotations':
-            'f:deployment.kubernetes.io/revision': {}
-        'f:status':
-          'f:conditions':
-            .: {}
-            'k:{"type":"Available"}':
-              .: {}
-              'f:lastTransitionTime': {}
-              'f:lastUpdateTime': {}
-              'f:message': {}
-              'f:reason': {}
-              'f:status': {}
-              'f:type': {}
-            'k:{"type":"Progressing"}':
-              .: {}
-              'f:lastTransitionTime': {}
-              'f:lastUpdateTime': {}
-              'f:message': {}
-              'f:reason': {}
-              'f:status': {}
-              'f:type': {}
-          'f:observedGeneration': {}
-          'f:replicas': {}
-          'f:unavailableReplicas': {}
-          'f:updatedReplicas': {}
-      subresource: status
-    - manager: kubectl-client-side-apply
-      operation: Update
-      apiVersion: apps/v1
-      time: '2026-05-04T14:18:58Z'
-      fieldsType: FieldsV1
-      fieldsV1:
-        'f:metadata':
-          'f:annotations':
-            .: {}
-            'f:kubectl.kubernetes.io/last-applied-configuration': {}
-          'f:labels':
-            .: {}
-            'f:app': {}
-            'f:app.kubernetes.io/part-of': {}
-            'f:app.kubernetes.io/version': {}
-            'f:app.openshift.io/runtime': {}
-        'f:spec':
-          'f:progressDeadlineSeconds': {}
-          'f:replicas': {}
-          'f:revisionHistoryLimit': {}
-          'f:selector': {}
-          'f:strategy':
-            'f:rollingUpdate':
-              .: {}
-              'f:maxSurge': {}
-              'f:maxUnavailable': {}
-            'f:type': {}
-          'f:template':
-            'f:metadata':
-              'f:annotations':
-                .: {}
-                'f:sidecar.istio.io/inject': {}
-              'f:labels':
-                .: {}
-                'f:app': {}
-                'f:app.kubernetes.io/part-of': {}
-                'f:app.openshift.io/runtime': {}
-            'f:spec':
-              'f:containers':
-                'k:{"name":"agwa-dailyoperations"}':
-                  'f:envFrom': {}
-                  'f:image': {}
-                  'f:startupProbe':
-                    .: {}
-                    'f:failureThreshold': {}
-                    'f:httpGet':
-                      .: {}
-                      'f:path': {}
-                      'f:port': {}
-                      'f:scheme': {}
-                    'f:periodSeconds': {}
-                   'f:successThreshold': {}
-                    'f:timeoutSeconds': {}
-                  'f:volumeMounts':
-                    .: {}
-                    'k:{"mountPath":"/well-presentation-docs"}':
-                      .: {}
-                      'f:mountPath': {}
-                      'f:name': {}
-                  'f:terminationMessagePolicy': {}
-                  .: {}
-                  'f:resources':
-                    .: {}
-                    'f:limits':
-                      .: {}
-                     'f:cpu': {}
-                      'f:memory': {}
-                    'f:requests':
-                      .: {}
-                      'f:cpu': {}
-                      'f:memory': {}
-                  'f:livenessProbe':
-                    .: {}
-                    'f:failureThreshold': {}
-                    'f:httpGet':
-                      .: {}
-                      'f:path': {}
-                      'f:port': {}
-                      'f:scheme': {}
-                    'f:periodSeconds': {}
-                    'f:successThreshold': {}
-                    'f:timeoutSeconds': {}
-                  'f:env':
-                    .: {}
-                    'k:{"name":"oracle.jdbc.javaNetNio"}':
-                      .: {}
-                      'f:name': {}
-                      'f:value': {}
-                  'f:readinessProbe':
-                    .: {}
-                    'f:failureThreshold': {}
-                    'f:httpGet':
-                      .: {}
-                      'f:path': {}
-                      'f:port': {}
-                      'f:scheme': {}
-                    'f:periodSeconds': {}
-                    'f:successThreshold': {}
-                    'f:timeoutSeconds': {}
-                  'f:terminationMessagePath': {}
-                  'f:imagePullPolicy': {}
-                  'f:ports':
-                    .: {}
-                    'k:{"containerPort":8080,"protocol":"TCP"}':
-                      .: {}
-                      'f:containerPort': {}
-                      'f:name': {}
-                      'f:protocol': {}
-                  'f:name': {}
-              'f:dnsPolicy': {}
-              'f:restartPolicy': {}
-              'f:schedulerName': {}
-              'f:securityContext': {}
-              'f:terminationGracePeriodSeconds': {}
-              'f:volumes':
-                .: {}
-                'k:{"name":"agwa-dailyoperations-presentation-docs-pvc"}':
-                  .: {}
-                  'f:name': {}
-                  'f:persistentVolumeClaim':
-                    .: {}
-                    'f:claimName': {}
-  namespace: easd-gdsd-agwa-test
-  labels:
-   app: agwa-dailyoperations
-    app.kubernetes.io/part-of: agwa-dailyoperations
-    app.kubernetes.io/version: 1.0.0-SNAPSHOT
-    app.openshift.io/runtime: quarkus
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: agwa-dailyoperations
-      app.kubernetes.io/part-of: agwa-dailyoperations
-      app.openshift.io/runtime: quarkus
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: agwa-dailyoperations
-        app.kubernetes.io/part-of: agwa-dailyoperations
-        app.openshift.io/runtime: quarkus
-      annotations:
-        sidecar.istio.io/inject: 'true'
-    spec:
-      volumes:
-        - name: agwa-dailyoperations-presentation-docs-pvc
-          persistentVolumeClaim:
-            claimName: agwa-dailyoperations-presentation-docs-pvc
-      containers:
-        - resources:
-            limits:
-              cpu: 100m
-              memory: 150Mi
-            requests:
-              cpu: 50m
-              memory: 110Mi
-          readinessProbe:
-            httpGet:
-              path: /q/health/ready
-              port: http
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          terminationMessagePath: /dev/termination-log
-          name: agwa-dailyoperations
-          livenessProbe:
-            httpGet:
-              path: /q/health/live
-              port: http
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          env:
-            - name: oracle.jdbc.javaNetNio
-              value: 'false'
-          ports:
-            - name: http
-              containerPort: 8080
-              protocol: TCP
-          imagePullPolicy: IfNotPresent
-          startupProbe:
-            httpGet:
-              path: /q/health/started
-              port: http
-              scheme: HTTP
-            timeoutSeconds: 1
-            periodSeconds: 10
-            successThreshold: 1
-            failureThreshold: 3
-          volumeMounts:
-            - name: agwa-dailyoperations-presentation-docs-pvc
-              mountPath: /well-presentation-docs
-          terminationMessagePolicy: File
-          envFrom:
-            - secretRef:
-                name: agwa-dailyoperations-datasource-credentials-secret
-            - configMapRef:
-                name: datasource-configmap
-          image: 'image-registry.openshift-image-registry.svc:5000/easd-gdsd-agwa-test/agwa-dailyoperations@sha256:7d39eedf034fd7af914c1ea6384f1a60e2531e682b962b8d9890012ce3d1f4b7'
-      restartPolicy: Always
-      terminationGracePeriodSeconds: 30
-      dnsPolicy: ClusterFirst
-      securityContext: {}
-      schedulerName: default-scheduler
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 25%
-      maxSurge: 25%
-  revisionHistoryLimit: 10
-  progressDeadlineSeconds: 600
-status:
-  observedGeneration: 1
-  replicas: 1
-  updatedReplicas: 1
-  unavailableReplicas: 1
-  conditions:
-    - type: Available
-      status: 'False'
-      lastUpdateTime: '2026-05-04T14:18:58Z'
-      lastTransitionTime: '2026-05-04T14:18:58Z'
-      reason: MinimumReplicasUnavailable
-      message: Deployment does not have minimum availability.
-    - type: Progressing
-      status: 'True'
-      lastUpdateTime: '2026-05-04T14:18:58Z'
-      lastTransitionTime: '2026-05-04T14:18:58Z'
-      reason: ReplicaSetUpdated
-      message: ReplicaSet "agwa-dailyoperations-58d5555d84" is progressing.
-
-This email has been classified as Saudi Aramco: Company General Use on 5/4/2026 5:21 PM
+{
+    "statusCode": 200,
+    "error": false,
+    "message": "Success",
+    "data": [
+        {
+            "REFERENCE": [
+                {}
+            ],
+            "RIG_ACTIVITY": [
+                {
+                    "drlgOpTypCd": "NEW",
+                    "wDrlgTypeDesc": "NEW WELL",
+                    "wWellTypeDesc": "WATER SUPPLY",
+                    "biNum": "58",
+                    "biNumDesc": "UTILITY AND SUPPORT WELLS",
+                    "wellName": "THRY-818",
+                    "spuddate": "09/22/2022@2000",
+                    "wRigCd": "ZPEC-1",
+                    "wDrlgLocDesc": "THRY-818",
+                    "welltype": "WATER SUPPLY WELL",
+                    "wDrlgTrgtDay": 41,
+                    "wDrlgEndDt": "11/07/2022"
+                }
+            ],
+            "WELL_MASTER": [
+                {
+                    "well": "THRY-818",
+                    "offshore": "Onshore",
+                    "utmNorth": 2805685,
+                    "utmEast": 419228,
+                    "lon": 50.1972217,
+                    "lat": 25.3653606
+                }
+            ],
+            "RIG_IDENTIFICATION": [
+                {
+                    "rigname": "ZPEC-1",
+                    "code": "ZPEC-1",
+                    "rigHeight": 25
+                }
+            ],
+            "CONTACT": [
+                {
+                    "rigContNum": "+8821677712973",
+                    "description": "THURAYA"
+                },
+                {
+                    "rigContNum": "0135723760",
+                    "description": "RIG FORMAN VSAT"
+                },
+                {
+                    "rigContNum": "0135723461",
+                    "description": "OTHER VSAT"
+                }
+            ],
+            "DRLG_OP_STATUS": [
+                {
+                    "epANum": 92277,
+                    "wActDt": "2022-10-05T00:00:00",
+                    "wPrsntDpth": 2310,
+                    "wCsgBotDpth": 905,
+                    "wCsgOdSz": "24",
+                    "wDpthChgDis": 310,
+                    "wDrlgEngName": "Buhlaigah, Mustafa Jamal",
+                    "wFmanName": "Aldossari, Faisal Abdullah",
+                    "wMudCircPc": "100",
+                    "wPrevDpth": 2000,
+                    "wSpudOprDay": 12.38,
+                    "wOpRmk": "DRILL 22\" HOLE SECTION  TO CP @ 2310', CHC, WHIPER TRIP, CHC & SPOT HVIS, DROP TOTCO, POOH 22\" BHA.",
+                    "wDrlgSmryRmk": null,
+                    "wDrlgSuptName": "Sarrani, Hassan Fahad",
+                    "wLnrOdSz": null,
+                    "wLnrBotDpth": null,
+                    "nxt24HrPlanRmk": "CONT POOH 22\" BHA, RUNG AND CMT 18-5/8\" CSG. ",
+                    "fuelTypCd": "DSEL",
+                    "fuelDayRem": null,
+                    "fuelShipStatus": null,
+                    "fuelTrckOnJob": null,
+                    "fuelTrckIdle": null,
+                    "spuddays": 12.38,
+                    "bopdate": null,
+                    "footage": 310,
+                    "targetDepth": 6175
+                }
+            ],
+            "DRLG_FM_TOPS": [
+                {
+                    "epANum": 92277,
+                    "wActDt": "2022-10-05T00:00:00",
+                    "stLongCd": "DMMM",
+                    "wStDmrkDpth": 565,
+                    "wStDmrkRmk": "20' SHALLOWER "
+                },
+                {
+                    "epANum": 92277,
+                    "wActDt": "2022-10-05T00:00:00",
+                    "stLongCd": "RUS",
+                    "wStDmrkDpth": 880,
+                    "wStDmrkRmk": "40' SHALLOWER "
+                },
+                {
+                    "epANum": 92277,
+                    "wActDt": "2022-10-05T00:00:00",
+                    "stLongCd": "ARUM",
+                    "wStDmrkDpth": 2290,
+                    "wStDmrkRmk": "385' SHALLOWER"
+                }
+            ],
+            "DRLG_FD_TDAY": [
+                {
+                    "footage": 310
+                }
+            ],
+            "ROP_DATA": [
+                {
+                    "rop": 24.8
+                }
+            ],
+            "NEXT_2_WELL_ACTIVITY": [
+                {
+                    "nextWellActivity": "THRY-819",
+                    "nextLocation": 92279,
+                    "nextBiNum": "58"
+                }
+            ],
+            "NEW_TARGET_DAYS": [
+                {
+                    "targetDays": 42
+                }
+            ],
+            "actualRm": 13.625,
+            "kpiRm": 10.97,
+            "rigMoveDays": 2.655,
+            "DRLG_OP_SMRY": [
+                {
+                    "wOpCd": "D",
+                    "wEvntTime": "0500",
+                    "wHolSz": "22",
+                    "wOpRmk": "ROTARY DRILL 22\" HOLE WITH 65 PCF PHPA MUD TO CP @ 2310. CONFIRED BY RCC  (20' INTO ARUMA)\n- WASH AND REAM DOWN BEFORE MAKING CONNECTION.\n- PUMP 25 BBLS HI VIS PILL EACH JOINT TWO TIMES. ",
+                    "holSecTypCd": "22",
+                    "wActvDrlgFlg": "N",
+                    "wMajOpCd": "DRLG",
+                    "wHoleStaDpth": 2000,
+                    "wHoleEndDpth": 2310,
+                    "wDrlgOpDttm": "2022-10-04T05:00:00",
+                    "toTm": "1730"
+                },
+                {
+                    "wOpCd": "CIRC",
+                    "wEvntTime": "1730",
+                    "wHolSz": "22",
+                    "wOpRmk": "PUMP 150 BBLS HI-VIS & CHC.",
+                    "holSecTypCd": "22",
+                    "wActvDrlgFlg": "N",
+                    "wMajOpCd": "DRLG",
+                    "wHoleStaDpth": 2310,
+                    "wHoleEndDpth": 2310,
+                    "wDrlgOpDttm": "2022-10-04T17:30:00",
+                    "toTm": "1930"
+                },
+                {
+                    "wOpCd": "ST",
+                    "wEvntTime": "1930",
+                    "wHolSz": "22",
+                    "wOpRmk": "PERFORMED WIPER TRIP TO 24\" CSG SHOE AND RUN BACK TO BTTM. HOLE IN CONDITION.",
+                    "holSecTypCd": "22",
+                    "wActvDrlgFlg": "N",
+                    "wMajOpCd": "DRLG",
+                    "wHoleStaDpth": 2310,
+                    "wHoleEndDpth": 2310,
+                    "wDrlgOpDttm": "2022-10-04T19:30:00",
+                    "toTm": "0000"
+                },
+                {
+                    "wOpCd": "CIRC",
+                    "wEvntTime": "0000",
+                    "wHolSz": "22",
+                    "wOpRmk": "PUMP 100 HI-VIS AND CHC. SPOT 700 BBLS HI-VIS WEIGHTED PILL ON BTM.\n- DROP TOTCO ",
+                    "holSecTypCd": "22",
+                    "wActvDrlgFlg": "N",
+                    "wMajOpCd": "DRLG",
+                    "wHoleStaDpth": 2310,
+                    "wHoleEndDpth": 2310,
+                    "wDrlgOpDttm": "2022-10-05T00:00:00",
+                    "toTm": "0200"
+                },
+                {
+                    "wOpCd": "TO",
+                    "wEvntTime": "0200",
+                    "wHolSz": "22",
+                    "wOpRmk": "HPJSM, POOH 22\" BHA TO SURFACE, L/D 3 X 9.5\" DC, 10 X 8.25\" DC, 9.5\" JAR, 22\" REAMERS AND BIT.\n",
+                    "holSecTypCd": "22",
+                    "wActvDrlgFlg": "N",
+                    "wMajOpCd": "DRLG",
+                    "wHoleStaDpth": 2310,
+                    "wHoleEndDpth": 2310,
+                    "wDrlgOpDttm": "2022-10-05T02:00:00",
+                    "toTm": "0500"
+                }
+            ],
+            "EXAD_GWD_IR_HEADER": [],
+            "EXAD_GWD_IR_TOPS": [],
+            "EXAD_GWD_IR_CASING": [],
+            "EXAD_GWD_IR_HYDROGEOLOGY": [],
+            "EXAD_GWD_IR_WATER": [],
+            "EXAD_RCD_PREWAP": [],
+            "MUD_CIRC": [
+                {
+                    "wPrsntDpth": 125,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 20
+                },
+                {
+                    "wPrsntDpth": 200,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 75
+                },
+                {
+                    "wPrsntDpth": 510,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 310
+                },
+                {
+                    "wPrsntDpth": 800,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 290
+                },
+                {
+                    "wPrsntDpth": 905,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 105
+                },
+                {
+                    "wPrsntDpth": 980,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 75
+                },
+                {
+                    "wPrsntDpth": 1260,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 280
+                },
+                {
+                    "wPrsntDpth": 1690,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 430
+                },
+                {
+                    "wPrsntDpth": 2000,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 310
+                },
+                {
+                    "wPrsntDpth": 2310,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 310
+                },
+                {
+                    "wPrsntDpth": 2333,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 23
+                },
+                {
+                    "wPrsntDpth": 2475,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 142
+                },
+                {
+                    "wPrsntDpth": 2780,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 305
+                },
+                {
+                    "wPrsntDpth": 3170,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 390
+                },
+                {
+                    "wPrsntDpth": 3394,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 224
+                },
+                {
+                    "wPrsntDpth": 3565,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 171
+                },
+                {
+                    "wPrsntDpth": 3648,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 83
+                },
+                {
+                    "wPrsntDpth": 3736,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 88
+                },
+                {
+                    "wPrsntDpth": 4058,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 322
+                },
+                {
+                    "wPrsntDpth": 4248,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 190
+                },
+                {
+                    "wPrsntDpth": 4288,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 40
+                },
+                {
+                    "wPrsntDpth": 4325,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 37
+                },
+                {
+                    "wPrsntDpth": 4590,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 265
+                },
+                {
+                    "wPrsntDpth": 4815,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 225
+                },
+                {
+                    "wPrsntDpth": 4978,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 163
+                },
+                {
+                    "wPrsntDpth": 5197,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 219
+                },
+                {
+                    "wPrsntDpth": 5480,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 283
+                },
+                {
+                    "wPrsntDpth": 5575,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 95
+                },
+                {
+                    "wPrsntDpth": 6000,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 425
+                },
+                {
+                    "wPrsntDpth": 6175,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 175
+                }
+            ],
+            "EXAD_GWD_WELL_TESTS": [],
+            "EXAD_GWD_DAILY_REMARKS": []
+        }
+    ]
+}
