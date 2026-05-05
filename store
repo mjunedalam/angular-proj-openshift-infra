@@ -1,831 +1,312 @@
-import { IWellData } from '@models/well-design/well-data.model';
-import { WellLogsIndicators } from '@models/well-design/well-logs-indicators.model';
-import { WellName } from '@models/well-design/well-name.model';
-import { WellboreDiagramData } from '@models/well-design/wellbore-diagram.model';
-import { MorningReport } from '@models/morning-report/morning-report.model';
-import {
-    CasingInfoViewModel,
-    DatabaseInfoViewModel,
-    FormationInfoViewModel,
-    MiscWellData,
-    OffsetWaterWells,
-    OperationSummaryViewModel,
-    PickedFormationTops,
-    WellHeaderViewModel,
-    WellTestResult,
-    WwellTestViewModel,
-} from '@models/active-wwell/active-wwell-view.model';
-import { IFormationTops } from 'src/app/shared/models/wwell/formation-tops.model';
-import { IHeaderIR } from 'src/app/shared/models/wwell/header-ir.model';
-import { ICasingIR } from 'src/app/shared/models/wwell/casing-ir.model';
-import { ITopsIR } from 'src/app/shared/models/wwell/tops-ir.model';
-import { IWaterIR } from 'src/app/shared/models/wwell/water-ir.model';
-import { IWaterWellTestOutcome } from 'src/app/shared/models/wwell/water-well-test-outcome.model';
-import { WaterWellTestResult, WellTestType } from 'src/app/shared/models/wwell/wwell-test-result.model';
-import { WwellEntry } from '@models/daily-operation/wwell-entry.model';
-import { sortCasingsByDepthDesc } from 'src/app/shared/utils/wellbore-math.util';
-import { formatDateForInput } from 'src/app/shared/utils/date.util';
-
-export const PAGE_SIZE = 5;
-export const FALLBACK_STR = 'N/A';
-
-function coercePositiveEpANum(value: number | string | null | undefined): number | null {
-    const numericValue = typeof value === 'string' ? Number.parseInt(value, 10) : value ?? null;
-    if (!Number.isFinite(numericValue) || numericValue === null || numericValue <= 0) return null;
-    return numericValue;
-}
-
-// ─── Well list / pagination ────────────────────────────────────────────────────
-
-export function selectWellNamesFromList(wellList: WwellEntry[]): WellName[] {
-    return wellList.flatMap((entry) => {
-        const epANum = coercePositiveEpANum(entry.epANum);
-        return epANum === null ? [] : [{ wellName: entry.wellName, epANum }];
-    });
-}
-
-export function selectTotalPages(names: WellName[]): number {
-    return Math.ceil(names.length / PAGE_SIZE);
-}
-
-export function selectPagedWellNames(names: WellName[], page: number): WellName[] {
-    return names.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-}
-
-export function selectPageIndexForEpANum(names: WellName[], epANum: number | null, fallbackPage = 0): number {
-    if (epANum === null) return fallbackPage;
-    const index = names.findIndex(w => w.epANum === epANum);
-    return index === -1 ? fallbackPage : Math.floor(index / PAGE_SIZE);
-}
-
-export function selectHasPrevPage(page: number): boolean {
-    return page > 0;
-}
-
-export function selectHasNextPage(names: WellName[], page: number): boolean {
-    return (page + 1) * PAGE_SIZE < names.length;
-}
-
-// ─── Well data helpers ─────────────────────────────────────────────────────────
-
-export function selectWellEpANum(d: IWellData | null | undefined): number | null {
-    const epANum = d?.DRLG_OP_STATUS?.[0]?.epANum ?? null;
-    return Number.isFinite(epANum) && (epANum ?? 0) > 0 ? epANum : null;
-}
-
-export function selectTotalDepth(d: IWellData | null): number {
-    return d?.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0;
-}
-
-export function selectPrimaryCasing(d: IWellData | null): ICasingIR | null {
-    const casings = [...(d?.EXAD_GWD_IR_CASING ?? [])].sort(
-        (l, r) => Number(r.csgDepth ?? 0) - Number(l.csgDepth ?? 0),
-    );
-    return casings[0] ?? null;
-}
-
-export function selectLatestFormation(d: IWellData | null): IFormationTops | null {
-    const formations = d?.DRLG_FM_TOPS ?? [];
-    return formations.length ? formations[formations.length - 1] : null;
-}
-
-export function findPlannedFormation(d: IWellData | null, formationCode: string | null | undefined): ITopsIR | null {
-    if (!formationCode) return null;
-    return d?.EXAD_GWD_IR_TOPS?.find(top => top.stLongCd === formationCode) ?? null;
-}
-
-export function selectPrimaryTestOutcome(d: IWellData | null): IWaterWellTestOutcome | null {
-    return d?.EXAD_GWD_WELL_TESTS?.[0] ?? null;
-}
-
-export function selectPrimaryWaterReference(d: IWellData | null): IWaterIR | null {
-    return d?.EXAD_GWD_IR_WATER?.[0] ?? null;
-}
-
-export function displayValue(value: unknown, fallback = FALLBACK_STR): string {
-    return value === null || value === undefined || value === '' ? fallback : String(value);
-}
-
-// ─── Well data selectors ───────────────────────────────────────────────────────
-
-export function selectDiagramData(d: IWellData | null): WellboreDiagramData | null {
-    if (!d) return null;
-    return {
-        wellName: d.WELL_MASTER?.[0]?.well ?? '',
-        totalDepth: d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0,
-        casings: sortCasingsByDepthDesc(d.EXAD_GWD_IR_CASING ?? []),
-        geologicTops: [...(d.EXAD_GWD_IR_TOPS ?? [])].sort((a, b) => a.planTvdDepth - b.planTvdDepth),
-        hydrogeology: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0] ?? null,
-        prewap: d.EXAD_RCD_PREWAP?.[0] ?? null,
-        rigActivity: d.RIG_ACTIVITY?.[0] ?? null,
-        currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
-        mudCirculation: (d.MUD_CIRC ?? []).map(m => ({
-            depth: m.wPrsntDpth,
-            pct: Number(m.wMudCircPc),
-        })),
-        wellDesign: d.EXAD_GWD_WELL_DESIGN?.[0] ?? null,
-    };
-}
-
-export function selectMiscWellData(d: IWellData | null): MiscWellData | null {
-    if (!d) return null;
-    const rig = d.RIG_ACTIVITY?.[0];
-    const status = d.DRLG_OP_STATUS?.[0];
-    return {
-        wellName: rig?.wellName ?? FALLBACK_STR,
-        targetDesc: rig?.drlgPlanWellDesc ?? FALLBACK_STR,
-        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier ?? FALLBACK_STR,
-        currentStatus: d.EXAD_GWD_DAILY_REMARKS?.[0].status ?? FALLBACK_STR,
-        daysSinceSpud: status?.spuddays ?? 0,
-        targetDays: d.NEW_TARGET_DAYS?.[0]?.targetDays ?? rig?.wDrlgTrgtDay ?? 0,
-        biNum: rig?.biNum ?? FALLBACK_STR,
-        supportingWell: rig?.waterWell ?? FALLBACK_STR,
-        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? status?.footage ?? 0,
-        previousWell: FALLBACK_STR,
-        currentDepth: status?.wPrsntDpth ?? 0,
-        nextWell: d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity ?? FALLBACK_STR,
-        footage: status?.wDpthChgDis ?? 0,
-        operationSummary: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.opRmk ?? d?.DRLG_OP_SMRY?.[0]?.wOpRmk,
-        next24HrOperation: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.next24HrPlanRrmk ?? status?.nxt24HrPlanRmk,
-        drlgSmryRmk: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.drlgSmryRmk ?? status?.wDrlgSmryRmk ?? null,
-        rop: d.ROP_DATA?.[0]?.rop ?? null,
-        actualRm: d.actualRm ?? null,
-        kpiRm: d.kpiRm ?? null,
-        rigMoveDays: d?.rigMoveDays ?? null,
-        rigName: d.RIG_IDENTIFICATION?.[0].rigname ?? FALLBACK_STR,
-        spudDate: rig?.spuddate ?? FALLBACK_STR,
-        holeSize: (() => {
-            const items = d.DRLG_OP_SMRY ?? [];
-            if (!items.length) return null;
-            const maxItem = items.reduce((best, cur) =>
-                cur.wHoleEndDpth > best.wHoleEndDpth ? cur : best
-            );
-            return maxItem.wHolSz ?? null;
-        })(),
-    };
-}
-
-export function selectPickedFormations(d: IWellData | null): PickedFormationTops[] {
-    return (d?.DRLG_FM_TOPS ?? []).map((fm: IFormationTops) => ({
-        formation: fm.stLongCd ?? '',
-        depth: fm.wStDmrkDpth ?? 0,
-        remarks: fm.wStDmrkRmk ?? '',
-    }));
-}
-
-export function selectOffsetWells(d: IWellData | null): OffsetWaterWells[] {
-    if (!d) return [];
-    return (d.EXAD_GWD_IR_WATER ?? []).map(ow => {
-        const test = (d.EXAD_GWD_WELL_TESTS ?? []).find(t => t.wellName === ow.offsetWaterWell);
-        return {
-            wellName: ow.offsetWaterWell,
-            aquifer: ow.aquifer || test?.rsvrCd || 'WASI',
-            tds: test?.wtrSaTdsCnc ?? 0,
-            rpm: ow.rpm ?? 0,
-            h2s: ow.h2s ?? 0,
-            distance: ow.distance ?? 0,
-            productivity: ow.specificCapacity ?? 0,
-            rate: test?.hydProdRt ?? ow.flowRate ?? 0,
-        };
-    });
-}
-
-export function selectWellLogsIndicators(d: IWellData | null): WellLogsIndicators | null {
-    if (!d) return null;
-    const h: IHeaderIR | undefined = d.EXAD_GWD_IR_HEADER?.[0];
-    return {
-        rcc: !!(h?.dtRemarks?.trim()),
-        mudLog: !!(h?.mudRemarks?.trim()),
-        logging: !!(h?.loggingRemarks?.trim()),
-    };
-}
-
-function resolveTestType(t: IWaterWellTestOutcome): WellTestType {
-    const code = (t.hydTestTypCd ?? '').toUpperCase().trim();
-    return code === 'FLOW' ? 'FLOW' : 'PUMP';
-}
-
-export function selectWellTestResults(d: IWellData | null): WellTestResult[] {
-    if (!d) return [];
-    return (d.EXAD_GWD_WELL_TESTS ?? []).map(t => {
-        const testType = resolveTestType(t);
-        return {
-            wellName: t.wellName ?? '',
-            testType,
-            aquifer: t.rsvrCd ?? FALLBACK_STR,
-            rpm: testType === 'PUMP' ? (t.rpm ?? 0) : 0,
-            siwhp: testType === 'FLOW' ? (t.siwhp ?? 0) : 0,
-            flowRate: t.hydProdRt ?? 0,
-            temperature: t.temp ?? 0,
-            tds: t.wtrSaTdsCnc ?? 0,
-            productivity: t.hydProduct ?? 0,
-            h2s: t.hydH2sCnc ?? 0,
-        };
-    });
-}
-
-// ─── View model selectors ──────────────────────────────────────────────────────
-
-export function selectWellHeaderViewModel(d: IWellData | null, epANum: number | null): WellHeaderViewModel | null {
-    if (!d) return null;
-    const rig = d.RIG_ACTIVITY?.[0];
-    const master = d.WELL_MASTER?.[0];
-    const prewap = d.EXAD_RCD_PREWAP?.[0];
-    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
-    const status = d.DRLG_OP_STATUS?.[0];
-    return {
-        field: prewap?.supportedBusiness ?? rig?.wDrlgLocDesc ?? rig?.welltype ?? FALLBACK_STR,
-        wellName: rig?.wellName ?? master?.well ?? FALLBACK_STR,
-        lat: master?.lat ?? FALLBACK_STR,
-        lon: master?.lon ?? FALLBACK_STR,
-        targetedAquifer: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? FALLBACK_STR,
-        depth: prewap?.estTargetDepth ?? status?.targetDepth ?? FALLBACK_STR,
-        epNum: status?.epANum ?? epANum ?? FALLBACK_STR,
-        biNum: rig?.biNum ?? FALLBACK_STR,
-    };
-}
-
-export function selectDatabaseInfoViewModel(d: IWellData | null, date: Date): DatabaseInfoViewModel | null {
-    if (!d) return null;
-    const rig = d.RIG_ACTIVITY?.[0];
-    const status = d.DRLG_OP_STATUS?.[0];
-    const prewap = d.EXAD_RCD_PREWAP?.[0];
-    const casing = selectPrimaryCasing(d);
-    return {
-        date: formatDateForInput(date),
-        daysSinceSpud: status?.spuddays ?? FALLBACK_STR,
-        spudDate: rig?.spuddate ?? FALLBACK_STR,
-        fiveAmDepth: status?.wPrsntDpth ?? FALLBACK_STR,
-        lastCasingSize: displayValue(casing?.csgSize ?? status?.wCsgOdSz),
-        rig: rig?.wRigCd ?? FALLBACK_STR,
-        targetDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
-        releaseDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
-        preFiveAmDepth: status?.wPrevDpth ?? FALLBACK_STR,
-        lastCasingDepth: casing?.csgDepth ?? status?.wCsgBotDpth ?? FALLBACK_STR,
-        spudDays: status?.spuddays ?? FALLBACK_STR,
-        samDepth: status?.targetDepth ?? prewap?.estTargetDepth ?? FALLBACK_STR,
-        rigMoveKpi: d.kpiRm ?? FALLBACK_STR,
-        wellTdDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
-        footage: status?.wDpthChgDis ?? FALLBACK_STR,
-        secondarySamDepth: prewap?.estTargetDepth ?? FALLBACK_STR,
-    };
-}
-
-export function selectOperationSummaryViewModel(d: IWellData | null): OperationSummaryViewModel | null {
-    if (!d) return null;
-    const remarks = d.EXAD_GWD_DAILY_REMARKS?.[0];
-    const status = d.DRLG_OP_STATUS?.[0];
-    return {
-        operation: remarks?.opRmk ?? status?.wOpRmk ?? FALLBACK_STR,
-        nextOperation: remarks?.next24HrPlanRrmk ?? status?.nxt24HrPlanRmk ?? FALLBACK_STR,
-        drillingRemarks: remarks?.drlgSmryRmk ?? status?.wDrlgSmryRmk ?? FALLBACK_STR,
-    };
-}
-
-export function selectFormationInfoViewModel(d: IWellData | null): FormationInfoViewModel | null {
-    if (!d) return null;
-    const latest = selectLatestFormation(d);
-    const planned = findPlannedFormation(d, latest?.stLongCd);
-    const actualDepth = latest?.wStDmrkDpth ?? null;
-    const plannedDepth = planned?.planTvdDepth ?? null;
-    return {
-        formation: latest?.stLongCd ?? FALLBACK_STR,
-        prognosed: plannedDepth ?? FALLBACK_STR,
-        actualDepth: actualDepth ?? FALLBACK_STR,
-        difference: actualDepth !== null && plannedDepth !== null ? actualDepth - plannedDepth : FALLBACK_STR,
-        remarks: latest?.wStDmrkRmk ?? FALLBACK_STR,
-    };
-}
-
-export function selectCasingInfoViewModel(d: IWellData | null): CasingInfoViewModel | null {
-    if (!d) return null;
-    const casing = selectPrimaryCasing(d);
-    const status = d.DRLG_OP_STATUS?.[0];
-    return {
-        csgType: casing?.csgType ?? FALLBACK_STR,
-        csgSize: casing?.csgSize ?? status?.wCsgOdSz ?? FALLBACK_STR,
-        csgDepth: casing?.csgDepth ?? FALLBACK_STR,
-        csgBotDpth: status?.wCsgBotDpth ?? FALLBACK_STR,
-    };
-}
-
-export function selectWwellTestViewModel(d: IWellData | null): WwellTestViewModel | null {
-    if (!d) return null;
-    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
-    const testOutcome = selectPrimaryTestOutcome(d);
-    const water = selectPrimaryWaterReference(d);
-    const status = d.DRLG_OP_STATUS?.[0];
-    const statusRecord = status as unknown as Record<string, unknown> | undefined;
-    const drillingEngineer = typeof statusRecord?.['wDrlgEngName'] === 'string' ? statusRecord['wDrlgEngName'] : null;
-    const foreman = typeof statusRecord?.['wFmanName'] === 'string' ? statusRecord['wFmanName'] : null;
-    const prewap = d.EXAD_RCD_PREWAP?.[0];
-    return {
-        flowType: hydro?.flowType ?? 'N',
-        testType: testOutcome?.hydTestTypCd ?? FALLBACK_STR,
-        aquiferActual: testOutcome?.rsvrCd ?? water?.aquifer ?? FALLBACK_STR,
-        aquiferEstimate: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? FALLBACK_STR,
-        h2sActual: testOutcome?.hydH2sCnc ?? water?.h2s ?? FALLBACK_STR,
-        h2sEstimate: hydro?.estH2s ?? FALLBACK_STR,
-        temp: testOutcome?.temp ?? FALLBACK_STR,
-        tds: testOutcome?.wtrSaTdsCnc ?? water?.fieldTds ?? hydro?.estWaterQuality ?? FALLBACK_STR,
-        rpm: testOutcome?.rpm ?? water?.rpm ?? FALLBACK_STR,
-        duration: testOutcome?.duration ?? water?.testDuration ?? FALLBACK_STR,
-        conductedBy: drillingEngineer ?? foreman ?? FALLBACK_STR,
-        rate: testOutcome?.hydProdRt ?? water?.flowRate ?? FALLBACK_STR,
-        siwhp: testOutcome?.siwhp ?? water?.staticWaterLevel ?? FALLBACK_STR,
-        depth: prewap?.estTargetDepth ?? status?.wPrsntDpth ?? FALLBACK_STR,
-        productivityActual: testOutcome?.hydProduct ?? water?.specificCapacity ?? FALLBACK_STR,
-        productivityEstimate: hydro?.estProductivity ?? FALLBACK_STR,
-        swl: testOutcome?.statWlvl ?? water?.staticWaterLevel ?? hydro?.estStaticWaterLevel ?? FALLBACK_STR,
-        dwl: testOutcome?.dyncWlvl ?? water?.drawDown ?? FALLBACK_STR,
-    };
-}
-
-// ─── Morning report mappers ────────────────────────────────────────────────────
-
-export function mapWellDataToMorningReport(d: IWellData): MorningReport {
-    const rig = d.RIG_ACTIVITY?.[0];
-    const status = d.DRLG_OP_STATUS?.[0];
-    const master = d.WELL_MASTER?.[0];
-    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
-    const prewap = d.EXAD_RCD_PREWAP?.[0];
-    const opSmry = d.DRLG_OP_SMRY?.[0];
-    const tops = d.DRLG_FM_TOPS ?? [];
-    const lastTop = tops[tops.length - 1];
-
-    return {
-        epANum: String(status?.epANum ?? ''),
-        wGnrName: rig?.wellName ?? '',
-        wRigCd: rig?.wRigCd ?? '',
-        racEstDdLatCord: String(master?.lat ?? ''),
-        racEstDdLonCord: String(master?.lon ?? ''),
-        biNum: rig?.biNum ?? '',
-        trgtRsvrCd: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? '',
-        stLongCd: lastTop?.stLongCd ?? '',
-        wStDmrkDpth: String(lastTop?.wStDmrkDpth ?? ''),
-        wPrsntDpth: status?.wPrsntDpth ?? null,
-        wDpthChgDis: status?.wDpthChgDis ?? null,
-        wOpRmk: opSmry?.wOpRmk ?? status?.wOpRmk ?? '',
-        foremanRmk: status?.nxt24HrPlanRmk ?? '',
-        plLtrlEndDpth: prewap?.estTargetDepth ?? null,
-        supportings: rig?.waterWell ?? '',
-        wEvntTime: opSmry?.wEvntTime ?? '',
-        rigStatus: d.EXAD_GWD_DAILY_REMARKS?.[0]?.status ?? 'NA',
-    };
-}
-
-export function mapToWaterWellTestResult(o: IWaterWellTestOutcome, drillingWellName: string): WaterWellTestResult {
-    const testType = resolveTestType(o);
-    return {
-        testType,
-        wellName: drillingWellName,
-        rPM: testType === 'PUMP' ? String(o.rpm ?? '') : '',
-        siwhp: testType === 'FLOW' ? String(o.siwhp ?? '') : '',
-        h2sPPM: String(o.hydH2sCnc ?? ''),
-        temperature: String(o.temp ?? ''),
-        trgtRsvrCd: o.rsvrCd ?? '',
-        testRate: String(o.hydProdRt ?? ''),
-        wellProductivity: String(o.hydProduct ?? ''),
-        tds: String(o.wtrSaTdsCnc ?? ''),
-    };
-}
-
-export function selectMorningReports(
-    data: IWellData[],
-    rigStatusOverrides: Record<number, string>,
-): MorningReport[] {
-    return data.map(d => {
-        const report = mapWellDataToMorningReport(d);
-        const overrideKey = Number.parseInt(report.epANum, 10);
-        const override = Number.isFinite(overrideKey) ? rigStatusOverrides[overrideKey] : undefined;
-        return override !== undefined ? { ...report, rigStatus: override } : report;
-    });
-}
-
-export function selectWaterWellTestResultsFromData(data: IWellData[]): WaterWellTestResult[] {
-    return data.flatMap(d => {
-        const drillingWellName = d.WELL_MASTER?.[0]?.well ?? '';
-        return (d.EXAD_GWD_WELL_TESTS ?? []).map(o => mapToWaterWellTestResult(o, drillingWellName));
-    });
-}
-===
-<div class="report-shell">
-  <div class="report-header">
-    <div class="report-header__bar">
-      <span class="report-header__title">Daily Drilling Operations Summary</span>
-    </div>
-  </div>
-
-  <div class="report-toolbar">
-    <div class="date-picker-section">
-      <label class="date-picker-label" for="report-date-input">Date:</label>
-      <input
-        id="report-date-input"
-        type="date"
-        class="date-picker-input"
-        [ngModel]="selectedDateString"
-        (ngModelChange)="onDateChange($event)"
-        [max]="maxDateString"
-        aria-label="Select report date"
-      />
-    </div>
-
-    <button
-      type="button"
-      (click)="sendEmail()"
-      class="email-btn"
-      aria-label="Email report to me"
-    >
-      <span class="email-btn__shimmer"></span>
-      <span class="email-btn__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <rect x="2" y="4" width="20" height="16" rx="3"/>
-          <path d="m2 7 10 7 10-7"/>
-        </svg>
-      </span>
-      <span class="email-btn__label">Email To Me</span>
-      <span class="email-btn__arrow" aria-hidden="true">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 8h10M9 4l4 4-4 4"/>
-        </svg>
-      </span>
-    </button>
-  </div>
-
-  @if (store.isLoading()) {
-    <mat-progress-bar mode="indeterminate" class="report-loading-bar" />
-  }
-
-  <div id="report-content" class="report-content">
-    @if (pageMessage()) {
-      <div class="report-empty">
-        <p>{{ pageMessage() }}</p>
-      </div>
-    } @else if (hasError()) {
-      <div class="report-error">
-        <p>Error ({{ statusCode() }}): {{ errorMessage() }}</p>
-      </div>
-    } @else {
-      <!-- Water Well Test Results grid -->
-      @if (waterWelltestResult().length) {
-      <section class="report-section">
-        <div class="report-section__heading">
-          <span class="report-section__title">Water Well Test Results</span>
-        </div>
-        <div class="report-grid">
-          @for (result of waterWelltestResult(); track result.wellName) {
-            <div class="report-card report-card--test">
-              <div class="card-header card-header--green">
-                <span class="card-header__name">{{ result.wellName || 'Unknown' }}</span>
-                <span class="card-header__badge">Test Result</span>
-              </div>
-              <table class="card-table">
-                <tbody>
-                  <tr>
-                    <td class="card-table__label">Aquifer</td>
-                    <td class="card-table__value" [class.missing]="!result.trgtRsvrCd">{{ result.trgtRsvrCd || 'Missing' }}</td>
-                    <td class="card-table__label">Test Rate (GPM)</td>
-                    <td class="card-table__value" [class.missing]="!result.testRate">{{ result.testRate || 'Missing' }}</td>
-                  </tr>
-                  <tr>
-                    <td class="card-table__label">{{ result.testType === 'FLOW' ? 'SIWHP (PSI)' : 'RPM' }}</td>
-                    <td class="card-table__value" [class.missing]="result.testType === 'FLOW' ? !result.siwhp : !result.rPM">
-                      {{ result.testType === 'FLOW' ? (result.siwhp || 'Missing') : (result.rPM || 'Missing') }}
-                    </td>
-                    <td class="card-table__label">H2S (PPM)</td>
-                    <td class="card-table__value" [class.missing]="!result.h2sPPM">{{ result.h2sPPM || 'Missing' }}</td>
-                  </tr>
-                  <tr>
-                    <td class="card-table__label">Temperature (°C)</td>
-                    <td class="card-table__value" [class.missing]="!result.temperature">{{ result.temperature || 'Missing' }}</td>
-                    <td class="card-table__label">Well Productivity (GPM/ft)</td>
-                    <td class="card-table__value" [class.missing]="!result.wellProductivity">{{ result.wellProductivity || 'Missing' }}</td>
-                  </tr>
-                  <tr>
-                    <td class="card-table__label">TDS (PPM)</td>
-                    <td class="card-table__value" [class.missing]="!result.tds">{{ result.tds || 'Missing' }}</td>
-                    <td class="card-table__label"></td>
-                    <td class="card-table__value"></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          }
-        </div>
-      </section>
-      }
-
-      <!-- Daily Drilling Summary grid -->
-      <div class="report-grid">
-        @for (report of morningReport(); track report.epANum) {
-          <div class="report-card report-card--summary">
-
-            <div class="card-header card-header--blue">
-              <div class="card-header__left">
-                <span class="card-header__name">{{ report.wGnrName }}</span>
-                <span class="card-header__rig">{{ report.wRigCd }}</span>
-              </div>
-              <input
-                class="card-header__status-input"
-                [class.card-header__status-input--na]="report.rigStatus === 'NA'"
-                placeholder="Rig status"
-                [ngModel]="report.rigStatus"
-                (ngModelChange)="store.updateRigStatus(report.epANum, $event)"
-                name="rigStatus"
-              />
-            </div>
-
-            <table class="card-table">
-              <tbody>
-                <tr>
-                  <td class="card-table__label">Target Aquifer</td>
-                  <td class="card-table__value" [class.missing]="!report.trgtRsvrCd" [class.present]="report.trgtRsvrCd">
-                    {{ report.trgtRsvrCd || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Current Formation</td>
-                  <td class="card-table__value" [class.missing]="!report.stLongCd" [class.present]="report.stLongCd">
-                    {{ report.stLongCd || 'NA' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Current Depth (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.wPrsntDpth" [class.present]="report.wPrsntDpth">
-                    {{ report.wPrsntDpth || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Planned Total Depth (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.plLtrlEndDpth" [class.present]="report.plLtrlEndDpth">
-                    {{ report.plLtrlEndDpth || 'Missing' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Footage (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.wDpthChgDis" [class.present]="report.wDpthChgDis">
-                    {{ report.wDpthChgDis || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Supportings</td>
-                  <td class="card-table__value" [class.missing]="!report.supportings" [class.present]="report.supportings">
-                    {{ report.supportings || 'Missing' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Operation</td>
-                  <td class="card-table__value card-table__value--op" colspan="3" [class.present]="report.wOpRmk">
-                    {{ report.wOpRmk || 'XXXX' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-          </div>
+{
+    "statusCode": 200,
+    "error": false,
+    "message": "Success",
+    "data": [
+        {
+            "REFERENCE": [
+                {
+                    "irSeq": 3353,
+                    "prewapSeq": 100530,
+                    "epAnum": 97882
+                }
+            ],
+            "RIG_ACTIVITY": [
+                {
+                    "drlgOpTypCd": "NEW",
+                    "wDrlgTypeDesc": "NEW WELL",
+                    "wWellTypeDesc": "WATER SUPPLY",
+                    "biNum": "60",
+                    "biNumDesc": "DEVELOPMENT DRILLING AND WORKOVERS",
+                    "wellName": "HABA-821",
+                    "spuddate": "05/05/2024@0700",
+                    "wRigCd": "SP-165",
+                    "wDrlgLocDesc": "311 KM FROM DMG.",
+                    "welltype": "WATER-WATER SUPPLY in HABA.",
+                    "wDrlgTrgtDay": 29,
+                    "wDrlgEndDt": "05/19/2024"
+                }
+            ],
+            "WELL_MASTER": [
+                {
+                    "well": "HABA-821",
+                    "offshore": "Onshore",
+                    "utmNorth": 2996562,
+                    "utmEast": 710642,
+                    "lon": 47.1241166,
+                    "lat": 27.075004
+                }
+            ],
+            "RIG_IDENTIFICATION": [
+                {
+                    "rigname": "SP-165",
+                    "code": "SP-165",
+                    "rigHeight": 35
+                }
+            ],
+            "CONTACT": [
+                {
+                    "rigContNum": "008821677712613",
+                    "description": "THURAYA"
+                },
+                {
+                    "rigContNum": "6794128",
+                    "description": "RIG FORMAN VSAT"
+                },
+                {
+                    "rigContNum": "679-4129",
+                    "description": "OTHER VSAT"
+                },
+                {
+                    "rigContNum": "679-4128",
+                    "description": "CONTRACTOR/CLERK VSAT"
+                }
+            ],
+            "DRLG_OP_STATUS": [
+                {
+                    "epANum": 97882,
+                    "wActDt": "2024-05-05T00:00:00",
+                    "wPrsntDpth": 0,
+                    "wCsgBotDpth": null,
+                    "wCsgOdSz": null,
+                    "wDpthChgDis": 0,
+                    "wDrlgEngName": "Alshaalan, Bandar Roudh",
+                    "wFmanName": "Barakat, Mohamed Basher",
+                    "wMudCircPc": null,
+                    "wPrevDpth": 0,
+                    "wSpudOprDay": 0,
+                    "wOpRmk": "CONT. R/U @ HABA-821 WHILE CLOSE PRE-SPUD CHECKLISTS OPEN ITEMS.",
+                    "wDrlgSmryRmk": null,
+                    "wDrlgSuptName": "Abada, Yassine",
+                    "wLnrOdSz": null,
+                    "wLnrBotDpth": null,
+                    "nxt24HrPlanRmk": "CONT. R/U @ HABA-821 WHILE CLOSE PRE-SPUD CHECKLISTS OPEN ITEMS.",
+                    "fuelTypCd": "DSEL",
+                    "fuelDayRem": null,
+                    "fuelShipStatus": null,
+                    "fuelTrckOnJob": null,
+                    "fuelTrckIdle": null,
+                    "spuddays": 0,
+                    "bopdate": null,
+                    "footage": 0,
+                    "targetDepth": 1585
+                }
+            ],
+            "DRLG_FM_TOPS": [],
+            "DRLG_FD_TDAY": [
+                {
+                    "footage": 0
+                }
+            ],
+            "ROP_DATA": [
+                {
+                    "rop": 0
+                }
+            ],
+            "NEXT_2_WELL_ACTIVITY": [
+                {
+                    "nextWellActivity": "HABA-14",
+                    "nextLocation": 97066,
+                    "nextBiNum": "60"
+                }
+            ],
+            "NEW_TARGET_DAYS": [
+                {
+                    "targetDays": 15
+                }
+            ],
+            "actualRm": 14.708,
+            "kpiRm": 19.31,
+            "rigMoveDays": -4.602,
+            "DRLG_OP_SMRY": [
+                {
+                    "wOpCd": "PJSM",
+                    "wEvntTime": "0500",
+                    "wHolSz": null,
+                    "wOpRmk": "HELD SAFETY MEETING WITH RIG CREW AND ALL PERSONNEL INVOLVED IN RIG MAINTENANCE FOR SAFE WORK PRACTICES DISCUSSED THE FOLLOWING:\n- STOP WORK AUTHORITY.\n- FALL PROTECTION DURING WORK AT HEIGHT.\n- DROP OBJECTS RISK.\n- HEAVY EQUIPMENT MOVEMENT AND USING FLAG MAN.\n- POTENTIAL HAZARDS, JSA & RISK ASSESMENT.\n- RIGGER-1 CRITICAL LIFT PLAN & CRAN INSPECTION.\n- USING PUSH/PULL STICK DURING OFFLOADING EQPTS.\n- NO CRITICAL LIFTING OPERATIONS DURING NIGHT TIME.\n- GOOD SUPERVISION ALL THE TIME FROM RIG MOVE AND RIG KEY PERSONNEL.\n- DISCUSSED SAFETY MEASURES & HSE INCIDENTS IN OTHER RIGS AND PREVENTION PRECAUTIONS.\n- ISOLATION & LOTO AWARENESS.",
+                    "holSecTypCd": "PRE",
+                    "wActvDrlgFlg": "N",
+                    "wMajOpCd": "RM",
+                    "wHoleStaDpth": 0,
+                    "wHoleEndDpth": 0,
+                    "wDrlgOpDttm": "2024-05-04T05:00:00",
+                    "toTm": "0530"
+                },
+                {
+                    "wOpCd": "RU",
+                    "wEvntTime": "0530",
+                    "wHolSz": null,
+                    "wOpRmk": "GENERAL R/U RIG ON HABA-821:\n\nR/U RIG: 98%.\n\n- CONTINUE CLOSE PRE-SPUD CHECKLISTS OPEN ITEMS.\n- HOUSEKEEPING AND CLEAN THE SUBSTRUCTURE.\n\n\n** STATUS\n- RIG RELEASE FROM SHRR-701 ON 04/20/2024 @ 12:00 HRS.\n- RIG MOVE DISTANCE: 245 KM FAR FROM SHRR-701 TO HABA-821.\n- DAYS SINCE RIG RELEASE 14.75 DAYS.",
+                    "holSecTypCd": "PRE",
+                    "wActvDrlgFlg": "N",
+                    "wMajOpCd": "RM",
+                    "wHoleStaDpth": 0,
+                    "wHoleEndDpth": 0,
+                    "wDrlgOpDttm": "2024-05-04T05:30:00",
+                    "toTm": "0500"
+                }
+            ],
+            "EXAD_GWD_IR_HEADER": [
+                {
+                    "dtRemarks": "Provide AramcoLink on-site to pick casing points and formation tops remotely.",
+                    "mudRemarks": null,
+                    "loggingRemarks": "Not required"
+                }
+            ],
+            "EXAD_GWD_IR_TOPS": [
+                {
+                    "stLongCd": "DMMM",
+                    "planTvdDepth": 215,
+                    "planSsDepth": 851
+                },
+                {
+                    "stLongCd": "RUS",
+                    "planTvdDepth": 395,
+                    "planSsDepth": 671
+                },
+                {
+                    "stLongCd": "UMER",
+                    "planTvdDepth": 460,
+                    "planSsDepth": 606
+                },
+                {
+                    "stLongCd": "ARUM",
+                    "planTvdDepth": 1625,
+                    "planSsDepth": -559
+                }
+            ],
+            "EXAD_GWD_IR_CASING": [
+                {
+                    "csgSize": "24",
+                    "csgType": "Conductor",
+                    "csgDepth": 100,
+                    "csgRemarks": null
+                },
+                {
+                    "csgSize": "18 5/8",
+                    "csgType": "Casing",
+                    "csgDepth": 250,
+                    "csgRemarks": "20 ft into DMMM"
+                },
+                {
+                    "csgSize": "13 3/8",
+                    "csgType": "Casing",
+                    "csgDepth": 970,
+                    "csgRemarks": "340 ft into UMER"
+                }
+            ],
+            "EXAD_GWD_IR_HYDROGEOLOGY": [
+                {
+                    "flowType": "N",
+                    "estTargetAquifier": "UMER",
+                    "estStaticWaterLevel": 240,
+                    "estWaterQuality": 6000,
+                    "estProductivity": 500,
+                    "estH2s": "No"
+                }
+            ],
+            "EXAD_GWD_IR_WATER": [
+                {
+                    "offsetWaterWell": "HABA_810",
+                    "distance": 13.9,
+                    "direction": "NW",
+                    "aquifer": "UMER",
+                    "td": 1600,
+                    "flowRate": 700,
+                    "rpm": 1600,
+                    "staticWaterLevel": 287.3,
+                    "specificCapacity": 2,
+                    "drawDown": 350.3,
+                    "fieldTds": 3910,
+                    "h2s": 0,
+                    "testDuration": 330
+                },
+                {
+                    "offsetWaterWell": "HABA_816",
+                    "distance": 14.7,
+                    "direction": "W",
+                    "aquifer": "UMER",
+                    "td": 1580,
+                    "flowRate": 930,
+                    "rpm": 1700,
+                    "staticWaterLevel": 232.8,
+                    "specificCapacity": 30.3,
+                    "drawDown": 30.7,
+                    "fieldTds": 3270,
+                    "h2s": 0,
+                    "testDuration": 210
+                }
+            ],
+            "EXAD_RCD_PREWAP": [
+                {
+                    "surfaceElevation": 1069,
+                    "estTargetDepth": 1550,
+                    "targetFormation": "UMER",
+                    "supportedBusiness": "HABA-14"
+                }
+            ],
+            "MUD_CIRC": [
+                {
+                    "wPrsntDpth": 120,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 120
+                },
+                {
+                    "wPrsntDpth": 250,
+                    "wMudCircPc": "100",
+                    "wDpthChgDis": 130
+                },
+                {
+                    "wPrsntDpth": 450,
+                    "wMudCircPc": "0",
+                    "wDpthChgDis": 200
+                },
+                {
+                    "wPrsntDpth": 970,
+                    "wMudCircPc": "90",
+                    "wDpthChgDis": 520
+                },
+                {
+                    "wPrsntDpth": 1555,
+                    "wMudCircPc": "0",
+                    "wDpthChgDis": 585
+                },
+                {
+                    "wPrsntDpth": 1585,
+                    "wMudCircPc": "0",
+                    "wDpthChgDis": 30
+                }
+            ],
+            "EXAD_GWD_WELL_TESTS": [],
+            "EXAD_GWD_DAILY_REMARKS": [],
+            "EXAD_GWD_WELL_DESIGN": [
+                {
+                    "staWaterLvl": 240,
+                    "swLvlTxt": "Estimated W.L @ 240 ft",
+                    "pumpLvl": 700,
+                    "ohFlg": "Y",
+                    "ohRemarks": "12 1/4\" OPEN HOLE",
+                    "gpFlg": null,
+                    "gpRemarks": null,
+                    "perforatedFlg": null,
+                    "perforatedRemarks": null,
+                    "lsFlg": null,
+                    "lsRemarks": null
+                },
+                {
+                    "staWaterLvl": 1014,
+                    "swLvlTxt": "Static water level @1014 ft",
+                    "pumpLvl": 0,
+                    "ohFlg": null,
+                    "ohRemarks": null,
+                    "gpFlg": null,
+                    "gpRemarks": null,
+                    "perforatedFlg": null,
+                    "perforatedRemarks": null,
+                    "lsFlg": "Y",
+                    "lsRemarks": null
+                }
+            ]
         }
-      </div>
-
-      <!-- Map -->
-      <section class="report-map-section">
-        <div class="map-container">
-          <app-wwellmap #wwellMap ></app-wwellmap>
-        </div>
-        <div class="map-legend">
-          <div class="map-legend__item">
-            <span class="map-legend__dot map-legend__dot--wasi"></span>
-            <span class="map-legend__text">WASI</span>
-          </div>
-          <div class="map-legend__item">
-            <span class="map-legend__dot map-legend__dot--ownership"></span>
-            <span class="map-legend__text">WELLS OWNERSHIP</span>
-          </div>
-          <div class="map-legend__item">
-            <span class="map-legend__dot map-legend__dot--aquifer"></span>
-            <span class="map-legend__text">Target Aquifer</span>
-          </div>
-          <div class="map-legend__item">
-            <span class="map-legend__dot map-legend__dot--active"></span>
-            <span class="map-legend__text">Active Well</span>
-          </div>
-        </div>
-      </section>
-    }
-  </div>
-</div>
-==
-<div class="test-results-container">
-  <!-- ── Section header ── -->
-  <div class="results-header">
-    <div class="results-header__title">
-      <div class="icon-box">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
-      </div>
-      <span>Well Test Results</span>
-    </div>
-    <div class="results-header__badge">{{ store.wellTestResults().length }}</div>
-  </div>
-
-  <!-- ── List of results ── -->
-  <div class="results-list">
-    @for (result of store.wellTestResults(); track result.wellName; let i = $index) {
-      <button @resultTabAnim class="result-tab" (click)="openDialog(result)">
-        <div class="result-tab__left">
-          <div class="well-indicator">
-            <svg viewBox="0 0 24 24" fill="url(#res-drop-grad)">
-              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-            </svg>
-          </div>
-          <div class="well-details">
-            <div class="name">{{ result.wellName }}</div>
-            <div class="aquifer">{{ result.aquifer }} Aquifer</div>
-          </div>
-        </div>
-
-        <div class="result-tab__right">
-          <div class="main-stat">
-            <span class="val">{{ result.flowRate | number }}</span>
-            <span class="unit">GPM</span>
-          </div>
-          <div class="view-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </div>
-        </div>
-      </button>
-    }
-
-    @if (store.wellTestResults().length === 0) {
-      <div class="results-empty">No test records available.</div>
-    }
-  </div>
-</div>
-
-<svg style="width:0;height:0;position:absolute;" aria-hidden="true">
-  <defs>
-    <linearGradient id="res-drop-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="#0ea5e9"/>
-      <stop offset="100%" stop-color="#0369a1"/>
-    </linearGradient>
-  </defs>
-</svg>
-
-@let r = selectedResult();
-
-<ng-template #resultDialog>
-  @if (r) {
-      <div class="dialog__header" mat-dialog-title>
-        <div class="dialog__title-group">
-        <div class="dialog__icon-wrap">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="url(#dlgDropGrad2)">
-            <defs>
-              <linearGradient id="dlgDropGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%"   stop-color="#38bdf8"/>
-                <stop offset="100%" stop-color="#0369a1"/>
-              </linearGradient>
-            </defs>
-            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="dialog__well-name">{{ r.wellName }}</div>
-          <div class="dialog__subtitle">{{ r.testType | titlecase }} Test · {{ r.aquifer }} Aquifer</div>
-        </div>
-        </div>
-        <button type="button" class="dialog__close" (click)="closeDialog()" aria-label="Close test result dialog">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 6 6 18M6 6l12 12"/>
-          </svg>
-        </button>
-      </div>
-
-    <mat-dialog-content class="dialog__body">
-      <div class="metric-grid">
-
-        <div class="metric metric--highlight">
-          <div class="metric__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M4 18s2-2 4-2 4 2 4 2 4-2 4 2"/>
-              <path d="M4 22s2-2 4-2 4 2 4 2 4-2 4 2"/>
-              <line x1="18" y1="4" x2="18" y2="14"/>
-              <polyline points="15 7 18 4 21 7"/>
-            </svg>
-          </div>
-          <div class="metric__value">{{ r.flowRate | number }}</div>
-          <div class="metric__label">Flow Rate (GPM)</div>
-        </div>
-
-        @if (r.testType === 'PUMP') {
-          <div class="metric metric--highlight">
-            <div class="metric__icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-              </svg>
-            </div>
-            <div class="metric__value">{{ r.rpm | number }}</div>
-            <div class="metric__label">RPM</div>
-          </div>
-        } @else {
-          <div class="metric metric--highlight">
-            <div class="metric__icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <line x1="12" y1="2" x2="12" y2="22"/>
-                <path d="M5 10c2-2 5-3 7 0s5 2 7 0"/>
-                <path d="M5 14c2-2 5-3 7 0s5 2 7 0"/>
-              </svg>
-            </div>
-            <div class="metric__value">{{ r.siwhp | number }}</div>
-            <div class="metric__label">SIWHP (FT)</div>
-          </div>
-        }
-
-        <div class="metric">
-          <div class="metric__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
-              <path d="M12 8v4l3 3"/>
-            </svg>
-          </div>
-          <div class="metric__value">{{ r.tds | number }}</div>
-          <div class="metric__label">TDS (PPM)</div>
-        </div>
-
-        <div class="metric">
-          <div class="metric__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
-            </svg>
-          </div>
-          <div class="metric__value">{{ r.temperature | number:'1.0-1' }}°C</div>
-          <div class="metric__label">Temperature</div>
-        </div>
-
-        <div class="metric">
-          <div class="metric__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <div class="metric__value">{{ r.productivity | number:'1.2-2' }}</div>
-          <div class="metric__label">Productivity (GPM/FT)</div>
-        </div>
-
-        <div class="metric" [class.metric--warn]="r.h2s > 0">
-          <div class="metric__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-              <line x1="12" y1="9"  x2="12" y2="13"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-          </div>
-          <div class="metric__value">{{ r.h2s | number }}</div>
-          <div class="metric__label">H₂S (PPM)</div>
-        </div>
-
-      </div>
-
-      <!-- Summary tags row -->
-      <div class="dialog__summary-row">
-        <span class="summary-tag summary-tag--aquifer">{{ r.aquifer }}</span>
-        <span class="summary-tag">{{ (r.testType | titlecase) + ' Test' }}</span>
-        @if (r.h2s > 0) {
-          <span class="summary-tag summary-tag--warn">H₂S Detected</span>
-        }
-      </div>
-    </mat-dialog-content>
-  }
-</ng-template>
-==
-
-export interface IWaterWellTestOutcome {
-    wellName?: string | null;
-    rsvrCd?: string | null;
-    hydTestTypCd?: string | null;
-    testStaDt?: string | null;
-    temp?: number | null;
-    hydH2sCnc?: number | null;
-    wtrSaTdsCnc?: number | null;
-    rpm?: number | null;
-    siwhp?: number | null;
-    hydPmpDpth?: number | null;
-    hydProdRt?: number | null;
-    statWlvl?: number | null;
-    dyncWlvl?: number | null;
-    testerNetworkId?: string | null;
-    hydProduct?: number | null;
-    duration?: number | null;
-}
-==
-export type WellTestType = 'FLOW' | 'PUMP';
-
-export interface WaterWellTestResult {
-  readonly testType: WellTestType;
-  readonly wellName: string;
-  readonly rPM: string;
-  readonly siwhp: string;
-  readonly h2sPPM: string;
-  readonly temperature: string;
-  readonly trgtRsvrCd: string;
-  readonly testRate: string;
-  readonly wellProductivity: string;
-  readonly tds: string;
+    ]
 }
