@@ -1,3 +1,424 @@
+/**
+ * WellNameChipsComponent — SMART
+ * Injects WellStore — reads pagedWellNames, selectedEpANum, pagination signals.
+ * Calls store.selectWell(), store.nextPage(), store.prevPage() directly.
+ * Includes date picker for loading well data from specific dates.
+ * Zero @Input / @Output needed.
+ */
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, Signal, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { PresentationStore } from '../store/presentation.store';
+import { formatDateForInput, getTodayAtMidnight, parseDateFromInput } from 'src/app/shared/utils/date.util';
+
+@Component({
+  selector: 'app-well-name-chips',
+  standalone: true,
+  imports: [NgClass, FormsModule, MatProgressBarModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './well-name-chips.component.html',
+  styleUrl:    './well-name-chips.component.scss',
+})
+export class WellNameChipsComponent {
+  protected readonly store = inject(PresentationStore);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly maxDateString = formatDateForInput(getTodayAtMidnight());
+  protected readonly loaderVisible = signal(false);
+
+  private loaderTimer: ReturnType<typeof setTimeout> | null = null;
+  private loaderShownAt = 0;
+
+  protected readonly pageLabel = computed(() =>
+    `${this.store.wellNamesPage() + 1} / ${this.store.totalPages()}`
+  );
+
+  protected readonly selectedDate: Signal<Date> = computed(() => {
+    const d = this.store.selectedDate();
+    return d instanceof Date ? d : new Date(d);
+  });
+
+  protected readonly selectedDateString = computed(() =>
+    formatDateForInput(this.selectedDate())
+  );
+
+  constructor() {
+    effect(() => {
+      const isLoading = this.store.isDetailsLoading();
+
+      if (isLoading) {
+        this.clearLoaderTimer();
+        this.loaderShownAt = Date.now();
+        this.loaderVisible.set(true);
+        return;
+      }
+
+      if (!this.loaderVisible()) {
+        return;
+      }
+
+      const elapsed = Date.now() - this.loaderShownAt;
+      const remaining = Math.max(0, 360 - elapsed);
+
+      this.clearLoaderTimer();
+      this.loaderTimer = setTimeout(() => {
+        this.loaderVisible.set(false);
+        this.loaderTimer = null;
+      }, remaining);
+    });
+
+    this.destroyRef.onDestroy(() => this.clearLoaderTimer());
+  }
+
+  /**
+   * Called when a well name chip is clicked.
+   * Loads well data for the selected well and current date.
+   */
+  protected onWellChipClick(epANum: number): void {
+    this.store.selectWell({
+      epANum,
+      date: this.selectedDateString(),
+    });
+  }
+
+  protected onDateInputChange(value: string): void {
+    const date = parseDateFromInput(value);
+    const today = getTodayAtMidnight();
+    if (!Number.isNaN(date.getTime()) && date <= today) {
+      this.store.setDate(formatDateForInput(date));
+    }
+  }
+
+  protected onNextPageClick(event: Event): void {
+    event.preventDefault();
+    this.store.nextPage();
+  }
+
+  protected onPrevPageClick(event: Event): void {
+    event.preventDefault();
+    this.store.prevPage();
+  }
+
+  private clearLoaderTimer(): void {
+    if (this.loaderTimer !== null) {
+      clearTimeout(this.loaderTimer);
+      this.loaderTimer = null;
+    }
+  }
+}
+==
+<div class="well-chips-shell">
+  <div class="well-chips-container">
+    <!-- Date picker section — positioned on the left -->
+    <div class="date-picker-section">
+      <label class="date-picker-label" for="well-date-input">Date:</label>
+      <input
+        id="well-date-input"
+        type="date"
+        class="date-picker-input"
+        [ngModel]="selectedDateString()"
+        [max]="maxDateString"
+        (ngModelChange)="onDateInputChange($event)"
+        aria-label="Select date for well data"
+      />
+    </div>
+
+    <!-- Well name chips and navigation — centered -->
+    <div class="chip-strip" role="list" aria-label="Available wells">
+      <span class="chip-strip__label">Active Wells</span>
+
+      @if (store.hasPrevPage()) {
+        <button
+          type="button"
+          class="chip chip--nav"
+          aria-label="Previous wells"
+          (click)="onPrevPageClick($event)"
+        >‹</button>
+      }
+
+      @for (well of store.pagedWellNames(); track well.epANum) {
+        <button
+          type="button"
+          class="chip"
+          role="listitem"
+          [ngClass]="{ 'chip--active': well.epANum === store.selectedEpANum() }"
+          [attr.aria-pressed]="well.epANum === store.selectedEpANum()"
+          (click)="onWellChipClick(well.epANum)"
+        >
+          <span class="chip__dot"></span>
+          <span class="chip__text">{{ well.wellName }}</span>
+        </button>
+      }
+
+      @if (store.hasNextPage()) {
+        <button
+          type="button"
+          class="chip chip--nav"
+          aria-label="Next wells"
+          (click)="onNextPageClick($event)"
+        >›</button>
+      }
+
+      <span class="chip-strip__page-indicator">{{ pageLabel() }}</span>
+    </div>
+  </div>
+
+  <div class="well-loading-slot" [class.well-loading-slot--active]="loaderVisible()">
+    <mat-progress-bar mode="indeterminate" class="well-loading-bar" />
+  </div>
+</div>
+==
+==
+import { computed, inject } from '@angular/core';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { tapResponse } from '@ngrx/operators';
+import { pipe, switchMap, tap } from 'rxjs';
+
+import { IWellData } from '@models/well-design/well-data.model';
+import { WellLogsIndicators } from '@models/well-design/well-logs-indicators.model';
+import { WellboreDiagramData } from '@models/well-design/wellbore-diagram.model';
+import {
+    CasingInfoViewModel,
+    DatabaseInfoViewModel,
+    FormationInfoViewModel,
+    MiscWellData,
+    OffsetWaterWells,
+    OperationSummaryViewModel,
+    PickedFormationTops,
+    WellHeaderViewModel,
+    WellTestResult,
+    WwellTestViewModel,
+} from '@models/active-wwell/active-wwell-view.model';
+import { WellName } from '@models/well-design/well-name.model';
+import { DailyOperationService } from '@services/daily-operation.service';
+import { NotificationService } from '@shared/components/notification/notification.service';
+import { formatDateForInput, parseDateFromInput } from 'src/app/shared/utils/date.util';
+import {
+    selectCasingInfoViewModel,
+    selectDatabaseInfoViewModel,
+    selectDiagramData,
+    selectFormationInfoViewModel,
+    selectHasNextPage,
+    selectHasPrevPage,
+    selectMiscWellData,
+    selectOffsetWells,
+    selectOperationSummaryViewModel,
+    selectPageIndexForEpANum,
+    selectPagedWellNames,
+    selectPickedFormations,
+    selectTotalDepth,
+    selectTotalPages,
+    selectWaterWellTestResultsFromData,
+    selectWellHeaderViewModel,
+    selectWellLogsIndicators,
+    selectWellNamesFromList,
+    selectWellTestResults,
+    selectWwellTestViewModel,
+} from 'src/app/core/store/shared/well-data.selectors';
+import { normalizeEpANum } from 'src/app/core/store/shared/well-data.state';
+import { initialPresentationState, PresentationState } from './presentation.state';
+
+export const PresentationStore = signalStore(
+    withState<PresentationState>(initialPresentationState),
+
+    withComputed(({ wellList, wellData, selectedEpANum, selectedDate, listLoading, detailLoading, error, wellNamesPage }) => {
+        const wellNames = computed((): WellName[] => selectWellNamesFromList(wellList()));
+
+        return {
+            wellNames,
+            pagedWellNames: computed((): WellName[] => selectPagedWellNames(wellNames(), wellNamesPage())),
+            hasPrevPage: computed(() => selectHasPrevPage(wellNamesPage())),
+            hasNextPage: computed(() => selectHasNextPage(wellNames(), wellNamesPage())),
+            totalPages: computed(() => selectTotalPages(wellNames())),
+            isDetailsLoading: computed(() => detailLoading() && wellList().length > 0),
+            isInitialLoading: computed(() => listLoading() && wellList().length === 0),
+            isLoaded: computed(() => selectedEpANum() !== null && wellData() !== null),
+            isLoading: computed(() => listLoading() || detailLoading()),
+            hasError: computed(() => error() !== null),
+            errorMessage: computed(() => error() ?? ''),
+            selectedWell: computed((): IWellData | null => wellData()),
+            miscWellData: computed((): MiscWellData | null => selectMiscWellData(wellData())),
+            diagramData: computed((): WellboreDiagramData | null => selectDiagramData(wellData())),
+            pickedFormations: computed((): PickedFormationTops[] => selectPickedFormations(wellData())),
+            offsetWells: computed((): OffsetWaterWells[] => selectOffsetWells(wellData())),
+            wellTestResults: computed((): WellTestResult[] => selectWellTestResults(wellData())),
+            wellsLogsIndicators: computed((): WellLogsIndicators | null => selectWellLogsIndicators(wellData())),
+            waterWelltestResult: computed(() => selectWaterWellTestResultsFromData(wellData() ? [wellData()!] : [])),
+            wellHeaderData: computed((): WellHeaderViewModel | null =>
+                selectWellHeaderViewModel(wellData(), selectedEpANum()),
+            ),
+            databaseInfo: computed((): DatabaseInfoViewModel | null =>
+                selectDatabaseInfoViewModel(wellData(), selectedDate()),
+            ),
+            operationSummary: computed((): OperationSummaryViewModel | null =>
+                selectOperationSummaryViewModel(wellData()),
+            ),
+            formationInfo: computed((): FormationInfoViewModel | null =>
+                selectFormationInfoViewModel(wellData()),
+            ),
+            casingInfo: computed((): CasingInfoViewModel | null =>
+                selectCasingInfoViewModel(wellData()),
+            ),
+            wwellTest: computed((): WwellTestViewModel | null =>
+                selectWwellTestViewModel(wellData()),
+            ),
+            totalDepth: computed((): number => selectTotalDepth(wellData())),
+        };
+    }),
+
+    withMethods((
+        store,
+        svc = inject(DailyOperationService),
+        notify = inject(NotificationService),
+    ) => {
+        const loadDetail = rxMethod<{ date: string; epANum: number }>(
+            pipe(
+                tap(() => patchState(store, { detailLoading: true, error: null })),
+                switchMap(({ date, epANum }) =>
+                    svc.getWellDetail(date, epANum).pipe(
+                        tapResponse({
+                            next: (wellData: IWellData) => {
+                                patchState(store, {
+                                    wellData,
+                                    detailLoading: false,
+                                    animationTrigger: store.animationTrigger() + 1,
+                                });
+                            },
+                            error: (err: Error) => {
+                                patchState(store, {
+                                    detailLoading: false,
+                                    error: err.message ?? 'Failed to load well detail',
+                                });
+                            },
+                        }),
+                    ),
+                ),
+            ),
+        );
+
+        const loadListAndAutoSelect = rxMethod<{ date: string; epANumOverride: number | null }>(
+            pipe(
+            tap(({ date }) => patchState(store, {
+                listLoading: true,
+                error: null,
+                selectedDate: parseDateFromInput(date),
+                // Keep wellData and selectedEpANum alive so components stay stable during load
+                })),
+                switchMap(({ date, epANumOverride }) =>
+                    svc.getWellList(date).pipe(
+                        tapResponse({
+                            next: (wellList) => {
+                                const names = selectWellNamesFromList(wellList);
+
+                                if (!wellList.length) {
+                                    patchState(store, { wellList: [], listLoading: false, selectedEpANum: null, wellData: null });
+                                    notify.info('Data is not available for the given date');
+                                    return;
+                                }
+
+                                // Honour the requested epANum when it exists in the new list.
+                                // Without this, the async arrival of the list always overwrote
+                                // selectedEpANum with firstEntry, discarding the URL's well param.
+                                const firstEntry = names[0];
+                                const targetEpANum = (epANumOverride !== null && names.some(w => w.epANum === epANumOverride))
+                                    ? epANumOverride
+                                    : firstEntry?.epANum ?? null;
+                                if (targetEpANum === null) {
+                                    patchState(store, {
+                                        wellList: [],
+                                        listLoading: false,
+                                        selectedEpANum: null,
+                                        wellData: null,
+                                        error: 'No valid wells were returned for the selected date',
+                                    });
+                                    return;
+                                }
+                                const page = selectPageIndexForEpANum(names, targetEpANum, 0);
+
+                                patchState(store, {
+                                    wellList,
+                                    listLoading: false,
+                                    selectedEpANum: targetEpANum,
+                                    wellNamesPage: page,
+                                });
+                                loadDetail({ date, epANum: targetEpANum });
+                            },
+                            error: (err: Error) => {
+                                patchState(store, {
+                                    listLoading: false,
+                                    error: err.message ?? 'Failed to load well list',
+                                });
+                            },
+                        }),
+                    ),
+                ),
+            ),
+        );
+
+        return {
+            initialize(date?: string, epANumOverride?: number): void {
+                loadListAndAutoSelect({
+                    date: date ?? formatDateForInput(store.selectedDate()),
+                    epANumOverride: epANumOverride ?? null,
+                });
+            },
+
+            selectWell(params: { epANum: number; date?: string }): void {
+                const epANum = normalizeEpANum(params.epANum);
+                if (epANum === null) return;
+
+                const date = params.date ?? formatDateForInput(store.selectedDate());
+                const names = selectWellNamesFromList(store.wellList());
+                const page = selectPageIndexForEpANum(names, epANum, store.wellNamesPage());
+
+                patchState(store, { selectedEpANum: epANum, wellNamesPage: page });
+                loadDetail({ date, epANum });
+            },
+
+            setDate(date: string, options?: { autoSelectFirst?: boolean }): void {
+                // Preserve the active well across date changes so the same well stays
+                // selected if it exists in the new date's list; falls back to first if not.
+                const epANumOverride = options?.autoSelectFirst ? null : store.selectedEpANum();
+                loadListAndAutoSelect({ date, epANumOverride });
+            },
+
+            nextPage(): void {
+                const names = selectWellNamesFromList(store.wellList());
+                const maxPage = Math.max(0, selectTotalPages(names) - 1);
+                const next = Math.min(store.wellNamesPage() + 1, maxPage);
+                const firstOnPage = selectPagedWellNames(names, next)[0];
+                patchState(store, {
+                    wellNamesPage: next,
+                    ...(firstOnPage ? { selectedEpANum: firstOnPage.epANum } : {}),
+                });
+                if (firstOnPage) {
+                    loadDetail({ date: formatDateForInput(store.selectedDate()), epANum: firstOnPage.epANum });
+                }
+            },
+
+            prevPage(): void {
+                const names = selectWellNamesFromList(store.wellList());
+                const prev = Math.max(0, store.wellNamesPage() - 1);
+                const firstOnPage = selectPagedWellNames(names, prev)[0];
+                patchState(store, {
+                    wellNamesPage: prev,
+                    ...(firstOnPage ? { selectedEpANum: firstOnPage.epANum } : {}),
+                });
+                if (firstOnPage) {
+                    loadDetail({ date: formatDateForInput(store.selectedDate()), epANum: firstOnPage.epANum });
+                }
+            },
+
+            setUiError(message: string | null): void {
+                patchState(store, { error: message });
+            },
+
+            loadWaterWellTestResults(): void { /* data comes from wellData */ },
+        };
+    }),
+);
+==
 import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { skip } from 'rxjs';
@@ -181,4 +602,646 @@ export class PresentationComponent implements OnInit {
 
     return value;
   }
+}
+==
+import { computed, inject } from '@angular/core';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { tapResponse } from '@ngrx/operators';
+import { EMPTY, pipe, switchMap, tap } from 'rxjs';
+
+import { IWellData } from '@models/well-design/well-data.model';
+import { WellLogsIndicators } from '@models/well-design/well-logs-indicators.model';
+import { WellboreDiagramData } from '@models/well-design/wellbore-diagram.model';
+import {
+    CasingInfoViewModel,
+    DatabaseInfoViewModel,
+    FormationInfoViewModel,
+    MiscWellData,
+    OffsetWaterWells,
+    OperationSummaryViewModel,
+    PickedFormationTops,
+    WellHeaderViewModel,
+    WellTestResult,
+    WwellTestViewModel,
+} from '@models/active-wwell/active-wwell-view.model';
+import { WellName } from '@models/well-design/well-name.model';
+import { DailyOperationService } from '@services/daily-operation.service';
+import { NotificationService } from '@shared/components/notification/notification.service';
+import { formatDateForInput, parseDateFromInput } from 'src/app/shared/utils/date.util';
+import {
+    selectCasingInfoViewModel,
+    selectDatabaseInfoViewModel,
+    selectDiagramData,
+    selectFormationInfoViewModel,
+    selectHasNextPage,
+    selectHasPrevPage,
+    selectMiscWellData,
+    selectOffsetWells,
+    selectOperationSummaryViewModel,
+    selectPageIndexForEpANum,
+    selectPagedWellNames,
+    selectPickedFormations,
+    selectTotalDepth,
+    selectTotalPages,
+    selectWellHeaderViewModel,
+    selectWellLogsIndicators,
+    selectWellNamesFromList,
+    selectWellTestResults,
+    selectWwellTestViewModel,
+} from 'src/app/core/store/shared/well-data.selectors';
+import { normalizeEpANum } from 'src/app/core/store/shared/well-data.state';
+import { ActiveWwellState, initialActiveWwellState } from './active-wwell.state';
+
+export const ActiveWwellStore = signalStore(
+    withState<ActiveWwellState>(initialActiveWwellState),
+
+    withComputed(({ wellList, wellData, selectedEpANum, selectedDate, listLoading, detailLoading, wellNamesPage, error }) => {
+        const wellNames = computed((): WellName[] => selectWellNamesFromList(wellList()));
+
+        return {
+            wellNames,
+            uniqueWellNames: wellNames,
+            pagedWellNames: computed((): WellName[] => selectPagedWellNames(wellNames(), wellNamesPage())),
+            hasPrevPage: computed(() => selectHasPrevPage(wellNamesPage())),
+            hasNextPage: computed(() => selectHasNextPage(wellNames(), wellNamesPage())),
+            totalPages: computed(() => selectTotalPages(wellNames())),
+            isDetailsLoading: computed(() => detailLoading() && wellList().length > 0),
+            isInitialLoading: computed(() => listLoading() && wellList().length === 0),
+            isLoading: computed(() => listLoading() || detailLoading()),
+            hasError: computed(() => error() !== null),
+            errorMessage: computed(() => error() ?? ''),
+            selectedWell: computed((): IWellData | null => wellData()),
+            miscWellData: computed((): MiscWellData | null => selectMiscWellData(wellData())),
+            diagramData: computed((): WellboreDiagramData | null => selectDiagramData(wellData())),
+            pickedFormations: computed((): PickedFormationTops[] => selectPickedFormations(wellData())),
+            offsetWells: computed((): OffsetWaterWells[] => selectOffsetWells(wellData())),
+            wellTestResults: computed((): WellTestResult[] => selectWellTestResults(wellData())),
+            wellsLogsIndicators: computed((): WellLogsIndicators | null => selectWellLogsIndicators(wellData())),
+            wellHeaderData: computed((): WellHeaderViewModel | null =>
+                selectWellHeaderViewModel(wellData(), selectedEpANum()),
+            ),
+            databaseInfo: computed((): DatabaseInfoViewModel | null =>
+                selectDatabaseInfoViewModel(wellData(), selectedDate()),
+            ),
+            operationSummary: computed((): OperationSummaryViewModel | null =>
+                selectOperationSummaryViewModel(wellData()),
+            ),
+            formationInfo: computed((): FormationInfoViewModel | null =>
+                selectFormationInfoViewModel(wellData()),
+            ),
+            casingInfo: computed((): CasingInfoViewModel | null =>
+                selectCasingInfoViewModel(wellData()),
+            ),
+            wwellTest: computed((): WwellTestViewModel | null =>
+                selectWwellTestViewModel(wellData()),
+            ),
+            totalDepth: computed((): number => selectTotalDepth(wellData())),
+        };
+    }),
+
+    withMethods((
+        store,
+        svc = inject(DailyOperationService),
+        notify = inject(NotificationService),
+    ) => {
+        const loadDetail = rxMethod<{ date: string; epANum: number }>(
+            pipe(
+                tap(() => patchState(store, { detailLoading: true, error: null })),
+                switchMap(({ date, epANum }) =>
+                    svc.getWellDetail(date, epANum).pipe(
+                        tapResponse({
+                            next: (wellData: IWellData) => {
+                                patchState(store, {
+                                    wellData,
+                                    detailLoading: false,
+                                    animationTrigger: store.animationTrigger() + 1,
+                                });
+                            },
+                            error: (err: Error) => {
+                                patchState(store, {
+                                    detailLoading: false,
+                                    error: err.message ?? 'Failed to load well detail',
+                                });
+                            },
+                        }),
+                    ),
+                ),
+            ),
+        );
+
+        const loadListAndAutoSelect = rxMethod<{ date: string; epANumOverride: number | null }>(
+            pipe(
+                tap(({ date }) => patchState(store, {
+                    listLoading: true,
+                    error: null,
+                    wellData: null,
+                    selectedDate: parseDateFromInput(date),
+                })),
+                switchMap(({ date, epANumOverride }) =>
+                    svc.getWellList(date).pipe(
+                        tapResponse({
+                            next: (wellList) => {
+                                const names = selectWellNamesFromList(wellList);
+
+                                if (!wellList.length) {
+                                    patchState(store, { wellList: [], listLoading: false, selectedEpANum: null });
+                                    notify.info('Data is not available for the given date');
+                                    return;
+                                }
+
+                                // Honour the requested epANum when it exists in the new list.
+                                // Without this, the async arrival of the list always overwrote
+                                // selectedEpANum with firstEntry, discarding the URL's well param.
+                                const firstEntry = names[0];
+                                const targetEpANum = (epANumOverride !== null && names.some(w => w.epANum === epANumOverride))
+                                    ? epANumOverride
+                                    : firstEntry?.epANum ?? null;
+                                if (targetEpANum === null) {
+                                    patchState(store, {
+                                        wellList: [],
+                                        listLoading: false,
+                                        selectedEpANum: null,
+                                        error: 'No valid wells were returned for the selected date',
+                                    });
+                                    return;
+                                }
+                                const page = selectPageIndexForEpANum(names, targetEpANum, 0);
+
+                                patchState(store, {
+                                    wellList,
+                                    listLoading: false,
+                                    selectedEpANum: targetEpANum,
+                                    wellNamesPage: page,
+                                });
+                                loadDetail({ date, epANum: targetEpANum });
+                            },
+                            error: (err: Error) => {
+                                patchState(store, {
+                                    listLoading: false,
+                                    error: err.message ?? 'Failed to load well list',
+                                });
+                            },
+                        }),
+                    ),
+                ),
+            ),
+        );
+
+        return {
+            loadWellNames(date?: string, epANumOverride?: number): void {
+                loadListAndAutoSelect({
+                    date: date ?? formatDateForInput(store.selectedDate()),
+                    epANumOverride: epANumOverride ?? null,
+                });
+            },
+
+            selectWell(params: { epANum: number; date?: string }): void {
+                const epANum = normalizeEpANum(params.epANum);
+                if (epANum === null) return;
+
+                const date = params.date ?? formatDateForInput(store.selectedDate());
+                const names = selectWellNamesFromList(store.wellList());
+                const page = selectPageIndexForEpANum(names, epANum, store.wellNamesPage());
+
+                patchState(store, { selectedEpANum: epANum, wellNamesPage: page });
+                loadDetail({ date, epANum });
+            },
+
+            setDate(date: string): void {
+                // Preserve the active well across date changes; falls back to first if not found.
+                loadListAndAutoSelect({ date, epANumOverride: store.selectedEpANum() });
+            },
+
+            nextPage(): void {
+                const maxPage = Math.max(0, store.totalPages() - 1);
+                const next = Math.min(store.wellNamesPage() + 1, maxPage);
+                const firstOnPage = selectPagedWellNames(store.wellNames(), next)[0];
+                patchState(store, {
+                    wellNamesPage: next,
+                    ...(firstOnPage ? { selectedEpANum: firstOnPage.epANum } : {}),
+                });
+                if (firstOnPage) {
+                    loadDetail({ date: formatDateForInput(store.selectedDate()), epANum: firstOnPage.epANum });
+                }
+            },
+
+            prevPage(): void {
+                const prev = Math.max(0, store.wellNamesPage() - 1);
+                const firstOnPage = selectPagedWellNames(store.wellNames(), prev)[0];
+                patchState(store, {
+                    wellNamesPage: prev,
+                    ...(firstOnPage ? { selectedEpANum: firstOnPage.epANum } : {}),
+                });
+                if (firstOnPage) {
+                    loadDetail({ date: formatDateForInput(store.selectedDate()), epANum: firstOnPage.epANum });
+                }
+            },
+
+            setUiError(message: string | null): void {
+                patchState(store, { error: message });
+            },
+
+            loadWaterWellTestResults(): void {
+                return EMPTY as unknown as void;
+            },
+        };
+    }),
+);
+
+export type ActiveWwellStoreType = InstanceType<typeof ActiveWwellStore>;
+==
+import { IWellData } from '@models/well-design/well-data.model';
+import { WellLogsIndicators } from '@models/well-design/well-logs-indicators.model';
+import { WellName } from '@models/well-design/well-name.model';
+import { WellboreDiagramData } from '@models/well-design/wellbore-diagram.model';
+import { MorningReport } from '@models/morning-report/morning-report.model';
+import {
+    CasingInfoViewModel,
+    DatabaseInfoViewModel,
+    FormationInfoViewModel,
+    MiscWellData,
+    OffsetWaterWells,
+    OperationSummaryViewModel,
+    PickedFormationTops,
+    WellHeaderViewModel,
+    WellTestResult,
+    WwellTestViewModel,
+} from '@models/active-wwell/active-wwell-view.model';
+import { IFormationTops } from 'src/app/shared/models/wwell/formation-tops.model';
+import { IHeaderIR } from 'src/app/shared/models/wwell/header-ir.model';
+import { ICasingIR } from 'src/app/shared/models/wwell/casing-ir.model';
+import { ITopsIR } from 'src/app/shared/models/wwell/tops-ir.model';
+import { IWaterIR } from 'src/app/shared/models/wwell/water-ir.model';
+import { IWaterWellTestOutcome } from 'src/app/shared/models/wwell/water-well-test-outcome.model';
+import { WaterWellTestResult } from 'src/app/shared/models/wwell/wwell-test-result.model';
+import { WwellEntry } from '@models/daily-operation/wwell-entry.model';
+import { sortCasingsByDepthDesc } from 'src/app/shared/utils/wellbore-math.util';
+import { formatDateForInput } from 'src/app/shared/utils/date.util';
+
+export const PAGE_SIZE = 5;
+export const FALLBACK_STR = 'N/A';
+
+function coercePositiveEpANum(value: number | string | null | undefined): number | null {
+    const numericValue = typeof value === 'string' ? Number.parseInt(value, 10) : value ?? null;
+    if (!Number.isFinite(numericValue) || numericValue === null || numericValue <= 0) return null;
+    return numericValue;
+}
+
+// ─── Well list / pagination ────────────────────────────────────────────────────
+
+export function selectWellNamesFromList(wellList: WwellEntry[]): WellName[] {
+    return wellList.flatMap((entry) => {
+        const epANum = coercePositiveEpANum(entry.epANum);
+        return epANum === null ? [] : [{ wellName: entry.wellName, epANum }];
+    });
+}
+
+export function selectTotalPages(names: WellName[]): number {
+    return Math.ceil(names.length / PAGE_SIZE);
+}
+
+export function selectPagedWellNames(names: WellName[], page: number): WellName[] {
+    return names.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+}
+
+export function selectPageIndexForEpANum(names: WellName[], epANum: number | null, fallbackPage = 0): number {
+    if (epANum === null) return fallbackPage;
+    const index = names.findIndex(w => w.epANum === epANum);
+    return index === -1 ? fallbackPage : Math.floor(index / PAGE_SIZE);
+}
+
+export function selectHasPrevPage(page: number): boolean {
+    return page > 0;
+}
+
+export function selectHasNextPage(names: WellName[], page: number): boolean {
+    return (page + 1) * PAGE_SIZE < names.length;
+}
+
+// ─── Well data helpers ─────────────────────────────────────────────────────────
+
+export function selectWellEpANum(d: IWellData | null | undefined): number | null {
+    const epANum = d?.DRLG_OP_STATUS?.[0]?.epANum ?? null;
+    return Number.isFinite(epANum) && (epANum ?? 0) > 0 ? epANum : null;
+}
+
+export function selectTotalDepth(d: IWellData | null): number {
+    return d?.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0;
+}
+
+export function selectPrimaryCasing(d: IWellData | null): ICasingIR | null {
+    const casings = [...(d?.EXAD_GWD_IR_CASING ?? [])].sort(
+        (l, r) => Number(r.csgDepth ?? 0) - Number(l.csgDepth ?? 0),
+    );
+    return casings[0] ?? null;
+}
+
+export function selectLatestFormation(d: IWellData | null): IFormationTops | null {
+    const formations = d?.DRLG_FM_TOPS ?? [];
+    return formations.length ? formations[formations.length - 1] : null;
+}
+
+export function findPlannedFormation(d: IWellData | null, formationCode: string | null | undefined): ITopsIR | null {
+    if (!formationCode) return null;
+    return d?.EXAD_GWD_IR_TOPS?.find(top => top.stLongCd === formationCode) ?? null;
+}
+
+export function selectPrimaryTestOutcome(d: IWellData | null): IWaterWellTestOutcome | null {
+    return d?.EXAD_GWD_WELL_TESTS?.[0] ?? null;
+}
+
+export function selectPrimaryWaterReference(d: IWellData | null): IWaterIR | null {
+    return d?.EXAD_GWD_IR_WATER?.[0] ?? null;
+}
+
+export function displayValue(value: unknown, fallback = FALLBACK_STR): string {
+    return value === null || value === undefined || value === '' ? fallback : String(value);
+}
+
+// ─── Well data selectors ───────────────────────────────────────────────────────
+
+export function selectDiagramData(d: IWellData | null): WellboreDiagramData | null {
+    if (!d) return null;
+    return {
+        wellName: d.WELL_MASTER?.[0]?.well ?? '',
+        totalDepth: d.EXAD_RCD_PREWAP?.[0]?.estTargetDepth ?? 0,
+        casings: sortCasingsByDepthDesc(d.EXAD_GWD_IR_CASING ?? []),
+        geologicTops: [...(d.EXAD_GWD_IR_TOPS ?? [])].sort((a, b) => a.planTvdDepth - b.planTvdDepth),
+        hydrogeology: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0] ?? null,
+        prewap: d.EXAD_RCD_PREWAP?.[0] ?? null,
+        rigActivity: d.RIG_ACTIVITY?.[0] ?? null,
+        currentDepth: d.DRLG_OP_STATUS?.[0]?.wPrsntDpth ?? 0,
+        mudCirculation: (d.MUD_CIRC ?? []).map(m => ({
+            depth: m.wPrsntDpth,
+            pct: Number(m.wMudCircPc),
+        })),
+        wellDesign: d.EXAD_GWD_WELL_DESIGN?.[0] ?? null,
+    };
+}
+
+export function selectMiscWellData(d: IWellData | null): MiscWellData | null {
+    if (!d) return null;
+    const rig = d.RIG_ACTIVITY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    return {
+        wellName: rig?.wellName ?? FALLBACK_STR,
+        targetDesc: rig?.drlgPlanWellDesc ?? FALLBACK_STR,
+        targetedAquifer: d.EXAD_GWD_IR_HYDROGEOLOGY?.[0]?.estTargetAquifier ?? FALLBACK_STR,
+        currentStatus: d.EXAD_GWD_DAILY_REMARKS?.[0].status ?? FALLBACK_STR,
+        daysSinceSpud: status?.spuddays ?? 0,
+        targetDays: d.NEW_TARGET_DAYS?.[0]?.targetDays ?? rig?.wDrlgTrgtDay ?? 0,
+        biNum: rig?.biNum ?? FALLBACK_STR,
+        supportingWell: rig?.waterWell ?? FALLBACK_STR,
+        feetDrilledToday: d.DRLG_FD_TDAY?.[0]?.footage ?? status?.footage ?? 0,
+        previousWell: FALLBACK_STR,
+        currentDepth: status?.wPrsntDpth ?? 0,
+        nextWell: d.NEXT_2_WELL_ACTIVITY?.[0]?.nextWellActivity ?? FALLBACK_STR,
+        footage: status?.wDpthChgDis ?? 0,
+        operationSummary: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.opRmk ?? d?.DRLG_OP_SMRY?.[0]?.wOpRmk,
+        next24HrOperation: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.next24HrPlanRrmk ?? status?.nxt24HrPlanRmk,
+        drlgSmryRmk: d?.EXAD_GWD_DAILY_REMARKS?.[0]?.drlgSmryRmk ?? status?.wDrlgSmryRmk ?? null,
+        rop: d.ROP_DATA?.[0]?.rop ?? null,
+        actualRm: d.actualRm ?? null,
+        kpiRm: d.kpiRm ?? null,
+        rigMoveDays: d?.rigMoveDays ?? null,
+        rigName: d.RIG_IDENTIFICATION?.[0].rigname ?? FALLBACK_STR,
+        spudDate: rig?.spuddate ?? FALLBACK_STR,
+        holeSize: (() => {
+            const items = d.DRLG_OP_SMRY ?? [];
+            if (!items.length) return null;
+            const maxItem = items.reduce((best, cur) =>
+                cur.wHoleEndDpth > best.wHoleEndDpth ? cur : best
+            );
+            return maxItem.wHolSz ?? null;
+        })(),
+    };
+}
+
+export function selectPickedFormations(d: IWellData | null): PickedFormationTops[] {
+    return (d?.DRLG_FM_TOPS ?? []).map((fm: IFormationTops) => ({
+        formation: fm.stLongCd ?? '',
+        depth: fm.wStDmrkDpth ?? 0,
+        remarks: fm.wStDmrkRmk ?? '',
+    }));
+}
+
+export function selectOffsetWells(d: IWellData | null): OffsetWaterWells[] {
+    if (!d) return [];
+    return (d.EXAD_GWD_IR_WATER ?? []).map(ow => {
+        const test = (d.EXAD_GWD_WELL_TESTS ?? []).find(t => t.wellName === ow.offsetWaterWell);
+        return {
+            wellName: ow.offsetWaterWell,
+            aquifer: ow.aquifer || test?.aquifer || 'WASI',
+            tds: test?.tds ?? 0,
+            rpm: ow.rpm ?? 0,
+            h2s: ow.h2s ?? 0,
+            distance: ow.distance ?? 0,
+            productivity: ow.specificCapacity ?? 0,
+            rate: test?.flowRate ?? ow.flowRate ?? 0,
+        };
+    });
+}
+
+export function selectWellLogsIndicators(d: IWellData | null): WellLogsIndicators | null {
+    if (!d) return null;
+    const h: IHeaderIR | undefined = d.EXAD_GWD_IR_HEADER?.[0];
+    return {
+        rcc: !!(h?.dtRemarks?.trim()),
+        mudLog: !!(h?.mudRemarks?.trim()),
+        logging: !!(h?.loggingRemarks?.trim()),
+    };
+}
+
+export function selectWellTestResults(d: IWellData | null): WellTestResult[] {
+    if (!d) return [];
+    return (d.EXAD_GWD_WELL_TESTS ?? []).map(t => ({
+        wellName: t.wellName ?? '',
+        testType: t.testType ?? FALLBACK_STR,
+        aquifer: t.aquifer ?? FALLBACK_STR,
+        rpm: t.rpm ?? 0,
+        flowRate: t.flowRate ?? 0,
+        temperature: t.temperature ?? 0,
+        tds: t.tds ?? 0,
+        productivity: t.producitivty ?? 0,
+        h2s: t.h2s ?? 0,
+    }));
+}
+
+// ─── View model selectors ──────────────────────────────────────────────────────
+
+export function selectWellHeaderViewModel(d: IWellData | null, epANum: number | null): WellHeaderViewModel | null {
+    if (!d) return null;
+    const rig = d.RIG_ACTIVITY?.[0];
+    const master = d.WELL_MASTER?.[0];
+    const prewap = d.EXAD_RCD_PREWAP?.[0];
+    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    return {
+        field: prewap?.supportedBusiness ?? rig?.wDrlgLocDesc ?? rig?.welltype ?? FALLBACK_STR,
+        wellName: rig?.wellName ?? master?.well ?? FALLBACK_STR,
+        lat: master?.lat ?? FALLBACK_STR,
+        lon: master?.lon ?? FALLBACK_STR,
+        targetedAquifer: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? FALLBACK_STR,
+        depth: prewap?.estTargetDepth ?? status?.targetDepth ?? FALLBACK_STR,
+        epNum: status?.epANum ?? epANum ?? FALLBACK_STR,
+        biNum: rig?.biNum ?? FALLBACK_STR,
+    };
+}
+
+export function selectDatabaseInfoViewModel(d: IWellData | null, date: Date): DatabaseInfoViewModel | null {
+    if (!d) return null;
+    const rig = d.RIG_ACTIVITY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    const prewap = d.EXAD_RCD_PREWAP?.[0];
+    const casing = selectPrimaryCasing(d);
+    return {
+        date: formatDateForInput(date),
+        daysSinceSpud: status?.spuddays ?? FALLBACK_STR,
+        spudDate: rig?.spuddate ?? FALLBACK_STR,
+        fiveAmDepth: status?.wPrsntDpth ?? FALLBACK_STR,
+        lastCasingSize: displayValue(casing?.csgSize ?? status?.wCsgOdSz),
+        rig: rig?.wRigCd ?? FALLBACK_STR,
+        targetDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
+        releaseDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
+        preFiveAmDepth: status?.wPrevDpth ?? FALLBACK_STR,
+        lastCasingDepth: casing?.csgDepth ?? status?.wCsgBotDpth ?? FALLBACK_STR,
+        spudDays: status?.spuddays ?? FALLBACK_STR,
+        samDepth: status?.targetDepth ?? prewap?.estTargetDepth ?? FALLBACK_STR,
+        rigMoveKpi: d.kpiRm ?? FALLBACK_STR,
+        wellTdDate: rig?.wDrlgEndDt ?? FALLBACK_STR,
+        footage: status?.wDpthChgDis ?? FALLBACK_STR,
+        secondarySamDepth: prewap?.estTargetDepth ?? FALLBACK_STR,
+    };
+}
+
+export function selectOperationSummaryViewModel(d: IWellData | null): OperationSummaryViewModel | null {
+    if (!d) return null;
+    const remarks = d.EXAD_GWD_DAILY_REMARKS?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    return {
+        operation: remarks?.opRmk ?? status?.wOpRmk ?? FALLBACK_STR,
+        nextOperation: remarks?.next24HrPlanRrmk ?? status?.nxt24HrPlanRmk ?? FALLBACK_STR,
+        drillingRemarks: remarks?.drlgSmryRmk ?? status?.wDrlgSmryRmk ?? FALLBACK_STR,
+    };
+}
+
+export function selectFormationInfoViewModel(d: IWellData | null): FormationInfoViewModel | null {
+    if (!d) return null;
+    const latest = selectLatestFormation(d);
+    const planned = findPlannedFormation(d, latest?.stLongCd);
+    const actualDepth = latest?.wStDmrkDpth ?? null;
+    const plannedDepth = planned?.planTvdDepth ?? null;
+    return {
+        formation: latest?.stLongCd ?? FALLBACK_STR,
+        prognosed: plannedDepth ?? FALLBACK_STR,
+        actualDepth: actualDepth ?? FALLBACK_STR,
+        difference: actualDepth !== null && plannedDepth !== null ? actualDepth - plannedDepth : FALLBACK_STR,
+        remarks: latest?.wStDmrkRmk ?? FALLBACK_STR,
+    };
+}
+
+export function selectCasingInfoViewModel(d: IWellData | null): CasingInfoViewModel | null {
+    if (!d) return null;
+    const casing = selectPrimaryCasing(d);
+    const status = d.DRLG_OP_STATUS?.[0];
+    return {
+        csgType: casing?.csgType ?? FALLBACK_STR,
+        csgSize: casing?.csgSize ?? status?.wCsgOdSz ?? FALLBACK_STR,
+        csgDepth: casing?.csgDepth ?? FALLBACK_STR,
+        csgBotDpth: status?.wCsgBotDpth ?? FALLBACK_STR,
+    };
+}
+
+export function selectWwellTestViewModel(d: IWellData | null): WwellTestViewModel | null {
+    if (!d) return null;
+    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
+    const testOutcome = selectPrimaryTestOutcome(d);
+    const water = selectPrimaryWaterReference(d);
+    const status = d.DRLG_OP_STATUS?.[0];
+    const statusRecord = status as unknown as Record<string, unknown> | undefined;
+    const drillingEngineer = typeof statusRecord?.['wDrlgEngName'] === 'string' ? statusRecord['wDrlgEngName'] : null;
+    const foreman = typeof statusRecord?.['wFmanName'] === 'string' ? statusRecord['wFmanName'] : null;
+    const prewap = d.EXAD_RCD_PREWAP?.[0];
+    return {
+        flowType: hydro?.flowType ?? 'N',
+        testType: testOutcome?.testType ?? FALLBACK_STR,
+        aquiferActual: testOutcome?.aquifer ?? water?.aquifer ?? FALLBACK_STR,
+        aquiferEstimate: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? FALLBACK_STR,
+        h2sActual: testOutcome?.h2s ?? water?.h2s ?? FALLBACK_STR,
+        h2sEstimate: hydro?.estH2s ?? FALLBACK_STR,
+        temp: testOutcome?.temperature ?? FALLBACK_STR,
+        tds: testOutcome?.tds ?? water?.fieldTds ?? hydro?.estWaterQuality ?? FALLBACK_STR,
+        rpm: testOutcome?.rpm ?? water?.rpm ?? FALLBACK_STR,
+        duration: water?.testDuration ?? FALLBACK_STR,
+        conductedBy: drillingEngineer ?? foreman ?? FALLBACK_STR,
+        rate: testOutcome?.flowRate ?? water?.flowRate ?? FALLBACK_STR,
+        siwhp: water?.staticWaterLevel ?? FALLBACK_STR,
+        depth: prewap?.estTargetDepth ?? status?.wPrsntDpth ?? FALLBACK_STR,
+        productivityActual: testOutcome?.producitivty ?? water?.specificCapacity ?? FALLBACK_STR,
+        productivityEstimate: hydro?.estProductivity ?? FALLBACK_STR,
+        swl: water?.staticWaterLevel ?? hydro?.estStaticWaterLevel ?? FALLBACK_STR,
+        dwl: water?.drawDown ?? FALLBACK_STR,
+    };
+}
+
+// ─── Morning report mappers ────────────────────────────────────────────────────
+
+export function mapWellDataToMorningReport(d: IWellData): MorningReport {
+    const rig = d.RIG_ACTIVITY?.[0];
+    const status = d.DRLG_OP_STATUS?.[0];
+    const master = d.WELL_MASTER?.[0];
+    const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
+    const prewap = d.EXAD_RCD_PREWAP?.[0];
+    const opSmry = d.DRLG_OP_SMRY?.[0];
+    const tops = d.DRLG_FM_TOPS ?? [];
+    const lastTop = tops[tops.length - 1];
+
+    return {
+        epANum: String(status?.epANum ?? ''),
+        wGnrName: rig?.wellName ?? '',
+        wRigCd: rig?.wRigCd ?? '',
+        racEstDdLatCord: String(master?.lat ?? ''),
+        racEstDdLonCord: String(master?.lon ?? ''),
+        biNum: rig?.biNum ?? '',
+        trgtRsvrCd: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? '',
+        stLongCd: lastTop?.stLongCd ?? '',
+        wStDmrkDpth: String(lastTop?.wStDmrkDpth ?? ''),
+        wPrsntDpth: status?.wPrsntDpth ?? null,
+        wDpthChgDis: status?.wDpthChgDis ?? null,
+        wOpRmk: opSmry?.wOpRmk ?? status?.wOpRmk ?? '',
+        foremanRmk: status?.nxt24HrPlanRmk ?? '',
+        plLtrlEndDpth: prewap?.estTargetDepth ?? null,
+        supportings: rig?.waterWell ?? '',
+        wEvntTime: opSmry?.wEvntTime ?? '',
+        rigStatus: d.EXAD_GWD_DAILY_REMARKS?.[0]?.status ?? 'NA',
+    };
+}
+
+export function mapToWaterWellTestResult(o: IWaterWellTestOutcome): WaterWellTestResult {
+    return {
+        wellName: o.wellName,
+        rPM: String(o.rpm ?? ''),
+        h2sPPM: String(o.h2s ?? ''),
+        temperature: String(o.temperature ?? ''),
+        trgtRsvrCd: o.aquifer ?? '',
+        testRate: String(o.flowRate ?? ''),
+        wellProductivity: String(o.producitivty ?? ''),
+    };
+}
+
+export function selectMorningReports(
+    data: IWellData[],
+    rigStatusOverrides: Record<number, string>,
+): MorningReport[] {
+    return data.map(d => {
+        const report = mapWellDataToMorningReport(d);
+        const overrideKey = Number.parseInt(report.epANum, 10);
+        const override = Number.isFinite(overrideKey) ? rigStatusOverrides[overrideKey] : undefined;
+        return override !== undefined ? { ...report, rigStatus: override } : report;
+    });
+}
+
+export function selectWaterWellTestResultsFromData(data: IWellData[]): WaterWellTestResult[] {
+    return data.flatMap(d => (d.EXAD_GWD_WELL_TESTS ?? []).map(mapToWaterWellTestResult));
 }
