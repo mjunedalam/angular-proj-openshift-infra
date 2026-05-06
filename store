@@ -32,12 +32,12 @@ type DefsSel = Selection<SVGDefsElement, unknown, null, undefined>;
 
 // Resolved animation params (derived from WellboreAnimConfig at draw time)
 type RA = {
-  lineDur:   number;
-  fadeDur:   number;
-  popDur:    number;
+  lineDur: number;
+  fadeDur: number;
+  popDur: number;
   lineStyle: 'draw' | 'fade';
-  popStyle:  'elastic' | 'bounce' | 'fade';
-  popEase:   (t: number) => number;
+  popStyle: 'elastic' | 'bounce' | 'fade';
+  popEase: (t: number) => number;
 };
 
 @Component({
@@ -51,7 +51,7 @@ type RA = {
 export class WellBoreViewComponent {
   readonly diagramData = input.required<WellboreDiagramData | null>();
   readonly animTrigger = input.required<number>();
-  readonly animConfig  = input<WellboreAnimConfig>(DEFAULT_ANIM_CONFIG);
+  readonly animConfig = input<WellboreAnimConfig>(DEFAULT_ANIM_CONFIG);
 
   private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('wellboreSvg');
 
@@ -399,15 +399,15 @@ export class WellBoreViewComponent {
   private resolveAnim(): RA {
     const cfg = this.animConfig();
     const mult = cfg.speed === 'slow' ? 1.8 : cfg.speed === 'fast' ? 0.4 : 1.0;
-    const popEase = cfg.popStyle === 'bounce'  ? easeBounceOut
-                  : cfg.popStyle === 'elastic' ? easeBackOut
-                  : easeCubicInOut;
+    const popEase = cfg.popStyle === 'bounce' ? easeBounceOut
+      : cfg.popStyle === 'elastic' ? easeBackOut
+        : easeCubicInOut;
     return {
-      lineDur:   Math.round(500 * mult),
-      fadeDur:   Math.round(300 * mult),
-      popDur:    Math.round(600 * mult),
+      lineDur: Math.round(500 * mult),
+      fadeDur: Math.round(300 * mult),
+      popDur: Math.round(600 * mult),
       lineStyle: cfg.lineStyle,
-      popStyle:  cfg.popStyle,
+      popStyle: cfg.popStyle,
       popEase,
     };
   }
@@ -573,7 +573,7 @@ export class WellBoreViewComponent {
 
     wg.append('text')
       .attr('class', 'water-label')
-      .attr('x', lR - 420).attr('y', wPx + 4).text(label)
+      .attr('x', lR - 520).attr('y', wPx + 4).text(label)
       .style('opacity', 0)
       .transition().delay(afterLine).duration(ra.fadeDur).ease(easeCubicInOut)
       .style('opacity', 1);
@@ -824,15 +824,7 @@ export class WellBoreViewComponent {
         const topPct = (seg.topPx / effectivePx) * 100;
         const botPct = (seg.botPx / effectivePx) * 100;
         const nextCol = idx + 1 < segs.length ? circColour(segs[idx + 1].pct) : col;
-        if (seg.pct === 100) {
-          const midPct = (topPct + botPct) / 2;
-          grad.append('stop').attr('offset', `${topPct.toFixed(4)}%`).attr('stop-color', '#15803d');
-          grad.append('stop').attr('offset', `${midPct.toFixed(4)}%`).attr('stop-color', '#4ade80');
-          grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', '#15803d');
-        } else {
-          grad.append('stop').attr('offset', `${topPct.toFixed(4)}%`).attr('stop-color', col);
-          grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', col);
-        }
+        grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', col);
         if (nextCol !== col) grad.append('stop').attr('offset', `${botPct.toFixed(4)}%`).attr('stop-color', nextCol);
       });
       shaftG.append('rect').attr('x', arrowCx - shaftHW).attr('y', 0).attr('width', shaftHW * 2).attr('height', cappedEffectivePx).attr('fill', `url(#${gradId})`);
@@ -936,7 +928,7 @@ export class WellBoreViewComponent {
     scale: ReturnType<typeof createDepthScale>,
     start: number,
   ): void {
-    const pumpLvl = data.wellDesign?.pumpLvl;
+    const pumpLvl = data.wellDesign?.pumpLevel;
     if (pumpLvl == null) return;
 
     const cy = scale(pumpLvl);
@@ -946,12 +938,12 @@ export class WellBoreViewComponent {
     // Place so that y=52 aligns with cy, and x=50 aligns with cx.
     const iconW = 100;
     const iconH = 100;
-    const iconX  = cx - iconW / 2;
+    const iconX = cx - iconW / 2;
 
     // Left arrowhead tip in parent coords = iconX + 30% of iconW ≈ cx − 20
     const lTip = iconX + iconW * 0.30;
     // Extend far left to clear the outermost casing (casings can reach ~90 units from center)
-    const lEnd   = lTip - 130;
+    const lEnd = lTip - 130;
     const labelX = lEnd - 6;
 
     const ra = this.resolveAnim();
