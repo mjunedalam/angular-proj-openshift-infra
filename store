@@ -1,1 +1,1 @@
-  await this.mapView.goTo({ target: MAP_CONFIG.center, zoom: 10 }, { animate: false });
+https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/EARTH/EARTH_Layers/MapServer/export?bbox=40.446104813731196%2C20.28728018504262%2C55.37590773849119%2C32.17047922476939&bboxSR=4204&imageSR=4204&size=1034%2C823&dpi=96&format=png32&transparent=true&layers=show%3A5%2C6&f=image  await this.mapView.goTo({ target: MAP_CONFIG.center, zoom: 10 }, { animate: false });
