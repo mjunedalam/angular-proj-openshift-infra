@@ -287,23 +287,40 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     const wells = this.wwells();
     for (const wwell of wells) {
       const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
-      const tileColor = tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 1];
-      const symbol = new SimpleMarkerSymbol({
-        style: 'circle',
-        color: tileColor,
-        size: STYLE.markerSize,
-        outline: { color: [255, 255, 255], width: 1.5 },
+      const [r, g, b] = tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 1];
+
+      const outerGlow = new Graphic({
+        geometry: point,
+        symbol: new SimpleMarkerSymbol({
+          style: 'circle',
+          size: 36,
+          color: [r, g, b, 0.08],
+          outline: { color: [r, g, b, 0.35], width: 2 },
+        }),
       });
-      layer.add(
-        new Graphic({
-          geometry: point,
-          symbol,
-          attributes: {
-            wwellId: wwell.wwellId,
-            Location: wwell.location
-          },
-        })
-      );
+
+      const midRing = new Graphic({
+        geometry: point,
+        symbol: new SimpleMarkerSymbol({
+          style: 'circle',
+          size: 20,
+          color: [r, g, b, 0.2],
+          outline: { color: [r, g, b, 0.75], width: 1.5 },
+        }),
+      });
+
+      const core = new Graphic({
+        geometry: point,
+        symbol: new SimpleMarkerSymbol({
+          style: 'circle',
+          size: 8,
+          color: [r, g, b, 1],
+          outline: { color: [255, 255, 255, 0.9], width: 1.5 },
+        }),
+        attributes: { wwellId: wwell.wwellId, Location: wwell.location },
+      });
+
+      layer.addMany([outerGlow, midRing, core]);
     }
   }
 
