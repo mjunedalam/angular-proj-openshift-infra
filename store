@@ -1,156 +1,162 @@
-import Polyline from '@arcgis/core/geometry/Polyline';
-import Graphic from '@arcgis/core/Graphic'
-import Point from '@arcgis/core/geometry/Point';
-
-import Polygon from '@arcgis/core/geometry/Polygon';
-import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import SimpleLineSymbol from '@arcgis/core/symbols/SimpleLineSymbol';
-
-export const MAP_BOUNDS = {
-  minLat: 16.3,
-  maxLat: 32.2,
-  minLng: 34.5,
-  maxLng: 55.7,
-};
-
-export const KSA_EXTENT = {
-  xmin: 34.5, ymin: 16.3,
-  xmax: 55.7, ymax: 32.2,
-  spatialReference: { wkid: 4326 },
-};
-//Configruation for Central Asia
-// minLat: 24.65,
-// maxLat: 39.78,
-// minLng: 44.03,
-// maxLng: 63.33
-
-export const tilesArray = [
-  { color: [132, 224, 63, 0.9], biNum: '3300' },
-  { color: [199, 153, 240, 0.9], biNum: '58' },
-  { color: [245, 100, 109, 0.9], biNum: '1514' },
-  { color: [182, 216, 242, 0.9], biNum: '60' }
-];
-
-export const tilesMap = new Map<string, { color: number[]; biNum: string }>(
-  tilesArray.map((tile) => [tile.biNum, tile]));
-
-export const MAP_CONFIG = {
-  center:  [45.0, 24.5] as [number, number],
-  zoom:    6,
-  minZoom: 5,
-  maxZoom: 14,
-  defaultExtent: {
-    xmin: 33.819,
-    ymin: 12.894,
-    xmax: 58.702,
-    ymax: 32.699,
-    spatialReference: { wkid: 4326 },
-  },
-};
-
-const baseUrl = window.location.origin;
-const iconUrl = `${baseUrl}/assets/images/oil-rig-icon.png`;
-
-type ArcGISTextWeight = 'normal' | 'bold' | 'lighter' | 'bolder';
-
-interface ArcGISTextFont {
-  size: number | string;
-  weight: ArcGISTextWeight;
-  family: string;
+:host {
+  --map-card-bg: color-mix(in srgb, var(--bg-card) 88%, white 12%);
+  --map-border: var(--border);
+  --map-header-text: var(--text-primary);
+  --map-muted: var(--text-secondary);
+  --map-panel: color-mix(in srgb, var(--bg-surface) 90%, white 10%);
+  display: block;
 }
 
-export const STYLE = {
-  markerIcon: iconUrl,
-  markerSize: 33,
-  bubbleSize: 25,
-  squareSize: 53,
-  stickColor: [10, 40, 0],
-  bubbleColor: [0, 255, 0, 0.9],
-  textFont: { size: 12, weight: 'normal', family: 'sans-serif' } as ArcGISTextFont,
-};
-
-export interface WWellGraphics {
-  wwellId: number;
-  polyline: Polyline;
-  bubble: Point;
-  radius: number
+.wwell-map-card {
+  overflow: hidden;
+  border: 1px solid var(--map-border);
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--map-card-bg) 92%, white 8%), var(--map-card-bg)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 12%, transparent), transparent 30%);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
 }
 
-export interface WWellResult {
-  stickGraphic: Graphic;
-  bubbleGraphic: Graphic;
+.wwell-map-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
-export interface WWell {
-  wwellId: string;
-  lat: number;
-  lng: number;
-  location: string;
-  label: string;
+.wwell-map-eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-export interface WWellResult {
-  stickGraphic: Graphic,
-  bubbleGraphic: Graphic
+.wwell-map-title {
+  margin: 0;
+  color: var(--map-header-text);
+  font-size: 1.4rem;
+  font-weight: 700;
 }
 
-export interface BubblePoint {
-  latitude: number;
-  longitude: number;
+.wwell-map-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #0f766e 20%), color-mix(in srgb, var(--accent) 65%, #0f4c81 35%));
+  color: #fff;
 }
-export { Point as ArcGISPoint };
 
-export const lineSymbol = (color: number[]) =>
-  new SimpleLineSymbol({ color, width: 2 });
+.wwell-map-stat__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
 
-export const wwellIdTextSymbol = (font: ArcGISTextFont) =>
-  new TextSymbol({
-    color: [0, 0, 0],
-    font,
-    horizontalAlignment: 'center',
-    verticalAlignment: 'top',
-    xoffset: 0,
-    yoffset: 8,
-  });
+.wwell-map-stat__label {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
 
-export const locationTextSymbol = (font: ArcGISTextFont) =>
-  new TextSymbol({
-    color: [255, 255, 255],
-    font,
-    horizontalAlignment: 'center',
-    verticalAlignment: 'bottom',
-    xoffset: 0,
-    yoffset: -9,
-  });
+.wwell-map-message {
+  display: block;
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, white);
+  color: var(--danger);
+}
 
-export const topPolygonTemplate = new Polygon({
-  rings: [
-    [
-      [-1.0, 0.4],//top-left
-      [1.0, 0.4], //top-right
-      [1.0, 0], //bottom-right
-      [-1.0, 0], //bottom-left
-      [-1.0, 0.4], //close
-    ],
-  ],
-  spatialReference: { wkid: 4326 },
-});
+.wwell-map-frame {
+  position: relative;
+  min-height: 90vh;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--map-border) 80%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--map-panel) 88%, white 12%), var(--map-panel));
+}
 
-export const bottomPolygonTemplate = new Polygon({
-  rings: [
-    [
-      [-0.6, 0],
-      [0.6, 0],
-      [0.6, -0.4],
-      [-0.6, -0.4],
-      [-0.6, 0],
-    ],
-  ],
-  spatialReference: { wkid: 4326 },
-});
-export const MAX_WIDTH = 1500;
-export const LEGEND_FONT_SMAAL_BOLD = Object.freeze({ size: 11, weight: 'bold', family: 'sans-serif' });
-===
+.wwell-map-canvas {
+  height: 90vh;
+  width: 100%;
+}
+
+.wwell-map-legend {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.45rem;
+  background: transparent;
+}
+
+.wwell-map-legend__chip {
+  min-width: 4rem;
+  padding: 0.42rem 0.7rem;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.wwell-map-legend__chip--owner {
+  background: #cedf5f;
+  color: #35530a;
+}
+
+.wwell-map-legend__chip--green {
+  background: #84cc16;
+}
+
+.wwell-map-legend__chip--purple {
+  background: #c084fc;
+}
+
+.wwell-map-legend__chip--red {
+  background: #f87171;
+}
+
+.wwell-map-legend__chip--blue {
+  background: #60a5fa;
+}
+
+.wwell-map-legend__chip--aquifer {
+  background: #22b8e6;
+}
+
+:host ::ng-deep .wwell-map-card {
+  padding: 1.25rem;
+}
+
+@media (max-width: 720px) {
+  .wwell-map-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .wwell-map-stat {
+    align-items: flex-start;
+  }
+
+  .wwell-map-legend {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    max-width: none;
+  }
+}
+==
 import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -189,6 +195,7 @@ import {
   MAP_CONFIG,
   MAX_WIDTH,
   STYLE,
+  tilesArray,
   tilesMap,
   topPolygonTemplate,
   WWell,
@@ -590,57 +597,19 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     this.downloadBase64(base64, 'water-wells-map.png');
   }
 
-  async captureMapAsBase64() {
-    if (!this.mapView || !this.legendLayer) return;
-
-    // Show the legend
-    this.legendLayer!.visible = true;
-
-    // Wait for the layer view to finish drawing
-    await this.waitForLegendRender();
-
-    // Capture screenshot
-    const base64 = await this.getScreenshotBase64();
-
-    // Hide the legend again (so the UI stays clean)
-    this.legendLayer!.visible = false;
-    return base64;
-
-  }
-
-  private async waitForLegendRender(): Promise<void> {
-    const layerView = await this.mapView!.whenLayerView(this.legendLayer!);
-    if (!layerView.updating) {
-      await new Promise(requestAnimationFrame);
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
-      const handle = watch(() => layerView.updating,
-        (updating) => {
-          if (!updating) {
-            handle.remove();
-            requestAnimationFrame(() => resolve());
-          }
-        })
-    });
+  async captureMapAsBase64(): Promise<string | undefined> {
+    if (!this.mapView) return;
+    return this.getScreenshotBase64();
   }
 
   private async getScreenshotBase64(): Promise<string> {
-    const screenshot = await this.mapView!.takeScreenshot({
-      format: 'png',
-      quality: 1,
-    });
+    const screenshot = await this.mapView!.takeScreenshot({ format: 'png', quality: 1 });
     const [, rawBase64] = screenshot.dataUrl.split(',');
     if (!rawBase64) throw new Error('Failed to extract Base‑64 payload');
 
-    // Resize (optional)
     const img = new Image();
     img.src = `data:image/png;base64,${rawBase64}`;
-    await new Promise((res, rej) => {
-      img.onload = res;
-      img.onerror = rej;
-    });
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
 
     const scale = Math.min(1, MAX_WIDTH / img.width);
     const canvas = document.createElement('canvas');
@@ -649,12 +618,54 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     const ctx = canvas.getContext('2d')!;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    // Small pause to let the browser finish any pending paint
+    this.drawLegendChips(ctx, canvas.height);
+
     await new Promise((r) => setTimeout(r, 300));
 
-    const resizedDataUrl = canvas.toDataURL('image/jpeg', 1);
-    const [, resizedBase64] = resizedDataUrl.split(',');
+    const [, resizedBase64] = canvas.toDataURL('image/jpeg', 1).split(',');
     return resizedBase64;
+  }
+
+  private drawLegendChips(ctx: CanvasRenderingContext2D, canvasHeight: number): void {
+    const chips = [
+      { text: 'Wells Ownership', bg: '#cedf5f', textColor: '#35530a' },
+      ...tilesArray.map(t => ({
+        text: t.biNum,
+        bg: `rgba(${t.color[0]}, ${t.color[1]}, ${t.color[2]}, ${t.color[3] ?? 1})`,
+        textColor: '#fff',
+      })),
+      { text: 'Aquifier', bg: '#22b8e6', textColor: '#fff' },
+    ];
+
+    const fontSize = 13;
+    const px = 12;
+    const py = 5;
+    const gap = 7;
+    const chipH = fontSize + py * 2;
+    const bottomMargin = 14;
+    const leftMargin = 14;
+
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+
+    let x = leftMargin;
+    const y = canvasHeight - bottomMargin - chipH;
+
+    for (const chip of chips) {
+      const tw = ctx.measureText(chip.text).width;
+      const cw = tw + px * 2;
+
+      ctx.fillStyle = chip.bg;
+      ctx.beginPath();
+      ctx.roundRect(x, y, cw, chipH, chipH / 2);
+      ctx.fill();
+
+      ctx.fillStyle = chip.textColor;
+      ctx.fillText(chip.text, x + cw / 2, y + chipH / 2);
+
+      x += cw + gap;
+    }
   }
 
   private downloadBase64(base64: string | undefined, fileName: string): void {
@@ -678,892 +689,4 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     this.loader.resolveBootTask(WWELL_MAP_BOOT_TASK);
   }
 
-}
-===
-<div class="report-shell">
-  <div class="report-header">
-    <div class="report-header__bar">
-      <span class="report-header__title">Daily Drilling Operations Summary</span>
-    </div>
-  </div>
-
-  <div class="report-toolbar">
-    <div class="date-picker-section">
-      <label class="date-picker-label" for="report-date-input">Date:</label>
-      <input
-        id="report-date-input"
-        type="date"
-        class="date-picker-input"
-        [ngModel]="selectedDateString"
-        (ngModelChange)="onDateChange($event)"
-        [max]="maxDateString"
-        aria-label="Select report date"
-      />
-    </div>
-
-    <button
-      type="button"
-      (click)="sendEmail()"
-      class="email-btn"
-      aria-label="Email report to me"
-    >
-      <span class="email-btn__shimmer"></span>
-      <span class="email-btn__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <rect x="2" y="4" width="20" height="16" rx="3"/>
-          <path d="m2 7 10 7 10-7"/>
-        </svg>
-      </span>
-      <span class="email-btn__label">Email To Me</span>
-      <span class="email-btn__arrow" aria-hidden="true">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 8h10M9 4l4 4-4 4"/>
-        </svg>
-      </span>
-    </button>
-  </div>
-
-  @if (loadingVisible()) {
-    <mat-progress-bar mode="indeterminate" class="report-loading-bar" />
-  }
-
-  <div id="report-content" class="report-content" [class.report-content--loading]="loadingVisible()">
-    @if (pageMessage()) {
-      <div class="report-empty">
-        <p>{{ pageMessage() }}</p>
-      </div>
-    } @else if (hasError()) {
-      <div class="report-error">
-        <p>Error ({{ statusCode() }}): {{ errorMessage() }}</p>
-      </div>
-    } @else {
-      <!-- Water Well Test Results grid -->
-      @if (waterWelltestResult().length) {
-      <section class="report-section">
-        <div class="report-section__heading">
-          <span class="report-section__title">Water Well Test Results</span>
-        </div>
-        <div class="report-grid">
-          @for (result of waterWelltestResult(); track result.wellName) {
-            <div class="report-card report-card--test">
-              <div class="card-header card-header--green">
-                <span class="card-header__name">{{ result.wellName || 'Unknown' }}</span>
-                <span class="card-header__badge">Test Result</span>
-              </div>
-              <table class="card-table">
-                <tbody>
-                  <tr>
-                    <td class="card-table__label">Aquifer</td>
-                    <td class="card-table__value" [class.missing]="!result.trgtRsvrCd">{{ result.trgtRsvrCd || 'Missing' }}</td>
-                    <td class="card-table__label">Test Rate (GPM)</td>
-                    <td class="card-table__value" [class.missing]="!result.testRate">{{ result.testRate || 'Missing' }}</td>
-                  </tr>
-                  <tr>
-                    <td class="card-table__label">{{ result.testType === 'FLOW' ? 'SIWHP (PSI)' : 'RPM' }}</td>
-                    <td class="card-table__value" [class.missing]="result.testType === 'FLOW' ? !result.siwhp : !result.rPM">
-                      {{ result.testType === 'FLOW' ? (result.siwhp || 'Missing') : (result.rPM || 'Missing') }}
-                    </td>
-                    <td class="card-table__label">H2S (PPM)</td>
-                    <td class="card-table__value" [class.missing]="!result.h2sPPM">{{ result.h2sPPM || 'Missing' }}</td>
-                  </tr>
-                  <tr>
-                    <td class="card-table__label">Temperature (°C)</td>
-                    <td class="card-table__value" [class.missing]="!result.temperature">{{ result.temperature || 'Missing' }}</td>
-                    <td class="card-table__label">Well Productivity (GPM/ft)</td>
-                    <td class="card-table__value" [class.missing]="!result.wellProductivity">{{ result.wellProductivity || 'Missing' }}</td>
-                  </tr>
-                  <tr>
-                    <td class="card-table__label">TDS (PPM)</td>
-                    <td class="card-table__value" [class.missing]="!result.tds">{{ result.tds || 'Missing' }}</td>
-                    <td class="card-table__label"></td>
-                    <td class="card-table__value"></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          }
-        </div>
-      </section>
-      }
-
-      <!-- Daily Drilling Summary grid -->
-      <div class="report-grid">
-        @for (report of morningReport(); track report.epANum) {
-          <div class="report-card report-card--summary">
-
-            <div class="card-header card-header--blue">
-              <div class="card-header__left">
-                <span class="card-header__name">{{ report.wGnrName }}</span>
-                <span class="card-header__rig">{{ report.wRigCd }}</span>
-              </div>
-              <input
-                class="card-header__status-input"
-                [class.card-header__status-input--na]="report.rigStatus === 'NA'"
-                placeholder="Rig status"
-                [ngModel]="report.rigStatus"
-                (ngModelChange)="store.updateRigStatus(report.epANum, $event)"
-                name="rigStatus"
-              />
-            </div>
-
-            <table class="card-table">
-              <tbody>
-                <tr>
-                  <td class="card-table__label">Target Aquifer</td>
-                  <td class="card-table__value" [class.missing]="!report.trgtRsvrCd" [class.present]="report.trgtRsvrCd">
-                    {{ report.trgtRsvrCd || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Current Formation</td>
-                  <td class="card-table__value" [class.missing]="!report.stLongCd" [class.present]="report.stLongCd">
-                    {{ report.stLongCd || 'NA' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Current Depth (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.wPrsntDpth" [class.present]="report.wPrsntDpth">
-                    {{ report.wPrsntDpth || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Planned Total Depth (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.plLtrlEndDpth" [class.present]="report.plLtrlEndDpth">
-                    {{ report.plLtrlEndDpth || 'Missing' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Footage (ft)</td>
-                  <td class="card-table__value" [class.missing]="!report.wDpthChgDis" [class.present]="report.wDpthChgDis">
-                    {{ report.wDpthChgDis || 'Missing' }}
-                  </td>
-                  <td class="card-table__label">Supportings</td>
-                  <td class="card-table__value" [class.missing]="!report.supportings" [class.present]="report.supportings">
-                    {{ report.supportings || 'Missing' }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="card-table__label">Operation</td>
-                  <td class="card-table__value card-table__value--op" colspan="3" [class.present]="report.wOpRmk">
-                    {{ report.wOpRmk || 'XXXX' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-          </div>
-        }
-      </div>
-
-      <!-- Map -->
-      <section class="report-map-section">
-        <div class="map-container">
-          <app-wwellmap #wwellMap ></app-wwellmap>
-        </div>
-        <div class="map-legend">
-          <div class="map-legend__section-title">Wells Ownership</div>
-          <div class="map-legend__tiles">
-            @for (tile of legendTiles; track tile.biNum) {
-              <div class="map-legend__tile" [style.background-color]="tile.cssColor">
-                {{ tile.biNum }}
-              </div>
-            }
-          </div>
-          <div class="map-legend__aquifer">Target Aquifer</div>
-        </div>
-      </section>
-    }
-  </div>
-</div>
-===
-
-:host {
-  --report-bg: var(--bg-surface);
-  --report-border: var(--border);
-  --report-border-strong: rgba(148, 163, 184, 0.26);
-  --report-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
-  --report-text: var(--text-primary);
-  --report-muted: var(--text-secondary);
-  --report-panel: color-mix(in srgb, var(--bg-card) 88%, white 12%);
-  --report-header-start: #4ec4f0;
-  --report-header-end: #3b82f6;
-  --report-green-start: #37b700;
-  --report-green-end: #178b00;
-  --report-blue-start: #2fb0e2;
-  --report-blue-end: #147ec5;
-  --report-summary-start: #2241bf;
-  --report-summary-end: #0f73ff;
-  --report-value-bg: color-mix(in srgb, var(--bg-surface) 92%, white 8%);
-  --wasi-color: #3b82f6;
-  --ownership-color: #10b981;
-  --aquifer-color: #f59e0b;
-  --active-well-color: #ef4444;
-
-  display: block;
-  padding: 2rem 1rem 3rem;
-  background: var(--bg-app);
-}
-
-.report-shell {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 1rem 1rem 2rem;
-  border: 1px solid var(--report-border);
-  border-radius: 24px;
-  background: var(--report-bg);
-  box-shadow: var(--report-shadow);
-  color: var(--report-text);
-}
-
-.report-header {
-  margin-bottom: 1.25rem;
-}
-
-.report-header__bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 3.4rem;
-  border: 1px solid color-mix(in srgb, var(--report-header-end) 28%, white 20%);
-  border-radius: 16px;
-  background: linear-gradient(180deg, var(--report-header-start), var(--report-header-end));
-}
-
-.report-header__title {
-  color: #fff;
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.report-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-}
-
-.date-picker-section {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.date-picker-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.date-picker-input {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-inner);
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
-  min-width: 140px;
-  appearance: none;
-
-  &:hover {
-    border-color: var(--accent-hover);
-    background: var(--accent-muted);
-    box-shadow: var(--shadow-sm);
-  }
-
-  &:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: var(--accent-muted);
-    box-shadow: 0 0 0 3px var(--accent-muted);
-  }
-
-  &::-webkit-calendar-picker-indicator {
-    cursor: pointer;
-    opacity: 0.9;
-    width: 24px;
-    height: 24px;
-    filter: brightness(0.6);
-  }
-}
-
-.report-loading-bar {
-  position: fixed;
-  top: 62px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  z-index: 99;
-  --mdc-linear-progress-track-height: 3px;
-  --mdc-linear-progress-active-indicator-height: 3px;
-  --mdc-linear-progress-track-color: transparent;
-  --mdc-linear-progress-active-indicator-color: transparent;
-}
-
-:host ::ng-deep .report-loading-bar .mdc-linear-progress__bar-inner {
-  border-top: none !important;
-  height: 4px;
-  background: linear-gradient(to right, #3b82f6, #22c55e);
-}
-
-.email-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.55rem 1.1rem 0.55rem 0.85rem;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  border-radius: 10px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
-  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
-
-  &:hover {
-    background: var(--bg-surface);
-    border-color: var(--accent);
-    color: var(--accent);
-
-    .email-btn__arrow { transform: translateX(3px); }
-  }
-
-  &:active { transform: scale(0.97); }
-}
-
-.email-btn__icon,
-.email-btn__arrow {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.email-btn__icon svg { width: 15px; height: 15px; }
-
-.email-btn__label { white-space: nowrap; }
-
-.email-btn__arrow {
-  opacity: 0.7;
-  transition: transform 180ms ease;
-  svg { width: 13px; height: 13px; }
-}
-
-.report-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.15rem;
-  transition: opacity 200ms ease;
-
-  &--loading {
-    opacity: 0.4;
-    pointer-events: none;
-  }
-}
-
-.report-error {
-  padding: 0.95rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--danger) 10%, var(--report-bg));
-  color: var(--danger);
-}
-
-.report-empty {
-  padding: 1.1rem 1.2rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--accent-muted) 72%, var(--report-bg));
-  color: var(--report-text);
-  text-align: center;
-  font-size: 0.98rem;
-  font-weight: 600;
-}
-
-.report-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.report-section__heading {
-  display: flex;
-  justify-content: center;
-  padding: 0.3rem 0 0.1rem;
-}
-
-.report-section__title {
-  color: var(--report-muted);
-  font-size: 1.25rem;
-  font-weight: 700;
-  text-align: center;
-}
-
-.report-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-  border: 1px solid var(--report-border-strong);
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.report-card {
-  overflow: hidden;
-  border: 1px solid var(--report-border-strong);
-  border-radius: 0;
-  background: var(--bg-card);
-  margin-right: -1px;
-  margin-bottom: -1px;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.65rem 0.85rem;
-
-  &--blue {
-    background: linear-gradient(90deg, var(--report-summary-start), var(--report-summary-end));
-  }
-
-  &--green {
-    background: linear-gradient(90deg, var(--report-green-start), var(--report-green-end));
-  }
-}
-
-.card-header__left {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.card-header__name {
-  color: #fff;
-  font-size: 1.25rem;
-  font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.card-header__rig {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.card-header__badge {
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.14);
-  flex-shrink: 0;
-}
-
-.card-header__status-input {
-  width: 150px;
-  flex-shrink: 0;
-  padding: 5px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.13);
-  color: #fff;
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  text-align: center;
-
-  &::placeholder { color: rgba(255, 255, 255, 0.7); }
-  &:focus { outline: none; background: rgba(255, 255, 255, 0.22); }
-
-  &--na {
-    border-color: rgba(239, 68, 68, 0.7);
-    background: rgba(239, 68, 68, 0.22);
-    color: #fca5a5;
-
-    &::placeholder { color: rgba(252, 165, 165, 0.7); }
-    &:focus { background: rgba(239, 68, 68, 0.32); }
-  }
-}
-
-.card-table {
-  width: 100%;
-  border-collapse: collapse;
-
-  tbody tr {
-    border-bottom: 1px solid var(--report-border);
-
-    &:last-child { border-bottom: none; }
-
-    &:hover .card-table__value {
-      background: color-mix(in srgb, var(--bg-card) 92%, var(--accent) 8%);
-    }
-  }
-}
-
-.card-table__label {
-  width: 22%;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(90deg, var(--report-blue-start), var(--report-blue-end));
-  color: #fff;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  border-right: 2px solid rgba(255, 255, 255, 0.18);
-  vertical-align: middle;
-  white-space: nowrap;
-
-  .report-card--test & {
-    background: linear-gradient(90deg, var(--report-green-start), var(--report-green-end));
-  }
-}
-
-.card-table__value {
-  padding: 0.75rem 1rem;
-  background: var(--bg-card);
-  color: var(--report-text);
-  font-size: 1rem;
-  font-weight: 700;
-  text-align: center;
-  vertical-align: middle;
-  transition: background 180ms ease;
-
-  &.missing {
-    color: var(--danger);
-    font-style: italic;
-    opacity: 0.85;
-  }
-  &.present { color: var(--accent); }
-
-  &--op {
-    text-align: left;
-    font-size: 0.95rem;
-    font-weight: 600;
-    line-height: 1.55;
-    color: var(--text-primary);
-  }
-}
-
-.report-map-section {
-  margin-top: 0.5rem;
-  border: 1px solid var(--report-border-strong);
-  border-radius: 16px;
-  background: var(--report-panel);
-  overflow: hidden;
-}
-
-.map-container {
-  width: 100%;
-  min-height: 450px;
-  background: var(--report-bg);
-}
-
-:host ::ng-deep app-wwellmap {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 450px;
-}
-
-.map-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border-top: 1px solid var(--report-border);
-  background: color-mix(in srgb, var(--report-value-bg) 96%, var(--accent) 4%);
-}
-
-.map-legend__section-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--report-text);
-  background: rgba(235, 245, 100, 0.9);
-  padding: 2px 8px;
-  border: 1px solid #000;
-  align-self: flex-start;
-}
-
-.map-legend__tiles {
-  display: grid;
-  grid-template-columns: repeat(2, auto);
-  gap: 4px;
-  align-self: flex-start;
-}
-
-.map-legend__tile {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #000;
-  border: 1px solid #000;
-  padding: 2px 12px;
-  text-align: center;
-}
-
-.map-legend__aquifer {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(3, 160, 250, 0.9);
-  border: 1px solid #000;
-  padding: 2px 8px;
-  align-self: flex-start;
-}
-
-@media (max-width: 640px) {
-  :host { padding: 1rem 0.5rem 2rem; }
-
-  .report-shell { padding: 0.8rem; border-radius: 16px; }
-
-  .report-header__title { font-size: 0.95rem; }
-
-  .map-container { min-height: 300px; }
-
-  :host ::ng-deep app-wwellmap { min-height: 300px; }
-
-  .map-legend { flex-direction: column; gap: 0.5rem; }
-}
-==
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  DestroyRef,
-  effect,
-  inject,
-  Injector,
-  OnDestroy,
-  OnInit,
-  signal,
-  ViewChild,
-} from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { ActivatedRoute, ParamMap, Router } from '@angular/router';
-
-import { AuthStore } from 'src/app/features/auth/store/auth.store';
-import { EmailStore } from 'src/app/core/store/email/email.store';
-import { tilesArray } from 'src/app/shared/models/config/agwa-map.config';
-import { EmailService } from '@services/email/email.service';
-import { DEFAULT_NOTIFICATION_DURATION_MS, NotificationService } from '@shared/components/notification/notification.service';
-import { WwellmapComponent } from '../wwell-map/wwell-map.component';
-import { formatDateForInput, getTodayAtMidnight, parseDateFromInput } from 'src/app/shared/utils/date.util';
-import { MorningReportStore } from './store/morning-report.store';
-
-const MORNING_REPORT_NOTIFICATION_DURATION_MS = 12000;
-
-@Component({
-  selector: 'app-morningreport',
-  standalone: true,
-  imports: [
-    WwellmapComponent,
-    FormsModule,
-    MatCardModule,
-    MatProgressBarModule,
-  ],
-  templateUrl: './morning-report.component.html',
-  styleUrl: './morning-report.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class MorningReportComponent implements OnInit, OnDestroy {
-  @ViewChild('wwellMap') protected wwellMap!: WwellmapComponent;
-
-  protected readonly store = inject(MorningReportStore);
-  private readonly authStore = inject(AuthStore);
-  private readonly emailStore = inject(EmailStore);
-  private readonly emailService = inject(EmailService);
-  private readonly notificationService = inject(NotificationService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly injector = inject(Injector);
-  private readonly destroyRef = inject(DestroyRef);
-
-  protected readonly morningReport = this.store.morningReport;
-  protected readonly hasError = this.store.hasError;
-  protected readonly errorMessage = this.store.errorMessage;
-  protected readonly waterWelltestResult = this.store.waterWellTestResult;
-  protected readonly statusCode = this.store.statusCode;
-  protected readonly pageMessage = computed(() => {
-    if (this.hasError() || this.store.isLoading()) {
-      return null;
-    }
-
-    return this.morningReport().length === 0
-      ? (this.hasDateQueryParam() ? 'Data is not available for this date' : 'Data is not available for the given date')
-      : null;
-  });
-
-  protected readonly legendTiles = tilesArray.map(t => ({
-    biNum: t.biNum,
-    cssColor: `rgba(${t.color[0]}, ${t.color[1]}, ${t.color[2]}, ${t.color[3] ?? 1})`,
-  }));
-
-  protected readonly maxDateString = formatDateForInput(getTodayAtMidnight());
-  protected selectedDateString = this.maxDateString;
-  protected readonly loadingVisible = signal(false);
-
-  private readonly urlSyncReady = signal(false);
-  private readonly hasDateQueryParam = signal(false);
-  private loadingTimer: ReturnType<typeof setTimeout> | null = null;
-  private loadingShownAt = 0;
-
-  constructor() {
-    effect(() => {
-      const isLoading = this.store.isLoading();
-      if (isLoading) {
-        this.clearLoadingTimer();
-        this.loadingShownAt = Date.now();
-        this.loadingVisible.set(true);
-        return;
-      }
-      if (!this.loadingVisible()) return;
-      const elapsed = Date.now() - this.loadingShownAt;
-      const remaining = Math.max(0, 380 - elapsed);
-      this.clearLoadingTimer();
-      this.loadingTimer = setTimeout(() => {
-        this.loadingVisible.set(false);
-        this.loadingTimer = null;
-      }, remaining);
-    }, { injector: this.injector });
-
-    effect(() => {
-      if (this.emailStore.isSent()) {
-        this.notificationService.info('Email sent successfully.');
-        this.emailStore.reset();
-      } else if (this.emailStore.hasFailed()) {
-        this.notificationService.error(this.emailStore.error() ?? 'Failed to send email.');
-        this.emailStore.reset();
-      }
-    }, { injector: this.injector });
-
-    effect(() => {
-      if (!this.urlSyncReady()) {
-        return;
-      }
-
-      const date = formatDateForInput(this.store.selectedDate());
-
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { date },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
-    }, { injector: this.injector });
-  }
-
-  ngOnInit(): void {
-    this.store.setNotificationDuration(MORNING_REPORT_NOTIFICATION_DURATION_MS);
-
-    this.applyDateFromQueryParams(this.route.snapshot.queryParamMap, true);
-    this.urlSyncReady.set(true);
-
-    this.route.queryParamMap
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((params) => this.applyDateFromQueryParams(params));
-
-    this.store.loadWaterWellTestResults();
-  }
-
-  ngOnDestroy(): void {
-    this.store.setNotificationDuration(DEFAULT_NOTIFICATION_DURATION_MS);
-    this.clearLoadingTimer();
-  }
-
-  private clearLoadingTimer(): void {
-    if (this.loadingTimer !== null) {
-      clearTimeout(this.loadingTimer);
-      this.loadingTimer = null;
-    }
-  }
-
-  protected onDateChange(value: string): void {
-    if (!value) return;
-
-    const selectedDate = parseDateFromInput(value);
-    if (Number.isNaN(selectedDate.getTime()) || selectedDate > getTodayAtMidnight()) {
-      return;
-    }
-
-    this.selectedDateString = value;
-    this.hasDateQueryParam.set(true);
-    this.urlSyncReady.set(true);
-    this.store.setDate(value);
-  }
-
-  protected async sendEmail(): Promise<void> {
-    try {
-      const recipientEmail = this.authStore.userEmail();
-
-      if (!recipientEmail) {
-        this.showError('Unable to determine the logged-in user email.');
-        return;
-      }
-
-      const morningReport = this.morningReport();
-      const mapData = await this.wwellMap.captureMapAsBase64();
-      const waterWelltestResults = this.waterWelltestResult();
-      const emailRequest = this.emailService.buildEmailRequest(
-        morningReport,
-        mapData ?? '',
-        recipientEmail,
-        waterWelltestResults,
-      );
-      this.emailStore.sendEmail(emailRequest);
-    } catch {
-      this.showError('Failed to send email. Please try again.');
-    }
-  }
-
-  protected downloadReport(): void {
-    this.wwellMap.saveMapImage();
-  }
-
-  private showError(message: string): void {
-    this.store.setUiError(message);
-  }
-
-  private normalizeDateParam(value: string | null): string {
-    if (!value) {
-      return this.maxDateString;
-    }
-
-    const parsed = parseDateFromInput(value);
-
-    if (Number.isNaN(parsed.getTime()) || parsed > getTodayAtMidnight()) {
-      return this.maxDateString;
-    }
-
-    return value;
-  }
-
-  private applyDateFromQueryParams(params: ParamMap, forceLoad = false): void {
-    const requestedDate = this.normalizeDateParam(params.get('date'));
-    const currentDate = formatDateForInput(this.store.selectedDate());
-
-    this.selectedDateString = requestedDate;
-    this.hasDateQueryParam.set(params.has('date'));
-
-    if (!forceLoad && requestedDate === currentDate) {
-      return;
-    }
-
-    this.store.loadMorningReportData(requestedDate);
-  }
 }
