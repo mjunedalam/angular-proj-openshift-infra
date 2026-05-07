@@ -1,10 +1,10 @@
-Hi [Manager's Name],
-
-Hope you're doing well!
-
-I'd like to request leave from May 20 to May 25, 2026. I'm planning to visit my home country and would love to spend some time with my family.
-
-Kindly let me know if this can be approved. I really appreciate it!
-
-Thanks,
-[Your Name]
+const asd_500k_mosaic2 = new ImageryLayer({
+        url: '"https://gissrv.enp.aramco.com.sa:6443/arcgis/rest/services/CART/ASD_100K_MOSAIC/ImageServer',
+        format: "jpgpng",
+        id: "parent-map",
+        opacity: 0.9
+      });
+     const map = new Map({
+        basemap: "oceans", //Basemap layer service
+        layers: [asd_500k_mosaic2]
+      });
