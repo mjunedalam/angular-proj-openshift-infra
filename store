@@ -1,10 +1,2 @@
-const asd_500k_mosaic2 = new ImageryLayer({
-        url: '"https://gissrv.enp.aramco.com.sa:6443/arcgis/rest/services/CART/ASD_100K_MOSAIC/ImageServer',
-        format: "jpgpng",
-        id: "parent-map",
-        opacity: 0.9
-      });
-     const map = new Map({
-        basemap: "oceans", //Basemap layer service
-        layers: [asd_500k_mosaic2]
-      });
+7:56:52 AM [vite] (client) error while updating dependencies:
+Error: EPERM: operation not permitted, rename 'C:\Dev\JavaDev\ang01\agwa-frontend\.angular\cache\19.2.4\agwa\vite\deps_temp_9f3c3480' -> 'C:\Dev\JavaDev\ang01\agwa-frontend\.angular\cache\19.2.4\agwa\vite\deps'  
