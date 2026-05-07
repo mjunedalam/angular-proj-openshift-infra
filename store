@@ -1,162 +1,3 @@
-:host {
-  --map-card-bg: color-mix(in srgb, var(--bg-card) 88%, white 12%);
-  --map-border: var(--border);
-  --map-header-text: var(--text-primary);
-  --map-muted: var(--text-secondary);
-  --map-panel: color-mix(in srgb, var(--bg-surface) 90%, white 10%);
-  display: block;
-}
-
-.wwell-map-card {
-  overflow: hidden;
-  border: 1px solid var(--map-border);
-  border-radius: 1.5rem;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--map-card-bg) 92%, white 8%), var(--map-card-bg)),
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 12%, transparent), transparent 30%);
-  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
-}
-
-.wwell-map-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.wwell-map-eyebrow {
-  margin: 0 0 0.25rem;
-  color: var(--accent);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.wwell-map-title {
-  margin: 0;
-  color: var(--map-header-text);
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-
-.wwell-map-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  padding: 0.75rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  border-radius: 1rem;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #0f766e 20%), color-mix(in srgb, var(--accent) 65%, #0f4c81 35%));
-  color: #fff;
-}
-
-.wwell-map-stat__value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.wwell-map-stat__label {
-  font-size: 0.8rem;
-  opacity: 0.85;
-  text-transform: uppercase;
-}
-
-.wwell-map-message {
-  display: block;
-  margin-bottom: 1rem;
-  padding: 0.8rem 1rem;
-  border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
-  background: color-mix(in srgb, var(--danger) 10%, white);
-  color: var(--danger);
-}
-
-.wwell-map-frame {
-  position: relative;
-  min-height: 90vh;
-  overflow: hidden;
-  border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--map-border) 80%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--map-panel) 88%, white 12%), var(--map-panel));
-}
-
-.wwell-map-canvas {
-  height: 90vh;
-  width: 100%;
-}
-
-.wwell-map-legend {
-  position: absolute;
-  left: 1rem;
-  bottom: 1rem;
-  z-index: 2;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.45rem;
-  background: transparent;
-}
-
-.wwell-map-legend__chip {
-  min-width: 4rem;
-  padding: 0.42rem 0.7rem;
-  border-radius: 999px;
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-align: center;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.wwell-map-legend__chip--owner {
-  background: #cedf5f;
-  color: #35530a;
-}
-
-.wwell-map-legend__chip--green {
-  background: #84cc16;
-}
-
-.wwell-map-legend__chip--purple {
-  background: #c084fc;
-}
-
-.wwell-map-legend__chip--red {
-  background: #f87171;
-}
-
-.wwell-map-legend__chip--blue {
-  background: #60a5fa;
-}
-
-.wwell-map-legend__chip--aquifer {
-  background: #22b8e6;
-}
-
-:host ::ng-deep .wwell-map-card {
-  padding: 1.25rem;
-}
-
-@media (max-width: 720px) {
-  .wwell-map-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .wwell-map-stat {
-    align-items: flex-start;
-  }
-
-  .wwell-map-legend {
-    left: 0.75rem;
-    right: 0.75rem;
-    bottom: 0.75rem;
-    max-width: none;
-  }
-}
-==
 import { isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -442,14 +283,16 @@ export class WwellmapComponent implements OnInit, OnDestroy {
   private async drawWWellIcons(layer: GraphicsLayer): Promise<void> {
     layer.removeAll();
     const { default: Point } = await import('@arcgis/core/geometry/Point');
-    const { default: PictureMarkerSymbol } = await import('@arcgis/core/symbols/PictureMarkerSymbol');
+    const { default: SimpleMarkerSymbol } = await import('@arcgis/core/symbols/SimpleMarkerSymbol');
     const wells = this.wwells();
     for (const wwell of wells) {
       const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
-      const symbol = new PictureMarkerSymbol({
-        url: STYLE.markerIcon,
-        width: STYLE.markerSize,
-        height: STYLE.markerSize
+      const tileColor = tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 1];
+      const symbol = new SimpleMarkerSymbol({
+        style: 'circle',
+        color: tileColor,
+        size: STYLE.markerSize,
+        outline: { color: [255, 255, 255], width: 1.5 },
       });
       layer.add(
         new Graphic({
