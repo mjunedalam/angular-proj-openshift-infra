@@ -1,7 +1,71 @@
-FROM registry.access.redhat.com/ubi8/nginx-122@sha256:418353eb2f1b267acd9635c5bd006d364fc09837162d192d110c943bc04e72ce
-USER 0
-ADD dist/agwa /tmp/src/
-RUN chown -R 1001:0 /tmp/src
-USER 1001
-RUN /usr/libexec/s2i/assemble
-CMD /usr/libexec/s2i/run
+OpenShift Pod — URL Connectivity Check
+Target: https://eccenterprisegis.enp.aramco.com.sa/arcgis  |  Container: UBI8 / nginx-122
+
+Ops Guide
+1
+Get the Pod Name
+List all pods in your namespace and copy the running pod name.
+
+oc get pods -n <your-namespace>
+ℹ️
+Replace <your-namespace> with the actual OpenShift project name (e.g. agwa-prod). Look for a pod with Running status.
+2
+Test HTTPS Connectivity via curl
+Exec into the pod and run curl against the target URL with verbose output and a timeout.
+
+oc exec -n <your-namespace> <pod-name> -- \
+  curl -v --max-time 10 \
+  https://eccenterprisegis.enp.aramco.com.sa/arcgis
+3
+Fallback — Use wget if curl is Unavailable
+Some minimal builds strip curl. Use wget as an alternative.
+
+oc exec -n <your-namespace> <pod-name> -- \
+  wget -O- --timeout=10 \
+  https://eccenterprisegis.enp.aramco.com.sa/arcgis
+4
+DNS Resolution Check
+Verify the hostname resolves from inside the pod. A timeout here means DNS is broken, not the host itself.
+
+oc exec -n <your-namespace> <pod-name> -- \
+  nslookup eccenterprisegis.enp.aramco.com.sa
+5
+Interpret the curl Output
+Diagnostic table — match your output to the row below:
+
+curl Output	Status	Meaning & Next Action
+Connected to … + HTTP 2xx/3xx	PASS	Pod reaches the host. Network is fine.
+Could not resolve host	DNS FAIL	DNS broken inside the pod. Check CoreDNS config or add a custom DNS entry.
+Connection refused	PORT BLOCKED	Host is reachable but port 443 is closed on the remote side.
+Connection timed out	EGRESS BLOCKED	EgressNetworkPolicy or corporate firewall is dropping the traffic.
+SSL certificate problem	TLS ISSUE	Host reachable but cert is self-signed or untrusted. Add -k flag to skip (test only).
+HTTP 401 / 403	REACHABLE	Network is fine — auth token or permissions issue on the server side.
+6
+Check OpenShift Network Policies (if Step 2 times out)
+Run these from your local terminal (not inside the pod) to inspect egress rules.
+
+# Check EgressNetworkPolicy (older OpenShift)
+oc get egressnetworkpolicy -n <your-namespace>
+
+# Check standard NetworkPolicy
+oc get networkpolicy -n <your-namespace>
+
+# Check EgressFirewall (OpenShift 4.x)
+oc get egressfirewall -n <your-namespace>
+⚠️
+If any egress rule exists that does not explicitly Allow the IP range of eccenterprisegis.enp.aramco.com.sa, traffic will be silently dropped.
+7
+Corporate Proxy (if required)
+If the cluster routes egress through a corporate proxy, the pod environment must have the proxy vars set.
+
+# Check if proxy env vars exist in the pod
+oc exec -n <your-namespace> <pod-name> -- env | grep -i proxy
+
+# Test curl through a proxy explicitly
+oc exec -n <your-namespace> <pod-name> -- \
+  curl -v --proxy http://<proxy-host>:<port> \
+  https://eccenterprisegis.enp.aramco.com.sa/arcgis
+✅
+If the proxy test succeeds but the direct test fails, add HTTP_PROXY / HTTPS_PROXY / NO_PROXY env vars to your OpenShift Deployment or DeploymentConfig.
+OpenShift Pod Connectivity Guide — UBI8/nginx-122
+Print via Ctrl+P → Save as PDF
