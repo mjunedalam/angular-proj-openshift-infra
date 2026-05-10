@@ -1,20 +1,36 @@
-quarkus.datasource.db-kind=oracle
-quarkus.datasource.jdbc.url=${JDBC_URL}
-quarkus.datasource.username=${AGWA_USERNAME}
-quarkus.datasource.password=${AGWA_PASSWORD}
+import io.agroal.api.AgroalDataSource;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import java.util.Map;
 
-quarkus.datasource.jdbc.min-size=5
-quarkus.datasource.jdbc.max-size=20
-quarkus.datasource.jdbc.acquisition-timeout=5S
-quarkus.datasource.jdbc.background-validation-interval=2M
-quarkus.datasource.jdbc.validation-query-sql=SELECT 1 FROM DUAL
-quarkus.datasource.jdbc.leak-detection-interval=30S
+@Path("/debug/db-pool")
+public class DbPoolResource {
 
-quarkus.mybatis.mapper-locations=mappers/
-quarkus.mybatis.jdbc-type-for-null=varchar
-quarkus.mybatis.use-actual-param-name=true
-quarkus.mybatis.transaction-factory=MANAGED
+    @Inject
+    AgroalDataSource dataSource;
 
-quarkus.rest-csrf.enabled=false
-%dev.quarkus.rest-csrf.enabled=false
-%test.quarkus.rest-csrf.enabled=false
+    @GET
+    public Map<String, Object> pool() {
+        var m = dataSource.getMetrics();
+        return Map.of(
+            "active", m.activeCount(),
+            "available", m.availableCount(),
+            "awaiting", m.awaitingCount(),
+            "maxUsed", m.maxUsedCount(),
+            "acquireCount", m.acquireCount(),
+            "creationCount", m.creationCount(),
+            "blockingTimeAvgMs", m.blockingTimeAverage().toMillis(),
+            "creationTimeAvgMs", m.creationTimeAverage().toMillis()
+        );
+    }
+}
+==
+SELECT sid, serial#, username, status, machine, program, module, action
+FROM v$session
+WHERE username = 'YOUR_SCHEMA_USER'
+ORDER BY status, sid;
+==
+quarkus.datasource.jdbc.telemetry.enabled=true
+quarkus.datasource.jdbc.telemetry.trace-connection=true
+quarkus.datasource.jdbc.metrics.enabled=true
