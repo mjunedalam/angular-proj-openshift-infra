@@ -1,36 +1,68 @@
-import io.agroal.api.AgroalDataSource;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import java.util.Map;
+#datasource
+quarkus.datasource.db-kind=oracle
+quarkus.datasource.jdbc.driver=oracle.jdbc.driver.OracleDriver
+quarkus.native.add-all-charsets=true
+quarkus.datasource.jdbc.url=${JDBC_URL}
+quarkus.datasource.username=${AGWA_USERNAME}
+quarkus.datasource.password=${AGWA_PASSWORD}
 
-@Path("/debug/db-pool")
-public class DbPoolResource {
+quarkus.http.test-port=9696
 
-    @Inject
-    AgroalDataSource dataSource;
+#mybatis
+quarkus.mybatis.mapper-locations=mappers/
+quarkus.mybatis.jdbc-type-for-null=varchar
+quarkus.mybatis.use-actual-param-name=true
 
-    @GET
-    public Map<String, Object> pool() {
-        var m = dataSource.getMetrics();
-        return Map.of(
-            "active", m.activeCount(),
-            "available", m.availableCount(),
-            "awaiting", m.awaitingCount(),
-            "maxUsed", m.maxUsedCount(),
-            "acquireCount", m.acquireCount(),
-            "creationCount", m.creationCount(),
-            "blockingTimeAvgMs", m.blockingTimeAverage().toMillis(),
-            "creationTimeAvgMs", m.creationTimeAverage().toMillis()
-        );
-    }
-}
-==
-SELECT sid, serial#, username, status, machine, program, module, action
-FROM v$session
-WHERE username = 'YOUR_SCHEMA_USER'
-ORDER BY status, sid;
-==
-quarkus.datasource.jdbc.telemetry.enabled=true
-quarkus.datasource.jdbc.telemetry.trace-connection=true
-quarkus.datasource.jdbc.metrics.enabled=true
+#CSRF
+quarkus.rest-csrf.cookie-name=XSRF-TOKEN
+quarkus.rest-csrf.token-header-name=X-XSRF-TOKEN
+quarkus.rest-csrf.cookie-http-only=false
+quarkus.rest-csrf.enabled=false
+
+
+%dev.quarkus.rest-csrf.enabled=false
+%test.rest-quarkus.csrf.enabled=false
+
+#opentelemetry
+quarkus.otel.exporter.otlp.endpoint=http://otel-collector.tempo-monolithic.svc.cluster.local:4317/
+
+quarkus.rest-client.logging.scope=request-response
+quarkus.rest-client.logging.body-limit=5000
+
+quarkus.http.cors=true
+#quarkus.http.cors.origins=http://localhost:4200,https://agwa-frontend-dev.apps.ocpb.enp.aramco.com.sa,
+quarkus.http.cors.methods=GET,POST,PUT,DELETE,OPTIONS
+quarkus.http.cors.headers=Content-Type,Authorization
+
+quarkus.http.cors.origins=*
+quarkus.swagger-ui.always-include=true
+
+#dailyreports
+agwa.dailyreports.path=/well-presentation-docs
+#5MB max
+agwa.max.filesize=5242880
+
+#opentelemetry
+
+quarkus.datasource.jdbc.telemetry=true
+quarkus.otel.security-events.enabled=true
+
+quarkus.mybatis.datasource.jdbc.max-size=10
+quarkus.mybatis.datasource.jdbc.min-size=5
+quarkus.mybatis.datasource.jdbc.initial-size=5
+quarkus.datasource.jdbc.acquisition-timeout=100
+
+
+
+quarkus.datasource.jdbc.validation-query-sql=SELECT 1 FROM DUAL
+quarkus.datasource.jdbc.leak-detection-interval=30S
+
+quarkus.mybatis.transaction-factory=MANAGED
+
+quarkus.datasource.*.jdbc.acquisition-timeout=5S
+
+
+INFO] --- quarkus:3.20.3.redhat-00006:build (default) @ dailyoperations ---
+[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.mybatis.datasource.jdbc.min-size" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
+[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.mybatis.datasource.jdbc.initial-size" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
+[WARNING] [io.quarkus.config] Unrecognized configuration key "quarkus.mybatis.datasource.jdbc.max-size" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
