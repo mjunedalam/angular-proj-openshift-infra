@@ -14,6 +14,7 @@ import {
 import Graphic from '@arcgis/core/Graphic';
 import { watch as reactiveWatch, watch } from '@arcgis/core/core/reactiveUtils';
 import Point from '@arcgis/core/geometry/Point';
+import Polygon from '@arcgis/core/geometry/Polygon';
 import Polyline from '@arcgis/core/geometry/Polyline';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import MapImageLayer from '@arcgis/core/layers/MapImageLayer';
@@ -26,20 +27,17 @@ import { IWellData } from '@models/well-design/well-data.model';
 import { MorningReportStore } from '../morning-report/store/morning-report.store';
 import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
 import {
-  bottomPolygonTemplate,
   lineSymbol,
   locationTextSymbol,
-  MAP_BOUNDS,
   MAP_CONFIG,
   MAX_WIDTH,
   STYLE,
   tilesArray,
   tilesMap,
-  topPolygonTemplate,
   WWell,
   wwellIdTextSymbol,
 } from 'src/app/shared/models/config/agwa-map.config';
-import { createLegendLayer, findNonOverlappingPosition, translatePolygon } from 'src/app/shared/utils/wwell-placement-utils';
+import { createLegendLayer, findNonOverlappingPosition } from 'src/app/shared/utils/wwell-placement-utils';
 import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
 import { EsriMapService } from '@core/services/esri-map.service';
 
@@ -194,11 +192,15 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     });
 
     await Promise.race([
-      this.mapView.when(),
+      Promise.all([this.mapView.when(), webMap.load()]),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Map initialization timed out')), this.MAP_TIMEOUT_MS),
       ),
     ]);
+
+    if (webMap.loadStatus === 'failed') {
+      throw webMap.loadError ?? new Error('WebMap failed to load');
+    }
 
     // Synchronously override any zoom/extent saved in the portal's WebMap initialViewProperties
     this.mapView.zoom = this.INITIAL_ZOOM;
@@ -269,15 +271,14 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     const wells = this.wwells();
     for (const wwell of wells) {
       const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
-      const [r, g, b] = tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 1];
 
       const outerGlow = new Graphic({
         geometry: point,
         symbol: new SimpleMarkerSymbol({
           style: 'circle',
           size: 36,
-          color: [r, g, b, 0.08],
-          outline: { color: [r, g, b, 0.35], width: 2 },
+          color: [14, 165, 233, 0.08],
+          outline: { color: [14, 165, 233, 0.35], width: 2 },
         }),
       });
 
@@ -286,8 +287,8 @@ export class WwellmapComponent implements OnInit, OnDestroy {
         symbol: new SimpleMarkerSymbol({
           style: 'circle',
           size: 20,
-          color: [r, g, b, 0.2],
-          outline: { color: [r, g, b, 0.75], width: 1.5 },
+          color: [14, 165, 233, 0.2],
+          outline: { color: [14, 165, 233, 0.75], width: 1.5 },
         }),
       });
 
@@ -296,7 +297,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
         symbol: new SimpleMarkerSymbol({
           style: 'circle',
           size: 8,
-          color: [r, g, b, 1],
+          color: [14, 165, 233, 1],
           outline: { color: [255, 255, 255, 0.9], width: 1.5 },
         }),
         attributes: { wwellId: wwell.wwellId, Location: wwell.location },
@@ -314,119 +315,101 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     const view = this.mapView;
     const viewW = view.width;
     const viewH = view.height;
+    const res = view.resolution; // degrees-per-pixel at current zoom — keeps boxes pixel-stable
+
+    // Target pixel sizes for each box → converted to degrees for this zoom level
+    const topPxW = 90, topPxH = 20;
+    const botPxW = 72, botPxH = 20;
+    const halfTopW = (topPxW / 2) * res;
+    const topH     = topPxH * res;
+    const halfBotW = (botPxW / 2) * res;
+    const botH     = botPxH * res;
 
     const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
     const iconRadius = STYLE.markerSize / 2;
+    const margin = bubblePixelRadius + 4;
     const graphics: Graphic[] = [];
     const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: { wkid: 4326 } });
 
-    const wells: WWell[] = this.wwells();
-    for (const wwell of wells) {
-      // ---- 3.1  Anchor point (screen → map) --------------------
+    for (const wwell of this.wwells()) {
       anchorPt.latitude = wwell.lat;
       anchorPt.longitude = wwell.lng;
 
       const sp = view.toScreen(anchorPt);
       if (!sp) continue;
 
-      // keep the bubble inside the view margins
       sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
       sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
 
-      // ---- 3.2  Find a non‑overlapping screen position ----------
       const obstacles = [
         ...this.placedBubbles,
         { x: sp.x, y: sp.y, radius: iconRadius + 6 },
       ];
-      const finalScreen = findNonOverlappingPosition(
-        sp.x,
-        sp.y,
-        obstacles,
-        bubblePixelRadius
-      );
+      const finalScreen = findNonOverlappingPosition(sp.x, sp.y, obstacles, bubblePixelRadius);
 
-      // ---- 3.3  Remember the placed bubble for the next iterations
-      this.placedBubbles.push({
-        x: finalScreen.x,
-        y: finalScreen.y,
-        radius: bubblePixelRadius,
-      });
+      // Clamp bubble fully within viewport so labels never hide behind the edge
+      finalScreen.x = Math.max(margin, Math.min(viewW - margin, finalScreen.x));
+      finalScreen.y = Math.max(margin, Math.min(viewH - margin, finalScreen.y));
 
-      // ---- 3.4  Convert back to map coordinates -----------------
-      let finalMapPoint = view.toMap(finalScreen) as __esri.Point | null;
-      if (!finalMapPoint) finalMapPoint = anchorPt.clone();
+      this.placedBubbles.push({ x: finalScreen.x, y: finalScreen.y, radius: bubblePixelRadius });
 
-      // ---- 3.5  Small offset so the bubble never sits on the oil well
-      const offsetLat = 3;
-      const offsetLng = 2;
-      finalMapPoint.latitude = Math.min(
-        Math.max(finalMapPoint.latitude! + offsetLat, MAP_BOUNDS.minLat),
-        MAP_BOUNDS.maxLat
-      );
-      finalMapPoint.longitude = Math.min(
-        Math.max(finalMapPoint.longitude! + offsetLng, MAP_BOUNDS.minLng),
-        MAP_BOUNDS.maxLng
-      );
-      // 4.1  Stick (polyline from oil‑well to bubble)
-      const stick = new Graphic({
+      let anchor = view.toMap(finalScreen) as __esri.Point | null;
+      if (!anchor) anchor = anchorPt.clone();
+      const cx = anchor.longitude!;
+      const cy = anchor.latitude!;
+
+      // Stick from well icon to the bubble anchor
+      graphics.push(new Graphic({
         geometry: new Polyline({
-          paths: [
-            [
-              [wwell.lng, wwell.lat],
-              [finalMapPoint.longitude!, finalMapPoint.latitude!],
-            ],
-          ],
+          paths: [[[wwell.lng, wwell.lat], [cx, cy + topH / 2]]],
           spatialReference: { wkid: 4326 },
         }),
-        symbol: lineSymbol(tilesMap.get(wwell.label)!.color),
-      });
+        symbol: lineSymbol(tilesMap.get(wwell.label)?.color ?? STYLE.stickColor),
+      }));
 
-      // 4.2  Top rectangle (bubble “head”)
-      const topPoly = translatePolygon(
-        topPolygonTemplate,
-        finalMapPoint.longitude!,
-        finalMapPoint.latitude!
-      );
-      const bubbleTop = new Graphic({
-        geometry: topPoly,
+      // Top box — color-coded by ownership (biNum)
+      graphics.push(new Graphic({
+        geometry: new Polygon({
+          rings: [[[cx - halfTopW, cy + topH], [cx + halfTopW, cy + topH],
+                   [cx + halfTopW, cy], [cx - halfTopW, cy], [cx - halfTopW, cy + topH]]],
+          spatialReference: { wkid: 4326 },
+        }),
         symbol: new SimpleFillSymbol({
-          color: tilesMap.get(wwell.label)!.color,
+          color: tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 0.9],
           outline: { color: [0, 0, 0], width: 1 },
         }),
-      });
+      }));
 
-      // 4.3  Bottom rectangle (bubble “tail”)
-      const bottomPoly = translatePolygon(
-        bottomPolygonTemplate,
-        finalMapPoint.longitude!,
-        finalMapPoint.latitude!
-      );
-      const bubbleBottom = new Graphic({
-        geometry: bottomPoly,
+      // Bottom box — aquifer blue
+      graphics.push(new Graphic({
+        geometry: new Polygon({
+          rings: [[[cx - halfBotW, cy], [cx + halfBotW, cy],
+                   [cx + halfBotW, cy - botH], [cx - halfBotW, cy - botH], [cx - halfBotW, cy]]],
+          spatialReference: { wkid: 4326 },
+        }),
         symbol: new SimpleFillSymbol({
           color: [0, 191, 255, 0.9],
           outline: { color: [0, 0, 0], width: 1 },
         }),
-      });
+      }));
 
-      // Inside the loop, after you have `finalMapPoint`:
-      const wwellIdLabel = new Graphic({
-        geometry: finalMapPoint,
-        // No clone – we keep the concrete TextSymbol type
-        symbol: wwellIdTextSymbol(STYLE.textFont),
-      });
-      (wwellIdLabel.symbol as TextSymbol).text = `${wwell.wwellId}`;
-      (wwellIdLabel.symbol as TextSymbol).verticalAlignment = "middle";
-      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = "center";
+      // Well ID label — centred in top box
+      const topCenter = new Point({ longitude: cx, latitude: cy + topH / 2, spatialReference: { wkid: 4326 } });
+      const wwellIdLabel = new Graphic({ geometry: topCenter, symbol: wwellIdTextSymbol(STYLE.textFont) });
+      (wwellIdLabel.symbol as TextSymbol).text = wwell.wwellId;
+      (wwellIdLabel.symbol as TextSymbol).verticalAlignment = 'middle';
+      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = 'center';
+      (wwellIdLabel.symbol as TextSymbol).yoffset = 0;
 
-      const locationLabel = new Graphic({
-        geometry: finalMapPoint,
-        symbol: locationTextSymbol(STYLE.textFont),
-      });
-      (locationLabel.symbol as TextSymbol).text = `${wwell.location}`;
-      (locationLabel.symbol as TextSymbol).horizontalAlignment = "center";
-      (locationLabel.symbol as TextSymbol).verticalAlignment = "middle";
-      graphics.push(stick, bubbleTop, bubbleBottom, wwellIdLabel, locationLabel);
+      // Location label — centred in bottom box
+      const botCenter = new Point({ longitude: cx, latitude: cy - botH / 2, spatialReference: { wkid: 4326 } });
+      const locationLabel = new Graphic({ geometry: botCenter, symbol: locationTextSymbol(STYLE.textFont) });
+      (locationLabel.symbol as TextSymbol).text = wwell.location;
+      (locationLabel.symbol as TextSymbol).horizontalAlignment = 'center';
+      (locationLabel.symbol as TextSymbol).verticalAlignment = 'middle';
+      (locationLabel.symbol as TextSymbol).yoffset = 0;
+
+      graphics.push(wwellIdLabel, locationLabel);
     }
     layer.addMany(graphics);
   }
