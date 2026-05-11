@@ -67,7 +67,6 @@ export class WwellmapComponent implements OnInit, OnDestroy {
   private readonly wwells = signal<WWell[]>([]);
   private readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
 
-  private readonly MAP_TIMEOUT_MS = 20_000;
   private readonly MAX_RETRY_DELAY_MS = 30_000;
   private readonly INITIAL_ZOOM = 6;
 
@@ -170,20 +169,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
       ui: { components: [] },
     });
 
-    await Promise.race([
-      Promise.all([this.mapView.when(), webMap.load()]),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Map initialization timed out')), this.MAP_TIMEOUT_MS),
-      ),
-    ]);
-
-    if (webMap.loadStatus !== 'loaded') {
-      throw webMap.loadError ?? new Error(`WebMap load status: ${webMap.loadStatus}`);
-    }
-
-    this.mapView.zoom = this.INITIAL_ZOOM;
-    this.mapView.center = { longitude: MAP_CONFIG.center[0], latitude: MAP_CONFIG.center[1] } as __esri.Point;
-    await this.mapView.goTo({ center: MAP_CONFIG.center, zoom: this.INITIAL_ZOOM }, { animate: true });
+    await this.mapView.when();
 
     this.wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
     this.bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
