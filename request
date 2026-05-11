@@ -1,778 +1,368 @@
-import { isPlatformBrowser } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  OnInit,
-  PLATFORM_ID,
-  signal,
-  ViewChild,
-} from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
-import Graphic from '@arcgis/core/Graphic';
-import { watch } from '@arcgis/core/core/reactiveUtils';
-import Point from '@arcgis/core/geometry/Point';
-import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
-import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import WebMap from '@arcgis/core/WebMap';
-import MapView from '@arcgis/core/views/MapView';
+<div class="map-card">
+  <div class="map-card__header">Active WWell Map</div>
 
-import { PresentationStore } from '../store/presentation.store';
-import { LoaderService } from '@shared/components/global-loader/loader.service';
-import { EsriMapService } from '@core/services/esri-map.service';
-import { MAP_CONFIG, MAX_WIDTH } from 'src/app/shared/models/config/agwa-map.config';
-import { ExternalConfigService } from '@shared/services/external-config.service';
+  <div class="blueprint-view">
+    <div #presMapViewNode class="wwell-map-canvas"></div>
 
-const BOOT_TASK = 'arcgis-map';
-const SELECTED_WELL_ZOOM = 11;
-
-interface SelectedWellCoords {
-  readonly lat: number;
-  readonly lng: number;
-}
-
-@Component({
-  selector: 'app-active-wwell-map',
-  standalone: true,
-  imports: [MatCardModule],
-  templateUrl: './active-wwell-map.component.html',
-  styleUrl: './active-wwell-map.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class ActiveWwellMapComponent implements OnInit, OnDestroy {
-  @ViewChild('presMapViewNode', { static: true }) private mapViewEl?: ElementRef<HTMLDivElement>;
-
-  private readonly platformId = inject(PLATFORM_ID);
-  private readonly store = inject(PresentationStore);
-  private readonly loader = inject(LoaderService);
-  private readonly esriAuth = inject(EsriMapService);
-  private readonly extConfigService = inject(ExternalConfigService);
-
-  private mapView?: __esri.MapView;
-  private selectedWellLayer?: GraphicsLayer;
-  private bootTaskRegistered = false;
-  private pointerMoveHandle: { remove(): void } | null = null;
-  private tooltipEl: HTMLDivElement | null = null;
-  private hitTestPending = false;
-
-  protected readonly errorMessage = signal<string | null>('Select a well to preview its location.');
-  protected readonly mapReady = signal(false);
-
-  private readonly selectedWellCoords = computed<SelectedWellCoords | null>(() => {
-    const header = this.store.wellHeaderData();
-    const epANum = this.store.selectedEpANum();
-
-    if (!header || epANum === null) return null;
-
-    const lat = this.parseCoord(header.lat);
-    const lng = this.parseCoord(header.lon);
-
-    return lat !== null && lng !== null ? { lat, lng } : null;
-  });
-
-  constructor() {
-    effect(() => {
-      const coords = this.selectedWellCoords();
-      if (!this.mapReady()) return;
-      this.syncGlowGraphic(coords);
-    });
-  }
-
-  ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    this.registerBootTask();
-    void this.initMap();
-  }
-
-  ngOnDestroy(): void {
-    this.pointerMoveHandle?.remove();
-    this.tooltipEl?.remove();
-    this.tooltipEl = null;
-    this.mapView?.destroy();
-    this.resolveBootTask();
-  }
-
-  async captureMapAsBase64(): Promise<string | undefined> {
-    if (!this.mapView) return undefined;
-    await this.waitForMapRender();
-    return this.getScreenshotBase64();
-  }
-
-  async saveMapImage(): Promise<void> {
-    const base64 = await this.captureMapAsBase64();
-    if (!base64) return;
-    const a = document.createElement('a');
-    a.href = `data:image/png;base64,${base64}`;
-    a.download = 'selected-well-map.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  private parseCoord(value: number | string | null | undefined): number | null {
-    const n = typeof value === 'number' ? value : Number.parseFloat(String(value ?? '').trim());
-    return Number.isFinite(n) ? n : null;
-  }
-
-  private async initMap(): Promise<void> {
-    try {
-      await this.esriAuth.authenticateUserForMapAccess();
-
-      const webMap = new WebMap({
-        portalItem: { id: this.extConfigService.settings.presWebMapId },
-      });
-
-      this.mapView = new MapView({
-        container: this.mapViewEl?.nativeElement,
-        map: webMap,
-        center: MAP_CONFIG.center,
-        zoom: 10,
-        ui: { components: [] },
-      });
-
-      await this.mapView.when();
-
-      this.selectedWellLayer = new GraphicsLayer({ id: 'selected-well' });
-      webMap.add(this.selectedWellLayer);
-
-      this.mapReady.set(true);
-      this.registerHoverTooltip();
-      await this.waitForMapRender();
-      this.syncGlowGraphic(this.selectedWellCoords());
-      this.resolveBootTask();
-    } catch (error) {
-      console.error('[ActiveWwellMap] initMap error', error);
-      this.errorMessage.set('Map could not be initialized.');
-      this.resolveBootTask();
-    }
-  }
-
-  private syncGlowGraphic(coords: SelectedWellCoords | null): void {
-    if (!this.selectedWellLayer) return;
-
-    this.selectedWellLayer.removeAll();
-
-    if (this.store.selectedEpANum() === null) {
-      this.errorMessage.set('Select a well to preview its location.');
-      return;
+    @if (!mapReady()) {
+      <div class="map-loader">
+        <span class="map-loader__spinner"></span>
+        <span class="map-loader__label">Loading map…</span>
+      </div>
     }
 
-    if (!coords) {
-      this.errorMessage.set('Selected well does not have valid coordinates.');
-      return;
+    @if (mapReady() && errorMessage()) {
+      <div class="map-state">
+        {{ errorMessage() }}
+      </div>
     }
-
-    this.errorMessage.set(null);
-
-    const point = new Point({ latitude: coords.lat, longitude: coords.lng });
-
-    const outerGlow = new Graphic({
-      geometry: point,
-      symbol: new SimpleMarkerSymbol({
-        style: 'circle',
-        size: 36,
-        color: [14, 165, 233, 0.08],
-        outline: { color: [14, 165, 233, 0.35], width: 2 },
-      }),
-    });
-
-    const midRing = new Graphic({
-      geometry: point,
-      symbol: new SimpleMarkerSymbol({
-        style: 'circle',
-        size: 20,
-        color: [14, 165, 233, 0.2],
-        outline: { color: [14, 165, 233, 0.75], width: 1.5 },
-      }),
-    });
-
-    const header = this.store.wellHeaderData();
-    const core = new Graphic({
-      geometry: point,
-      symbol: new SimpleMarkerSymbol({
-        style: 'circle',
-        size: 8,
-        color: [14, 165, 233, 1],
-        outline: { color: [255, 255, 255, 0.9], width: 1.5 },
-      }),
-      popupTemplate: header ? {
-        title: header.wellName,
-        content: `Field: ${header.field} &nbsp;·&nbsp; Depth: ${header.depth} &nbsp;·&nbsp; Ep#: ${header.epNum}<br>Lat: ${coords.lat.toFixed(5)} &nbsp; Lon: ${coords.lng.toFixed(5)}`,
-      } : undefined,
-    });
-
-    const graphics = [outerGlow, midRing, core];
-    const wellName = header?.wellName;
-
-    if (wellName) {
-      const label = new Graphic({
-        geometry: point,
-        symbol: new TextSymbol({
-          text: wellName,
-          color: [15, 23, 42, 1],
-          haloColor: [255, 255, 255, 0.9],
-          haloSize: 2,
-          font: { size: 11, weight: 'bold', family: 'sans-serif' },
-          yoffset: 14,
-          horizontalAlignment: 'center',
-        }),
-      });
-      graphics.push(label);
-    }
-
-    this.selectedWellLayer.addMany(graphics);
-    void this.focusWell(point);
-  }
-
-  private registerHoverTooltip(): void {
-    if (!this.mapView || !this.mapViewEl) return;
-
-    const tip = document.createElement('div');
-    tip.className = 'wwell-map-tooltip';
-    this.mapViewEl.nativeElement.appendChild(tip);
-    this.tooltipEl = tip;
-
-    this.mapViewEl.nativeElement.addEventListener('mouseleave', () => {
-      this.tooltipEl?.classList.remove('wwell-map-tooltip--visible');
-    });
-
-    this.pointerMoveHandle = this.mapView.on('pointer-move', (event) => {
-      void this.onPointerMove(event);
-    });
-  }
-
-  private async onPointerMove(event: __esri.ViewPointerMoveEvent): Promise<void> {
-    if (!this.mapView || !this.selectedWellLayer || !this.tooltipEl || this.hitTestPending) return;
-
-    this.hitTestPending = true;
-    try {
-      const result = await this.mapView.hitTest(event, { include: [this.selectedWellLayer] });
-      const hit = result.results.some(r => r.type === 'graphic');
-
-      if (hit) {
-        this.tooltipEl.textContent = this.store.wellHeaderData()?.wellName ?? '';
-        this.tooltipEl.style.left = `${event.x + 14}px`;
-        this.tooltipEl.style.top = `${event.y - 10}px`;
-        this.tooltipEl.classList.add('wwell-map-tooltip--visible');
-      } else {
-        this.tooltipEl.classList.remove('wwell-map-tooltip--visible');
-      }
-    } finally {
-      this.hitTestPending = false;
-    }
-  }
-
-  private async focusWell(point: Point): Promise<void> {
-    if (!this.mapView) return;
-    try {
-      await this.mapView.goTo({ target: point, zoom: SELECTED_WELL_ZOOM }, { animate: true });
-    } catch {
-      // ignore goTo interruptions during teardown
-    }
-  }
-
-  private async waitForMapRender(): Promise<void> {
-    if (!this.mapView) return;
-    if (!this.mapView.updating) {
-      await new Promise(requestAnimationFrame);
-      return;
-    }
-    await new Promise<void>((resolve) => {
-      const handle = watch(
-        () => this.mapView?.updating ?? false,
-        (updating) => {
-          if (!updating) {
-            handle.remove();
-            requestAnimationFrame(() => resolve());
-          }
-        },
-      );
-    });
-  }
-
-  private async getScreenshotBase64(): Promise<string> {
-    const screenshot = await this.mapView!.takeScreenshot({ format: 'png', quality: 1 });
-    const [, raw] = screenshot.dataUrl.split(',');
-    if (!raw) throw new Error('Screenshot payload empty');
-
-    const img = new Image();
-    img.src = `data:image/png;base64,${raw}`;
-    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-
-    const scale = Math.min(1, MAX_WIDTH / img.width);
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
-    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    return canvas.toDataURL('image/jpeg', 1).split(',')[1];
-  }
-
-  private registerBootTask(): void {
-    if (this.bootTaskRegistered) return;
-    this.bootTaskRegistered = true;
-    this.loader.registerBootTask(BOOT_TASK);
-  }
-
-  private resolveBootTask(): void {
-    if (!this.bootTaskRegistered) return;
-    this.bootTaskRegistered = false;
-    this.loader.resolveBootTask(BOOT_TASK);
-  }
-}
-
+  </div>
+</div>
 ===
+:host {
+  display: block;
+}
 
+.map-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card);
+  overflow: hidden;
 
-import { isPlatformBrowser } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  OnInit,
-  PLATFORM_ID,
-  signal,
-  ViewChild,
-} from '@angular/core';
-import Graphic from '@arcgis/core/Graphic';
-import { watch as reactiveWatch, watch } from '@arcgis/core/core/reactiveUtils';
-import Point from '@arcgis/core/geometry/Point';
-import Polygon from '@arcgis/core/geometry/Polygon';
-import Polyline from '@arcgis/core/geometry/Polyline';
-import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
-import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import WebMap from '@arcgis/core/WebMap';
-import MapView from '@arcgis/core/views/MapView';
-import { MatCardModule } from '@angular/material/card';
-import { IWellData } from '@models/well-design/well-data.model';
-import { MorningReportStore } from '../morning-report/store/morning-report.store';
-import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
-import {
-  lineSymbol,
-  locationTextSymbol,
-  MAP_CONFIG,
-  MAX_WIDTH,
-  STYLE,
-  tilesArray,
-  tilesMap,
-  WWell,
-  wwellIdTextSymbol,
-} from 'src/app/shared/models/config/agwa-map.config';
-import { findNonOverlappingPosition } from 'src/app/shared/utils/wwell-placement-utils';
-import { EsriMapService } from '@core/services/esri-map.service';
-import { ExternalConfigService } from '@shared/services/external-config.service';
+  &__header {
+    color: #ffffff;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.35;
+    padding: 12px 16px;
+    letter-spacing: 0.04em;
+  }
+}
 
-const WWELL_MAP_BOOT_TASK = 'arcgis-map';
+.blueprint-view {
+  height: 300px;
+  position: relative;
+  overflow: hidden;
+}
 
-@Component({
-  selector: 'app-wwellmap',
-  standalone: true,
-  imports: [MatCardModule],
-  templateUrl: './wwell-map.component.html',
-  styleUrl: './wwell-map.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class WwellmapComponent implements OnInit, OnDestroy {
-  @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef<HTMLDivElement>;
+.wwell-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
 
-  private mapView?: __esri.MapView;
-  private wwellLayer?: GraphicsLayer;
-  private bubbleLayer?: GraphicsLayer;
-  private stationaryWatchHandle?: __esri.WatchHandle;
-  private placedBubbles: { x: number; y: number; radius: number }[] = [];
-  private bootTaskRegistered = false;
-  private mapRetryTimeoutId?: ReturnType<typeof setTimeout>;
-  private intersectionObserver?: IntersectionObserver;
-  private isDestroyed = false;
+.wwell-map-tooltip {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.88);
+  color: #e2e8f0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 4px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.12s ease;
 
-  protected readonly mapReady = signal(false);
-  private readonly wwells = signal<WWell[]>([]);
-  private readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
+  &--visible {
+    opacity: 1;
+  }
+}
 
-  private readonly MAP_TIMEOUT_MS = 20_000;
-  private readonly MAX_RETRY_DELAY_MS = 30_000;
-  private readonly INITIAL_ZOOM = 6;
+.map-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
 
-
-  private readonly platformId = inject(PLATFORM_ID);
-  private readonly loader = inject(LoaderService);
-  private readonly esriAuth = inject(EsriMapService);
-  private readonly store = inject(MorningReportStore);
-  private readonly extConfigService = inject(ExternalConfigService);
-
-  constructor() {
-    effect(() => {
-      this.buildWWellSignal(this.store.allWellsData());
-    });
-
-    effect(() => {
-      this.wwells();
-      if (!this.mapReady() || !this.wwellLayer) return;
-      this.drawWWellIcons(this.wwellLayer).catch(e =>
-        console.error('[WwellMap] drawWWellIcons failed', e)
-      );
-    });
-
-    effect(() => {
-      this.wwells();
-      const layer = this.bubbleLayerReady();
-      if (!layer) return;
-      this.layoutBubbles(layer);
-    });
+  &__spinner {
+    display: block;
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(103, 232, 249, 0.2);
+    border-top-color: #67e8f9;
+    border-radius: 50%;
+    animation: map-spin 0.75s linear infinite;
   }
 
-  ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    this.observeVisibility();
+  &__label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #67e8f9;
+    text-shadow: 0 1px 8px rgba(2, 6, 23, 0.88);
   }
+}
 
-  ngOnDestroy(): void {
-    this.isDestroyed = true;
-    clearTimeout(this.mapRetryTimeoutId);
-    this.intersectionObserver?.disconnect();
-    this.stationaryWatchHandle?.remove();
-    this.mapView?.destroy();
-    this.resolveBootTask();
-  }
+@keyframes map-spin {
+  to { transform: rotate(360deg); }
+}
 
-  private observeVisibility(): void {
-    const el = this.mapViewEl?.nativeElement;
-    if (!el || !('IntersectionObserver' in window)) {
-      this.registerBootTask();
-      this.initMapWithRetry();
-      return;
-    }
-    this.intersectionObserver = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          this.intersectionObserver?.disconnect();
-          this.intersectionObserver = undefined;
-          this.registerBootTask();
-          this.initMapWithRetry();
-        }
-      },
-      { threshold: 0.1 },
-    );
-    this.intersectionObserver.observe(el);
-  }
+.map-state {
+  position: absolute;
+  inset: 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: #67e8f9;
+  text-shadow: 0 1px 8px rgba(2, 6, 23, 0.88);
+}
+===
+<mat-card class="wwell-map-card">
+  <div class="wwell-map-header">
+    <div>
+      <h3 class="wwell-map-title">Map Of Active Water Wells</h3>
+    </div>
+  </div>
 
-  private initMapWithRetry(attempt = 0): void {
-    this.initMap().then(() => {
-      if (attempt > 0) console.log(`[Map] Connected after ${attempt + 1} attempt(s)`);
-    }).catch((err: unknown) => {
-      if (this.isDestroyed) return;
-      const delay = Math.min(1000 * Math.pow(2, attempt), this.MAX_RETRY_DELAY_MS);
-      console.warn(`[Map] Reconnecting… attempt ${attempt + 1} (retry in ${delay / 1000}s)`, err);
-      this.mapRetryTimeoutId = setTimeout(() => this.initMapWithRetry(attempt + 1), delay);
-    });
-  }
 
-  private async initMap(): Promise<void> {
-    this.mapView?.destroy();
-    this.mapView = undefined;
-    this.mapReady.set(false);
-    this.bubbleLayerReady.set(null);
+  <div class="wwell-map-frame">
+    <div #mapViewNode class="wwell-map-canvas"></div>
 
-    await this.esriAuth.authenticateUserForMapAccess();
-
-    const webMap = new WebMap({
-      portalItem: { id: this.extConfigService.settings.morningReportWebMapId },
-    });
-
-    this.mapView = new MapView({
-      container: this.mapViewEl?.nativeElement,
-      map: webMap,
-      center: MAP_CONFIG.center,
-      zoom: this.INITIAL_ZOOM,
-      ui: { components: [] },
-    });
-
-    await Promise.race([
-      Promise.all([this.mapView.when(), webMap.load()]),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Map initialization timed out')), this.MAP_TIMEOUT_MS),
-      ),
-    ]);
-
-    if (webMap.loadStatus === 'failed') {
-      throw webMap.loadError ?? new Error('WebMap failed to load');
+    @if (!mapReady()) {
+      <div class="map-loader">
+        <span class="map-loader__spinner"></span>
+        <span class="map-loader__label">Loading map…</span>
+      </div>
     }
 
-    this.mapView.zoom = this.INITIAL_ZOOM;
-    this.mapView.center = { longitude: MAP_CONFIG.center[0], latitude: MAP_CONFIG.center[1] } as __esri.Point;
-    await this.mapView.goTo({ center: MAP_CONFIG.center, zoom: this.INITIAL_ZOOM }, { animate: true });
-
-    this.wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
-    this.bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
-    webMap.addMany([this.wwellLayer, this.bubbleLayer]);
-
-    this.mapReady.set(true);
-    this.bubbleLayerReady.set(this.bubbleLayer);
-    await this.waitForMapRender();
-    this.resolveBootTask();
-
-    this.stationaryWatchHandle = reactiveWatch(
-      () => this.mapView?.stationary,
-      (isStationary) => {
-        if (isStationary && this.bubbleLayer) this.layoutBubbles(this.bubbleLayer);
-      },
-    );
-  }
-
-  private buildWWellSignal(data: IWellData[]): void {
-    const wells: WWell[] = data.flatMap((d) => {
-      const master = d.WELL_MASTER?.[0];
-      const rig = d.RIG_ACTIVITY?.[0];
-      const lat = master?.lat;
-      const lng = master?.lon;
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) return [];
-      const hydro = d.EXAD_GWD_IR_HYDROGEOLOGY?.[0];
-      const prewap = d.EXAD_RCD_PREWAP?.[0];
-      return [{
-        wwellId: rig?.wellName ?? 'N/A',
-        lat: lat!,
-        lng: lng!,
-        location: hydro?.estTargetAquifier ?? prewap?.targetFormation ?? 'N/A',
-        label: rig?.biNum ?? 'N/A',
-      }];
-    });
-    this.wwells.set(wells);
-  }
-
-  private async drawWWellIcons(layer: GraphicsLayer): Promise<void> {
-    layer.removeAll();
-    const { default: SimpleMarkerSymbol } = await import('@arcgis/core/symbols/SimpleMarkerSymbol');
-    for (const wwell of this.wwells()) {
-      const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
-      const [r, g, b] = tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 1];
-      layer.addMany([
-        new Graphic({
-          geometry: point,
-          symbol: new SimpleMarkerSymbol({ style: 'circle', size: 36, color: [r, g, b, 0.08], outline: { color: [r, g, b, 0.35], width: 2 } }),
-        }),
-        new Graphic({
-          geometry: point,
-          symbol: new SimpleMarkerSymbol({ style: 'circle', size: 20, color: [r, g, b, 0.2], outline: { color: [r, g, b, 0.75], width: 1.5 } }),
-        }),
-        new Graphic({
-          geometry: point,
-          symbol: new SimpleMarkerSymbol({ style: 'circle', size: 8, color: [r, g, b, 1], outline: { color: [255, 255, 255, 0.9], width: 1.5 } }),
-          attributes: { wwellId: wwell.wwellId, location: wwell.location },
-        }),
-      ]);
+    @if (mapReady()) {
+    <div class="wwell-map-legend">
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--owner">
+        Wells Ownership
+      </div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--green">
+        3300
+      </div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--purple">
+        58
+      </div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--red">1514</div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--blue">60</div>
+      <div class="wwell-map-legend__chip wwell-map-legend__chip--aquifer">
+        Aquifier
+      </div>
+    </div>
     }
+  </div>
+</mat-card>
+==
+:host {
+  --map-card-bg: color-mix(in srgb, var(--bg-card) 88%, white 12%);
+  --map-border: var(--border);
+  --map-header-text: var(--text-primary);
+  --map-muted: var(--text-secondary);
+  --map-panel: color-mix(in srgb, var(--bg-surface) 90%, white 10%);
+  display: block;
+}
+
+.wwell-map-card {
+  overflow: hidden;
+  border: 1px solid var(--map-border);
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--map-card-bg) 92%, white 8%), var(--map-card-bg)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 12%, transparent), transparent 30%);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
+}
+
+.wwell-map-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.wwell-map-eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.wwell-map-title {
+  margin: 0;
+  color: var(--map-header-text);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.wwell-map-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #0f766e 20%), color-mix(in srgb, var(--accent) 65%, #0f4c81 35%));
+  color: #fff;
+}
+
+.wwell-map-stat__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.wwell-map-stat__label {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+
+.wwell-map-message {
+  display: block;
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 1rem;
+
+  &--retrying {
+    border: 1px solid color-mix(in srgb, var(--primary, #1a73e8) 28%, transparent);
+    background: color-mix(in srgb, var(--primary, #1a73e8) 8%, white);
+    color: var(--primary, #1a73e8);
+  }
+}
+
+.wwell-map-frame {
+  position: relative;
+  min-height: 90vh;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--map-border) 80%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--map-panel) 88%, white 12%), var(--map-panel));
+}
+
+.wwell-map-canvas {
+  height: 90vh;
+  width: 100%;
+}
+
+.map-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: color-mix(in srgb, var(--map-panel) 70%, transparent);
+  backdrop-filter: blur(3px);
+  border-radius: 1rem;
+  pointer-events: none;
+
+  &__spinner {
+    display: block;
+    width: 44px;
+    height: 44px;
+    border: 3px solid color-mix(in srgb, var(--accent) 20%, transparent);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: map-spin 0.75s linear infinite;
   }
 
-  private geoDegreesPerPixel(view: __esri.MapView): { x: number; y: number } {
-    const cx = view.width / 2, cy = view.height / 2;
-    const p0 = view.toMap({ x: cx, y: cy });
-    const px = view.toMap({ x: cx + 10, y: cy });
-    const py = view.toMap({ x: cx, y: cy + 10 });
-    return {
-      x: p0 && px ? Math.abs((px.longitude ?? 0) - (p0.longitude ?? 0)) / 10 : 0.001,
-      y: p0 && py ? Math.abs((py.latitude ?? 0) - (p0.latitude ?? 0)) / 10 : 0.001,
-    };
+  &__label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--map-muted);
+    text-transform: uppercase;
+  }
+}
+
+@keyframes map-spin {
+  to { transform: rotate(360deg); }
+}
+
+.wwell-map-legend {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.45rem;
+  background: transparent;
+}
+
+.wwell-map-legend__chip {
+  min-width: 4rem;
+  padding: 0.42rem 0.7rem;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.wwell-map-legend__chip--owner {
+  background: #cedf5f;
+  color: #35530a;
+}
+
+.wwell-map-legend__chip--green {
+  background: #84cc16;
+}
+
+.wwell-map-legend__chip--purple {
+  background: #c084fc;
+}
+
+.wwell-map-legend__chip--red {
+  background: #f87171;
+}
+
+.wwell-map-legend__chip--blue {
+  background: #60a5fa;
+}
+
+.wwell-map-legend__chip--aquifer {
+  background: #22b8e6;
+}
+
+:host ::ng-deep .wwell-map-card {
+  padding: 1.25rem;
+}
+
+@media (max-width: 720px) {
+  .wwell-map-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  private layoutBubbles(layer: GraphicsLayer): void {
-    if (!this.mapView) return;
-    layer.removeAll();
-    this.placedBubbles = [];
-
-    const view = this.mapView;
-    const viewW = view.width;
-    const viewH = view.height;
-
-    const { x: degX, y: degY } = this.geoDegreesPerPixel(view);
-    const topPxW = 90, topPxH = 20, botPxW = 72, botPxH = 20;
-    const halfTopW = (topPxW / 2) * degX;
-    const topH = topPxH * degY;
-    const halfBotW = (botPxW / 2) * degX;
-    const botH = botPxH * degY;
-
-    const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
-    const iconRadius = STYLE.markerSize / 2;
-    const margin = bubblePixelRadius + 4;
-    const graphics: Graphic[] = [];
-    const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: { wkid: 4326 } });
-
-    for (const wwell of this.wwells()) {
-      anchorPt.latitude = wwell.lat;
-      anchorPt.longitude = wwell.lng;
-
-      const sp = view.toScreen(anchorPt);
-      if (!sp) continue;
-
-      sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
-      sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
-
-      const obstacles = [...this.placedBubbles, { x: sp.x, y: sp.y, radius: iconRadius + 6 }];
-      const finalScreen = findNonOverlappingPosition(sp.x, sp.y, obstacles, bubblePixelRadius);
-
-      finalScreen.x = Math.max(margin, Math.min(viewW - margin, finalScreen.x));
-      finalScreen.y = Math.max(margin, Math.min(viewH - margin, finalScreen.y));
-
-      this.placedBubbles.push({ x: finalScreen.x, y: finalScreen.y, radius: bubblePixelRadius });
-
-      let anchor = view.toMap(finalScreen) as __esri.Point | null;
-      if (!anchor) anchor = anchorPt.clone();
-      const cx = anchor.longitude!;
-      const cy = anchor.latitude!;
-
-      graphics.push(new Graphic({
-        geometry: new Polyline({
-          paths: [[[wwell.lng, wwell.lat], [cx, cy + topH / 2]]],
-          spatialReference: { wkid: 4326 },
-        }),
-        symbol: lineSymbol(tilesMap.get(wwell.label)?.color ?? STYLE.stickColor),
-      }));
-
-      graphics.push(new Graphic({
-        geometry: new Polygon({
-          rings: [[[cx - halfTopW, cy + topH], [cx + halfTopW, cy + topH],
-          [cx + halfTopW, cy], [cx - halfTopW, cy], [cx - halfTopW, cy + topH]]],
-          spatialReference: { wkid: 4326 },
-        }),
-        symbol: new SimpleFillSymbol({
-          color: tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 0.9],
-          outline: { color: [0, 0, 0], width: 1 },
-        }),
-      }));
-
-      graphics.push(new Graphic({
-        geometry: new Polygon({
-          rings: [[[cx - halfBotW, cy], [cx + halfBotW, cy],
-          [cx + halfBotW, cy - botH], [cx - halfBotW, cy - botH], [cx - halfBotW, cy]]],
-          spatialReference: { wkid: 4326 },
-        }),
-        symbol: new SimpleFillSymbol({ color: [0, 191, 255, 0.9], outline: { color: [0, 0, 0], width: 1 } }),
-      }));
-
-      const topCenter = new Point({ longitude: cx, latitude: cy + topH / 2, spatialReference: { wkid: 4326 } });
-      const wwellIdLabel = new Graphic({ geometry: topCenter, symbol: wwellIdTextSymbol(STYLE.textFont) });
-      (wwellIdLabel.symbol as TextSymbol).text = wwell.wwellId;
-      (wwellIdLabel.symbol as TextSymbol).verticalAlignment = 'middle';
-      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = 'center';
-      (wwellIdLabel.symbol as TextSymbol).yoffset = 0;
-
-      const botCenter = new Point({ longitude: cx, latitude: cy - botH / 2, spatialReference: { wkid: 4326 } });
-      const locationLabel = new Graphic({ geometry: botCenter, symbol: locationTextSymbol(STYLE.textFont) });
-      (locationLabel.symbol as TextSymbol).text = wwell.location;
-      (locationLabel.symbol as TextSymbol).horizontalAlignment = 'center';
-      (locationLabel.symbol as TextSymbol).verticalAlignment = 'middle';
-      (locationLabel.symbol as TextSymbol).yoffset = 0;
-
-      graphics.push(wwellIdLabel, locationLabel);
-    }
-    layer.addMany(graphics);
+  .wwell-map-stat {
+    align-items: flex-start;
   }
 
-  private async waitForMapRender(): Promise<void> {
-    if (!this.mapView) return;
-    if (!this.mapView.updating) { await new Promise(requestAnimationFrame); return; }
-    await new Promise<void>((resolve) => {
-      const handle = watch(
-        () => this.mapView?.updating ?? false,
-        (updating) => { if (!updating) { handle.remove(); requestAnimationFrame(() => resolve()); } },
-      );
-    });
-  }
-
-  async saveMapImage(): Promise<void> {
-    const base64 = await this.captureMapAsBase64();
-    this.downloadBase64(base64, 'water-wells-map.png');
-  }
-
-  async captureMapAsBase64(): Promise<string | undefined> {
-    if (!this.mapView) return;
-    await this.waitForMapRender();
-    return this.getScreenshotBase64();
-  }
-
-  private async getScreenshotBase64(): Promise<string> {
-    const screenshot = await this.mapView!.takeScreenshot({ format: 'png', quality: 1 });
-    const [, rawBase64] = screenshot.dataUrl.split(',');
-    if (!rawBase64) throw new Error('Failed to extract Base-64 payload');
-
-    const img = new Image();
-    img.src = `data:image/png;base64,${rawBase64}`;
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-
-    const scale = Math.min(1, MAX_WIDTH / img.width);
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    this.drawLegendChips(ctx, canvas.width, canvas.height);
-    await new Promise((r) => setTimeout(r, 300));
-
-    return canvas.toDataURL('image/jpeg', 1).split(',')[1];
-  }
-
-  private drawLegendChips(ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number): void {
-    const chips = [
-      { text: 'Wells Ownership', bg: '#cedf5f', textColor: '#35530a' },
-      ...tilesArray.map(t => ({
-        text: t.biNum,
-        bg: `rgba(${t.color[0]}, ${t.color[1]}, ${t.color[2]}, ${t.color[3] ?? 1})`,
-        textColor: '#fff',
-      })),
-      { text: 'Aquifer', bg: '#22b8e6', textColor: '#fff' },
-    ];
-
-    const fontSize = Math.max(13, Math.round(canvasWidth * 0.013));
-    const px = Math.round(fontSize * 0.75);
-    const py = Math.round(fontSize * 0.45);
-    const gap = Math.round(fontSize * 0.6);
-    const chipH = fontSize + py * 2;
-
-    ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
-
-    let x = Math.round(canvasWidth * 0.01);
-    const y = canvasHeight - Math.round(canvasHeight * 0.02) - chipH;
-
-    for (const chip of chips) {
-      const cw = Math.max(chipH * 2, ctx.measureText(chip.text).width + px * 2);
-      ctx.fillStyle = chip.bg;
-      ctx.beginPath();
-      ctx.roundRect(x, y, cw, chipH, chipH / 2);
-      ctx.fill();
-      ctx.fillStyle = chip.textColor;
-      ctx.fillText(chip.text, x + px, y + chipH / 2);
-      x += cw + gap;
-    }
-  }
-
-  private downloadBase64(base64: string | undefined, fileName: string): void {
-    const a = document.createElement('a');
-    a.href = `data:image/png;base64,${base64}`;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  private registerBootTask(): void {
-    if (this.bootTaskRegistered) return;
-    this.bootTaskRegistered = true;
-    this.loader.registerBootTask(WWELL_MAP_BOOT_TASK);
-  }
-
-  private resolveBootTask(): void {
-    if (!this.bootTaskRegistered) return;
-    this.bootTaskRegistered = false;
-    this.loader.resolveBootTask(WWELL_MAP_BOOT_TASK);
+  .wwell-map-legend {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    max-width: none;
   }
 }
