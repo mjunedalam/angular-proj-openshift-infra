@@ -71,9 +71,6 @@ export class WwellmapComponent implements OnInit, OnDestroy {
   private mapRetryTimeoutId?: ReturnType<typeof setTimeout>;
   private isDestroyed = false;
 
-  protected readonly retrying = signal(false);
-  protected readonly retryCount = signal(0);
-
   private readonly MAP_TIMEOUT_MS = 20_000;
   private readonly MAX_RETRY_DELAY_MS = 30_000;
 
@@ -121,13 +118,11 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
   private initMapWithRetry(attempt = 0): void {
     this.initMap().then(() => {
-      this.retrying.set(false);
+      if (attempt > 0) console.log(`[Map] Connected after ${attempt + 1} attempt(s)`);
     }).catch((err: unknown) => {
       if (this.isDestroyed) return;
-      console.error(`Map init attempt ${attempt + 1} failed`, err);
       const delay = Math.min(1000 * Math.pow(2, attempt), this.MAX_RETRY_DELAY_MS);
-      this.retrying.set(true);
-      this.retryCount.set(attempt + 1);
+      console.warn(`[Map] Reconnecting… attempt ${attempt + 1} (retry in ${delay / 1000}s)`, err);
       this.mapRetryTimeoutId = setTimeout(
         () => this.initMapWithRetry(attempt + 1),
         delay,
