@@ -21,8 +21,8 @@ import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import MapImageLayer from '@arcgis/core/layers/MapImageLayer';
 import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
 import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import Basemap from '@arcgis/core/Basemap';
-// import BasemapView from '@arcgis/core/BasemapView';
+import WebMap from '@arcgis/core/WebMap';
+import MapView from '@arcgis/core/views/MapView';
 import { MatCardModule } from '@angular/material/card';
 import { IWellData } from '@models/well-design/well-data.model';
 import { MorningReportStore } from '../morning-report/store/morning-report.store';
@@ -165,24 +165,13 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
     await this.esriAuth.authenticateUserForMapAccess();
 
-    const [{ default: MapMod }, { default: MapViewMod }, { default: MapImageLayerMod }] =
-      await Promise.all([
-        import('@arcgis/core/Map'),
-        import('@arcgis/core/views/MapView'),
-        import('@arcgis/core/layers/MapImageLayer'),
-      ]);
-
-    const baseLayer = new MapImageLayer({
-      url: 'https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/Poliocea_AinAlAbd/MapServer',
+    const webMap = new WebMap({
+      portalItem: { id: 'c177620bd7744a22b6e7e0d98c33d18a' },
     });
 
-    const map = new MapMod({
-      basemap: new Basemap({ baseLayers: [baseLayer], title: 'Poliocea', id: 'poliocea' }),
-    });
-
-    this.mapView = new MapViewMod({
+    this.mapView = new MapView({
       container: this.mapViewEl?.nativeElement,
-      map,
+      map: webMap,
       center: MAP_CONFIG.center,
     });
 
@@ -200,7 +189,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
     await view.goTo(new Extent(MAP_CONFIG.defaultExtent), { animate: false });
 
-    const explorerLayer = new MapImageLayerMod({
+    const explorerLayer = new MapImageLayer({
       url: mapServerUrl,
       sublayers: [
         { id: 6, visible: true },
@@ -214,7 +203,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     viewMap.add(this.legendLayer);
     const wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
     const bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
-    map.addMany([explorerLayer, wwellLayer, bubbleLayer]);
+    webMap.addMany([explorerLayer, wwellLayer, bubbleLayer]);
     this.mapReady.set(true);
     this.bubbleLayerReady.set(bubbleLayer);
     await this.waitForInitialMapRender();
