@@ -101,26 +101,8 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    this.wwells.set(this.getMockWells());
     this.registerBootTask();
     this.initMapWithRetry();
-  }
-
-  private getMockWells(): WWell[] {
-    return [
-      { wwellId: 'W-101', lat: 24.688, lng: 46.722, location: 'Riyadh', label: '3300' },
-      { wwellId: 'W-102', lat: 21.543, lng: 39.173, location: 'Jeddah', label: '58' },
-      { wwellId: 'W-103', lat: 26.435, lng: 50.103, location: 'Dammam', label: '1514' },
-      { wwellId: 'W-104', lat: 28.397, lng: 36.479, location: 'Tabuk', label: '60' },
-      { wwellId: 'W-105', lat: 18.261, lng: 42.531, location: 'Abha', label: '3300' },
-      { wwellId: 'W-106', lat: 24.130, lng: 38.048, location: 'Madinah', label: '1514' },
-      { wwellId: 'W-107', lat: 27.870, lng: 45.620, location: 'Hafar Al-Batin', label: '58' },
-      { wwellId: 'W-108', lat: 20.290, lng: 45.960, location: 'Khamis Mushait', label: '60' },
-      { wwellId: 'W-109', lat: 29.970, lng: 40.200, location: 'Arar', label: '3300' },
-      { wwellId: 'W-110', lat: 25.360, lng: 49.580, location: 'Al-Ahsa', label: '1514' },
-      { wwellId: 'W-111', lat: 22.860, lng: 43.740, location: 'Taif', label: '58' },
-      { wwellId: 'W-112', lat: 17.499, lng: 44.130, location: 'Jizan', label: '60' },
-    ];
   }
 
   ngOnDestroy(): void {
@@ -271,14 +253,15 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     const wells = this.wwells();
     for (const wwell of wells) {
       const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
+      const [r, g, b] = tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 1];
 
       const outerGlow = new Graphic({
         geometry: point,
         symbol: new SimpleMarkerSymbol({
           style: 'circle',
           size: 36,
-          color: [14, 165, 233, 0.08],
-          outline: { color: [14, 165, 233, 0.35], width: 2 },
+          color: [r, g, b, 0.08],
+          outline: { color: [r, g, b, 0.35], width: 2 },
         }),
       });
 
@@ -287,8 +270,8 @@ export class WwellmapComponent implements OnInit, OnDestroy {
         symbol: new SimpleMarkerSymbol({
           style: 'circle',
           size: 20,
-          color: [14, 165, 233, 0.2],
-          outline: { color: [14, 165, 233, 0.75], width: 1.5 },
+          color: [r, g, b, 0.2],
+          outline: { color: [r, g, b, 0.75], width: 1.5 },
         }),
       });
 
@@ -297,7 +280,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
         symbol: new SimpleMarkerSymbol({
           style: 'circle',
           size: 8,
-          color: [14, 165, 233, 1],
+          color: [r, g, b, 1],
           outline: { color: [255, 255, 255, 0.9], width: 1.5 },
         }),
         attributes: { wwellId: wwell.wwellId, Location: wwell.location },
