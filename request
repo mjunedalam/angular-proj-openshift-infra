@@ -153,8 +153,13 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
     await this.esriAuth.authenticateUserForMapAccess();
 
+    const portalItemId = this.extConfigService.settings.morningReportWebMapId?.trim();
+    if (!portalItemId) {
+      throw new Error('[WwellMap] morningReportWebMapId is not configured in external-config.json');
+    }
+
     const webMap = new WebMap({
-      portalItem: { id: this.extConfigService.settings.morningReportWebMapId },
+      portalItem: { id: portalItemId },
     });
 
     this.mapView = new MapView({
@@ -172,8 +177,8 @@ export class WwellmapComponent implements OnInit, OnDestroy {
       ),
     ]);
 
-    if (webMap.loadStatus === 'failed') {
-      throw webMap.loadError ?? new Error('WebMap failed to load');
+    if (webMap.loadStatus !== 'loaded') {
+      throw webMap.loadError ?? new Error(`WebMap load status: ${webMap.loadStatus}`);
     }
 
     this.mapView.zoom = this.INITIAL_ZOOM;
