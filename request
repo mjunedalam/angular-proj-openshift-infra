@@ -12,9 +12,13 @@ import {
   ViewChild,
 } from '@angular/core';
 import Graphic from '@arcgis/core/Graphic';
-import { watch } from '@arcgis/core/core/reactiveUtils';
+import { watch as reactiveWatch, watch } from '@arcgis/core/core/reactiveUtils';
 import Point from '@arcgis/core/geometry/Point';
+import Polygon from '@arcgis/core/geometry/Polygon';
+import Polyline from '@arcgis/core/geometry/Polyline';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
+import TextSymbol from '@arcgis/core/symbols/TextSymbol';
 import WebMap from '@arcgis/core/WebMap';
 import MapView from '@arcgis/core/views/MapView';
 import { MatCardModule } from '@angular/material/card';
@@ -22,12 +26,17 @@ import { IWellData } from '@models/well-design/well-data.model';
 import { MorningReportStore } from '../morning-report/store/morning-report.store';
 import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
 import {
+  lineSymbol,
+  locationTextSymbol,
   MAP_CONFIG,
   MAX_WIDTH,
+  STYLE,
   tilesArray,
   tilesMap,
   WWell,
+  wwellIdTextSymbol,
 } from 'src/app/shared/models/config/agwa-map.config';
+import { findNonOverlappingPosition } from 'src/app/shared/utils/wwell-placement-utils';
 import { EsriMapService } from '@core/services/esri-map.service';
 
 const WWELL_MAP_BOOT_TASK = 'arcgis-map';
@@ -45,13 +54,16 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
   private mapView?: __esri.MapView;
   private wwellLayer?: GraphicsLayer;
+  private bubbleLayer?: GraphicsLayer;
+  private stationaryWatchHandle?: __esri.WatchHandle;
+  private placedBubbles: { x: number; y: number; radius: number }[] = [];
   private bootTaskRegistered = false;
   private mapRetryTimeoutId?: ReturnType<typeof setTimeout>;
   private isDestroyed = false;
 
   protected readonly mapReady = signal(false);
-
   private readonly wwells = signal<WWell[]>([]);
+  private readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
 
   private readonly MAP_TIMEOUT_MS = 20_000;
   private readonly MAX_RETRY_DELAY_MS = 30_000;
@@ -67,13 +79,20 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     effect(() => {
       this.buildWWellSignal(this.store.allWellsData());
     });
+
     effect(() => {
       this.wwells();
-      if (!this.mapReady()) return;
-      if (!this.wwellLayer) return;
+      if (!this.mapReady() || !this.wwellLayer) return;
       this.drawWWellIcons(this.wwellLayer).catch(e =>
         console.error('[WwellMap] drawWWellIcons failed', e)
       );
+    });
+
+    effect(() => {
+      this.wwells();
+      const layer = this.bubbleLayerReady();
+      if (!layer) return;
+      this.layoutBubbles(layer);
     });
   }
 
@@ -86,6 +105,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.isDestroyed = true;
     clearTimeout(this.mapRetryTimeoutId);
+    this.stationaryWatchHandle?.remove();
     this.mapView?.destroy();
     this.resolveBootTask();
   }
@@ -105,6 +125,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     this.mapView?.destroy();
     this.mapView = undefined;
     this.mapReady.set(false);
+    this.bubbleLayerReady.set(null);
 
     await this.esriAuth.authenticateUserForMapAccess();
 
@@ -136,11 +157,20 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     await this.mapView.goTo({ center: MAP_CONFIG.center, zoom: this.INITIAL_ZOOM }, { animate: false });
 
     this.wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
-    webMap.add(this.wwellLayer);
+    this.bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
+    webMap.addMany([this.wwellLayer, this.bubbleLayer]);
 
     this.mapReady.set(true);
+    this.bubbleLayerReady.set(this.bubbleLayer);
     await this.waitForMapRender();
     this.resolveBootTask();
+
+    this.stationaryWatchHandle = reactiveWatch(
+      () => this.mapView?.stationary,
+      (isStationary) => {
+        if (isStationary && this.bubbleLayer) this.layoutBubbles(this.bubbleLayer);
+      },
+    );
   }
 
   private buildWWellSignal(data: IWellData[]): void {
@@ -169,52 +199,135 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     for (const wwell of this.wwells()) {
       const point = new Point({ latitude: wwell.lat, longitude: wwell.lng });
       const [r, g, b] = tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 1];
-
       layer.addMany([
         new Graphic({
           geometry: point,
-          symbol: new SimpleMarkerSymbol({
-            style: 'circle', size: 36,
-            color: [r, g, b, 0.08],
-            outline: { color: [r, g, b, 0.35], width: 2 },
-          }),
+          symbol: new SimpleMarkerSymbol({ style: 'circle', size: 36, color: [r, g, b, 0.08], outline: { color: [r, g, b, 0.35], width: 2 } }),
         }),
         new Graphic({
           geometry: point,
-          symbol: new SimpleMarkerSymbol({
-            style: 'circle', size: 20,
-            color: [r, g, b, 0.2],
-            outline: { color: [r, g, b, 0.75], width: 1.5 },
-          }),
+          symbol: new SimpleMarkerSymbol({ style: 'circle', size: 20, color: [r, g, b, 0.2], outline: { color: [r, g, b, 0.75], width: 1.5 } }),
         }),
         new Graphic({
           geometry: point,
-          symbol: new SimpleMarkerSymbol({
-            style: 'circle', size: 8,
-            color: [r, g, b, 1],
-            outline: { color: [255, 255, 255, 0.9], width: 1.5 },
-          }),
+          symbol: new SimpleMarkerSymbol({ style: 'circle', size: 8, color: [r, g, b, 1], outline: { color: [255, 255, 255, 0.9], width: 1.5 } }),
           attributes: { wwellId: wwell.wwellId, location: wwell.location },
         }),
       ]);
     }
   }
 
+  private geoDegreesPerPixel(view: __esri.MapView): { x: number; y: number } {
+    const cx = view.width / 2, cy = view.height / 2;
+    const p0 = view.toMap({ x: cx,      y: cy });
+    const px = view.toMap({ x: cx + 10, y: cy });
+    const py = view.toMap({ x: cx,      y: cy + 10 });
+    return {
+      x: p0 && px ? Math.abs((px.longitude  ?? 0) - (p0.longitude ?? 0)) / 10 : 0.001,
+      y: p0 && py ? Math.abs((py.latitude   ?? 0) - (p0.latitude  ?? 0)) / 10 : 0.001,
+    };
+  }
+
+  private layoutBubbles(layer: GraphicsLayer): void {
+    if (!this.mapView) return;
+    layer.removeAll();
+    this.placedBubbles = [];
+
+    const view = this.mapView;
+    const viewW = view.width;
+    const viewH = view.height;
+
+    const { x: degX, y: degY } = this.geoDegreesPerPixel(view);
+    const topPxW = 90, topPxH = 20, botPxW = 72, botPxH = 20;
+    const halfTopW = (topPxW / 2) * degX;
+    const topH     = topPxH * degY;
+    const halfBotW = (botPxW / 2) * degX;
+    const botH     = botPxH * degY;
+
+    const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
+    const iconRadius = STYLE.markerSize / 2;
+    const margin = bubblePixelRadius + 4;
+    const graphics: Graphic[] = [];
+    const anchorPt = new Point({ latitude: 0, longitude: 0, spatialReference: { wkid: 4326 } });
+
+    for (const wwell of this.wwells()) {
+      anchorPt.latitude = wwell.lat;
+      anchorPt.longitude = wwell.lng;
+
+      const sp = view.toScreen(anchorPt);
+      if (!sp) continue;
+
+      sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
+      sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
+
+      const obstacles = [...this.placedBubbles, { x: sp.x, y: sp.y, radius: iconRadius + 6 }];
+      const finalScreen = findNonOverlappingPosition(sp.x, sp.y, obstacles, bubblePixelRadius);
+
+      finalScreen.x = Math.max(margin, Math.min(viewW - margin, finalScreen.x));
+      finalScreen.y = Math.max(margin, Math.min(viewH - margin, finalScreen.y));
+
+      this.placedBubbles.push({ x: finalScreen.x, y: finalScreen.y, radius: bubblePixelRadius });
+
+      let anchor = view.toMap(finalScreen) as __esri.Point | null;
+      if (!anchor) anchor = anchorPt.clone();
+      const cx = anchor.longitude!;
+      const cy = anchor.latitude!;
+
+      graphics.push(new Graphic({
+        geometry: new Polyline({
+          paths: [[[wwell.lng, wwell.lat], [cx, cy + topH / 2]]],
+          spatialReference: { wkid: 4326 },
+        }),
+        symbol: lineSymbol(tilesMap.get(wwell.label)?.color ?? STYLE.stickColor),
+      }));
+
+      graphics.push(new Graphic({
+        geometry: new Polygon({
+          rings: [[[cx - halfTopW, cy + topH], [cx + halfTopW, cy + topH],
+                   [cx + halfTopW, cy], [cx - halfTopW, cy], [cx - halfTopW, cy + topH]]],
+          spatialReference: { wkid: 4326 },
+        }),
+        symbol: new SimpleFillSymbol({
+          color: tilesMap.get(wwell.label)?.color ?? [200, 200, 200, 0.9],
+          outline: { color: [0, 0, 0], width: 1 },
+        }),
+      }));
+
+      graphics.push(new Graphic({
+        geometry: new Polygon({
+          rings: [[[cx - halfBotW, cy], [cx + halfBotW, cy],
+                   [cx + halfBotW, cy - botH], [cx - halfBotW, cy - botH], [cx - halfBotW, cy]]],
+          spatialReference: { wkid: 4326 },
+        }),
+        symbol: new SimpleFillSymbol({ color: [0, 191, 255, 0.9], outline: { color: [0, 0, 0], width: 1 } }),
+      }));
+
+      const topCenter = new Point({ longitude: cx, latitude: cy + topH / 2, spatialReference: { wkid: 4326 } });
+      const wwellIdLabel = new Graphic({ geometry: topCenter, symbol: wwellIdTextSymbol(STYLE.textFont) });
+      (wwellIdLabel.symbol as TextSymbol).text = wwell.wwellId;
+      (wwellIdLabel.symbol as TextSymbol).verticalAlignment = 'middle';
+      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = 'center';
+      (wwellIdLabel.symbol as TextSymbol).yoffset = 0;
+
+      const botCenter = new Point({ longitude: cx, latitude: cy - botH / 2, spatialReference: { wkid: 4326 } });
+      const locationLabel = new Graphic({ geometry: botCenter, symbol: locationTextSymbol(STYLE.textFont) });
+      (locationLabel.symbol as TextSymbol).text = wwell.location;
+      (locationLabel.symbol as TextSymbol).horizontalAlignment = 'center';
+      (locationLabel.symbol as TextSymbol).verticalAlignment = 'middle';
+      (locationLabel.symbol as TextSymbol).yoffset = 0;
+
+      graphics.push(wwellIdLabel, locationLabel);
+    }
+    layer.addMany(graphics);
+  }
+
   private async waitForMapRender(): Promise<void> {
     if (!this.mapView) return;
-    if (!this.mapView.updating) {
-      await new Promise(requestAnimationFrame);
-      return;
-    }
+    if (!this.mapView.updating) { await new Promise(requestAnimationFrame); return; }
     await new Promise<void>((resolve) => {
       const handle = watch(
         () => this.mapView?.updating ?? false,
-        (updating) => {
-          if (!updating) {
-            handle.remove();
-            requestAnimationFrame(() => resolve());
-          }
-        },
+        (updating) => { if (!updating) { handle.remove(); requestAnimationFrame(() => resolve()); } },
       );
     });
   }
@@ -245,13 +358,13 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     canvas.height = img.height * scale;
     const ctx = canvas.getContext('2d')!;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    this.drawLegendChips(ctx, canvas.height);
+    this.drawLegendChips(ctx, canvas.width, canvas.height);
     await new Promise((r) => setTimeout(r, 300));
 
     return canvas.toDataURL('image/jpeg', 1).split(',')[1];
   }
 
-  private drawLegendChips(ctx: CanvasRenderingContext2D, canvasHeight: number): void {
+  private drawLegendChips(ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number): void {
     const chips = [
       { text: 'Wells Ownership', bg: '#cedf5f', textColor: '#35530a' },
       ...tilesArray.map(t => ({
@@ -262,23 +375,27 @@ export class WwellmapComponent implements OnInit, OnDestroy {
       { text: 'Aquifer', bg: '#22b8e6', textColor: '#fff' },
     ];
 
-    const fontSize = 10, px = 6, py = 5, gap = 7;
+    const fontSize = Math.max(13, Math.round(canvasWidth * 0.013));
+    const px = Math.round(fontSize * 0.75);
+    const py = Math.round(fontSize * 0.45);
+    const gap = Math.round(fontSize * 0.6);
     const chipH = fontSize + py * 2;
+
     ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'left';
 
-    let x = 14;
-    const y = canvasHeight - 14 - chipH;
+    let x = Math.round(canvasWidth * 0.01);
+    const y = canvasHeight - Math.round(canvasHeight * 0.02) - chipH;
 
     for (const chip of chips) {
-      const cw = ctx.measureText(chip.text).width + px * 2;
+      const cw = Math.max(chipH * 2, ctx.measureText(chip.text).width + px * 2);
       ctx.fillStyle = chip.bg;
       ctx.beginPath();
       ctx.roundRect(x, y, cw, chipH, chipH / 2);
       ctx.fill();
       ctx.fillStyle = chip.textColor;
-      ctx.fillText(chip.text, x + cw / 2, y + chipH / 2);
+      ctx.fillText(chip.text, x + px, y + chipH / 2);
       x += cw + gap;
     }
   }
