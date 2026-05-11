@@ -59,6 +59,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
   private placedBubbles: { x: number; y: number; radius: number }[] = [];
   private bootTaskRegistered = false;
   private mapRetryTimeoutId?: ReturnType<typeof setTimeout>;
+  private intersectionObserver?: IntersectionObserver;
   private isDestroyed = false;
 
   protected readonly mapReady = signal(false);
@@ -98,16 +99,37 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    this.registerBootTask();
-    this.initMapWithRetry();
+    this.observeVisibility();
   }
 
   ngOnDestroy(): void {
     this.isDestroyed = true;
     clearTimeout(this.mapRetryTimeoutId);
+    this.intersectionObserver?.disconnect();
     this.stationaryWatchHandle?.remove();
     this.mapView?.destroy();
     this.resolveBootTask();
+  }
+
+  private observeVisibility(): void {
+    const el = this.mapViewEl?.nativeElement;
+    if (!el || !('IntersectionObserver' in window)) {
+      this.registerBootTask();
+      this.initMapWithRetry();
+      return;
+    }
+    this.intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          this.intersectionObserver?.disconnect();
+          this.intersectionObserver = undefined;
+          this.registerBootTask();
+          this.initMapWithRetry();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    this.intersectionObserver.observe(el);
   }
 
   private initMapWithRetry(attempt = 0): void {
