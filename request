@@ -290,6 +290,17 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     }
   }
 
+  private geoDegreesPerPixel(view: __esri.MapView): { x: number; y: number } {
+    const cx = view.width / 2, cy = view.height / 2;
+    const p0 = view.toMap({ x: cx,      y: cy });
+    const px = view.toMap({ x: cx + 10, y: cy });
+    const py = view.toMap({ x: cx,      y: cy + 10 });
+    return {
+      x: p0 && px ? Math.abs((px.longitude  ?? 0) - (p0.longitude ?? 0)) / 10 : 0.001,
+      y: p0 && py ? Math.abs((py.latitude   ?? 0) - (p0.latitude  ?? 0)) / 10 : 0.001,
+    };
+  }
+
   private layoutBubbles(layer: GraphicsLayer): void {
     if (!this.mapView) return;
     layer.removeAll();
@@ -298,15 +309,15 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     const view = this.mapView;
     const viewW = view.width;
     const viewH = view.height;
-    const res = view.resolution; // degrees-per-pixel at current zoom — keeps boxes pixel-stable
 
-    // Target pixel sizes for each box → converted to degrees for this zoom level
+    // Convert target pixel sizes to geographic degrees at the current zoom/projection
+    const { x: degX, y: degY } = this.geoDegreesPerPixel(view);
     const topPxW = 90, topPxH = 20;
     const botPxW = 72, botPxH = 20;
-    const halfTopW = (topPxW / 2) * res;
-    const topH     = topPxH * res;
-    const halfBotW = (botPxW / 2) * res;
-    const botH     = botPxH * res;
+    const halfTopW = (topPxW / 2) * degX;
+    const topH     = topPxH * degY;
+    const halfBotW = (botPxW / 2) * degX;
+    const botH     = botPxH * degY;
 
     const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
     const iconRadius = STYLE.markerSize / 2;
