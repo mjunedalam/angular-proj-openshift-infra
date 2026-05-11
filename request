@@ -38,6 +38,7 @@ import {
 } from 'src/app/shared/models/config/agwa-map.config';
 import { findNonOverlappingPosition } from 'src/app/shared/utils/wwell-placement-utils';
 import { EsriMapService } from '@core/services/esri-map.service';
+import { ExternalConfigService } from '@shared/services/external-config.service';
 
 const WWELL_MAP_BOOT_TASK = 'arcgis-map';
 
@@ -68,13 +69,14 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
   private readonly MAP_TIMEOUT_MS = 20_000;
   private readonly MAX_RETRY_DELAY_MS = 30_000;
-  private readonly INITIAL_ZOOM = 8;
-  private readonly PORTAL_ITEM_ID = 'MOCK_WEBMAP_PORTAL_ITEM_ID';
+  private readonly INITIAL_ZOOM = 6;
+
 
   private readonly platformId = inject(PLATFORM_ID);
   private readonly loader = inject(LoaderService);
   private readonly esriAuth = inject(EsriMapService);
   private readonly store = inject(MorningReportStore);
+  private readonly extConfigService = inject(ExternalConfigService);
 
   constructor() {
     effect(() => {
@@ -152,7 +154,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     await this.esriAuth.authenticateUserForMapAccess();
 
     const webMap = new WebMap({
-      portalItem: { id: this.PORTAL_ITEM_ID },
+      portalItem: { id: this.extConfigService.settings.morningReportWebMapId },
     });
 
     this.mapView = new MapView({
@@ -176,7 +178,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
     this.mapView.zoom = this.INITIAL_ZOOM;
     this.mapView.center = { longitude: MAP_CONFIG.center[0], latitude: MAP_CONFIG.center[1] } as __esri.Point;
-    await this.mapView.goTo({ center: MAP_CONFIG.center, zoom: this.INITIAL_ZOOM }, { animate: false });
+    await this.mapView.goTo({ center: MAP_CONFIG.center, zoom: this.INITIAL_ZOOM }, { animate: true });
 
     this.wwellLayer = new GraphicsLayer({ id: 'WWell-icons' });
     this.bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
@@ -241,12 +243,12 @@ export class WwellmapComponent implements OnInit, OnDestroy {
 
   private geoDegreesPerPixel(view: __esri.MapView): { x: number; y: number } {
     const cx = view.width / 2, cy = view.height / 2;
-    const p0 = view.toMap({ x: cx,      y: cy });
+    const p0 = view.toMap({ x: cx, y: cy });
     const px = view.toMap({ x: cx + 10, y: cy });
-    const py = view.toMap({ x: cx,      y: cy + 10 });
+    const py = view.toMap({ x: cx, y: cy + 10 });
     return {
-      x: p0 && px ? Math.abs((px.longitude  ?? 0) - (p0.longitude ?? 0)) / 10 : 0.001,
-      y: p0 && py ? Math.abs((py.latitude   ?? 0) - (p0.latitude  ?? 0)) / 10 : 0.001,
+      x: p0 && px ? Math.abs((px.longitude ?? 0) - (p0.longitude ?? 0)) / 10 : 0.001,
+      y: p0 && py ? Math.abs((py.latitude ?? 0) - (p0.latitude ?? 0)) / 10 : 0.001,
     };
   }
 
@@ -262,9 +264,9 @@ export class WwellmapComponent implements OnInit, OnDestroy {
     const { x: degX, y: degY } = this.geoDegreesPerPixel(view);
     const topPxW = 90, topPxH = 20, botPxW = 72, botPxH = 20;
     const halfTopW = (topPxW / 2) * degX;
-    const topH     = topPxH * degY;
+    const topH = topPxH * degY;
     const halfBotW = (botPxW / 2) * degX;
-    const botH     = botPxH * degY;
+    const botH = botPxH * degY;
 
     const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
     const iconRadius = STYLE.markerSize / 2;
@@ -306,7 +308,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
       graphics.push(new Graphic({
         geometry: new Polygon({
           rings: [[[cx - halfTopW, cy + topH], [cx + halfTopW, cy + topH],
-                   [cx + halfTopW, cy], [cx - halfTopW, cy], [cx - halfTopW, cy + topH]]],
+          [cx + halfTopW, cy], [cx - halfTopW, cy], [cx - halfTopW, cy + topH]]],
           spatialReference: { wkid: 4326 },
         }),
         symbol: new SimpleFillSymbol({
@@ -318,7 +320,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
       graphics.push(new Graphic({
         geometry: new Polygon({
           rings: [[[cx - halfBotW, cy], [cx + halfBotW, cy],
-                   [cx + halfBotW, cy - botH], [cx - halfBotW, cy - botH], [cx - halfBotW, cy]]],
+          [cx + halfBotW, cy - botH], [cx - halfBotW, cy - botH], [cx - halfBotW, cy]]],
           spatialReference: { wkid: 4326 },
         }),
         symbol: new SimpleFillSymbol({ color: [0, 191, 255, 0.9], outline: { color: [0, 0, 0], width: 1 } }),
