@@ -68,6 +68,14 @@ export class WwellmapComponent implements OnInit, OnDestroy {
   private stationaryWatchHandle?: __esri.WatchHandle;
   private legendLayer: GraphicsLayer | undefined;
   private bootTaskRegistered = false;
+  private mapRetryTimeoutId?: ReturnType<typeof setTimeout>;
+  private isDestroyed = false;
+
+  protected readonly retrying = signal(false);
+  protected readonly retryCount = signal(0);
+
+  private readonly MAP_TIMEOUT_MS = 20_000;
+  private readonly MAX_RETRY_DELAY_MS = 30_000;
 
   private readonly store = inject(MorningReportStore);
 
@@ -100,17 +108,31 @@ export class WwellmapComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     this.registerBootTask();
-
-    this.initMap().catch((e) => {
-      console.error('initMap error', e);
-      this.resolveBootTask();
-    });
+    this.initMapWithRetry();
   }
 
   ngOnDestroy(): void {
+    this.isDestroyed = true;
+    clearTimeout(this.mapRetryTimeoutId);
     this.stationaryWatchHandle?.remove();
     this.mapView?.destroy();
     this.resolveBootTask();
+  }
+
+  private initMapWithRetry(attempt = 0): void {
+    this.initMap().then(() => {
+      this.retrying.set(false);
+    }).catch((err: unknown) => {
+      if (this.isDestroyed) return;
+      console.error(`Map init attempt ${attempt + 1} failed`, err);
+      const delay = Math.min(1000 * Math.pow(2, attempt), this.MAX_RETRY_DELAY_MS);
+      this.retrying.set(true);
+      this.retryCount.set(attempt + 1);
+      this.mapRetryTimeoutId = setTimeout(
+        () => this.initMapWithRetry(attempt + 1),
+        delay,
+      );
+    });
   }
 
   private buildWWellSignal(data: IWellData[]): void {
@@ -141,85 +163,53 @@ export class WwellmapComponent implements OnInit, OnDestroy {
   }
 
   private async initMap(): Promise<void> {
-    let MapMod: typeof __esri.Map;
-    let MapViewMod: typeof __esri.MapView;
-    let MapImageLayerMod: typeof MapImageLayer;
+    this.mapView?.destroy();
+    this.mapView = undefined;
+    this.mapReady.set(false);
+    this.bubbleLayerReady.set(null);
 
-    try {
-      await this.esriAuth.authenticateUserForMapAccess();
-    } catch (e) {
-      console.error('ArcGIS authentication failed', e);
-      this.errorMessage.set('Map authentication failed.');
-      this.resolveBootTask();
-      return;
-    }
+    await this.esriAuth.authenticateUserForMapAccess();
 
-    try {
-      const [{ default: MapTmp },
-        { default: MapViewTmp },
-        { default: MapImageLayerTmp }
-      ] = await Promise.all([
+    const [{ default: MapMod }, { default: MapViewMod }, { default: MapImageLayerMod }] =
+      await Promise.all([
         import('@arcgis/core/Map'),
         import('@arcgis/core/views/MapView'),
         import('@arcgis/core/layers/MapImageLayer'),
       ]);
-      MapMod = MapTmp;
-      MapViewMod = MapViewTmp;
-      MapImageLayerMod = MapImageLayerTmp;
-
-    } catch (e) {
-      console.error("Failed to load core ARcGIS module..", e);
-      this.errorMessage.set('Map could not be initialized');
-      this.resolveBootTask();
-      return;
-    }
 
     const baseLayer = new MapImageLayer({
-      url: 'https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/Poliocea_AinAlAbd/MapServer'
-    })
+      url: 'https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/Poliocea_AinAlAbd/MapServer',
+    });
 
+    const map = new MapMod({
+      basemap: new Basemap({ baseLayers: [baseLayer], title: 'Poliocea', id: 'poliocea' }),
+    });
 
-
-    const customBasemap = new Basemap({
-      baseLayers: [baseLayer],
-      title: 'Poliocea',
-      id: 'poliocea'
-    })
-
-    const map = new MapMod({ basemap: customBasemap });
     this.mapView = new MapViewMod({
       container: this.mapViewEl?.nativeElement,
       map,
       center: MAP_CONFIG.center,
-      //constraints: { minZoom: 2, maxZoom: 10 }
     });
 
-    const mapServerUrl = `${this.extConfigService.settings.mapServerUrl}`
+    await Promise.race([
+      this.mapView.when(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Map initialization timed out')), this.MAP_TIMEOUT_MS),
+      ),
+    ]);
 
-    await this.mapView.when();
-    await this.mapView.goTo(new Extent(MAP_CONFIG.defaultExtent), { animate: false });
+    const mapServerUrl = this.extConfigService.settings.mapServerUrl;
     const view = this.mapView;
-    if (!view) {
-      this.resolveBootTask();
-      return;
-    }
     const viewMap = view.map;
-    if (!viewMap) {
-      this.resolveBootTask();
-      return;
-    }
+    if (!viewMap) throw new Error('Map view has no map');
+
+    await view.goTo(new Extent(MAP_CONFIG.defaultExtent), { animate: false });
 
     const explorerLayer = new MapImageLayerMod({
       url: mapServerUrl,
       sublayers: [
-        {
-          id: 6, // “Oil Wells”
-          visible: true,
-        },
-        {
-          id: 5, // “Gas Pipelines”
-          visible: true,
-        },
+        { id: 6, visible: true },
+        { id: 5, visible: true },
       ],
       opacity: 0.8,
       title: 'Explorer (Oil & Gas)',
@@ -242,7 +232,7 @@ export class WwellmapComponent implements OnInit, OnDestroy {
           const layer = this.bubbleLayerReady();
           if (layer) this.layoutBubbles(layer);
         }
-      }
+      },
     );
   }
 
