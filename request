@@ -1,1 +1,11 @@
-Failed to load resource: net::ERR_CONNECTION_RESET  eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/GeoKnowledge/wells/MapServer/export?bbox=5195307.788298417%2C3087599.4796376443%2C5296357.539691284%2C3178091.794317824&bboxSR=102100&imageSR=102100&size=335%2C300&dpi=96&format=png32&transparent=true&dynamicLayers=%5B%7B%22id%22%3A12%2C%22source%22%3A%7B%22type%22%3A%22mapLayer%22%2C%22mapLayerId%22%3A12%7D%2C%22definitionExpression%22%3A%22(W_TYP_DESC%20LIKE%20%27%25WATER%25%27)%20AND%20(W_TYP_DESC%20LIKE%20%27%25INJ%25%27%20OR%20W_TYP_DESC%20LIKE%20%27%25NON-ARAMCO%25%27)%22%2C%22drawingInfo%22%3A%7B%22renderer%22%3A%7B%22type%22%3A%22simple%22%2C%22symbol%22%3A%7B%22type%22%3A%22esriSMS%22%2C%22color%22%3A%5B171%2C171%2C171%2C255%5D%2C%22angle%22%3A0%2C%22xoffset%22%3A0%2C%22yoffset%22%3A0%2C%22size%22%3A6%2C%22style%22%3A%22esriSMSCircle%22%2C%22outline%22%3A%7B%22type%22%3A%22esriSLS%22%2C%22color%22%3A%5B0%2C0%2C0%2C255%5D%2C%22width%22%3A0.998%2C%22style%22%3A%22esriSLSSolid%22%7D%7D%7D%2C%22showLabels%22%3Atrue%2C%22transparency%22%3A0%7D%7D%5D&f=image:1
+GWD_client to see (reports, presentation) modules.
+GWD_member to see all modules + can update the active water well module.
+GWD_admin to see all modules + can update the active water well module
+
+the module should still be existing, but you need to prompt the user that he needs any of the roles.
+
+but you know, these roles could vary and naming also might changes.
+so you need to implement an abstracted way to grant roles access to different modules and routes.
+
+
+also but gaurds on the route, to prevent unauthorized access to any module via direct link acces
