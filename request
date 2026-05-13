@@ -1,122 +1,259 @@
-import { ApplicationConfig, importProvidersFrom, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { provideHttpClient, withFetch } from '@angular/common/http';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialogModule } from '@angular/material/dialog';
-import { MatIconRegistry } from '@angular/material/icon';
-import { routes } from './app.routes';
-import { ExternalConfigService } from '@shared/services/external-config.service';
-import { AuthStore } from './features/auth/store/auth.store';
-import { RbacStore } from '@store/rbac/rbac.store';
+<div class="denied-dialog">
+  <div class="denied-header">
+    <mat-icon class="denied-icon" [class]="iconClass">{{ icon }}</mat-icon>
+    <div class="denied-titles">
+      <h3 class="denied-title">{{ title }}</h3>
+      <span class="denied-subtitle">{{ subtitle }}</span>
+    </div>
+    <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withFetch()),
-    provideAnimationsAsync(),
-    importProvidersFrom(MatSnackBarModule, MatDialogModule),
+  <div class="denied-body">
+    <p class="denied-message">{{ message }}</p>
 
-    // 1. Load external config, then RBAC roles (sequential so roleGuard
-    //    has settings.rolesUrl before any protected route activates).
-    provideAppInitializer(async () => {
-      const configService = inject(ExternalConfigService);
-      const rbacStore     = inject(RbacStore);
-      await configService.loadConfig();
-      await rbacStore.loadRoles(configService.settings.rolesUrl ?? 'assets/roles.json');
-    }),
+    @if (data.reason === 'no-permission' && data.userRoles.length) {
+      <div class="roles-row">
+        <span class="roles-label">Your roles</span>
+        <div class="chips">
+          @for (role of data.userRoles; track role) {
+            <span class="chip">{{ role }}</span>
+          }
+        </div>
+      </div>
+    }
 
-    // 2. Restore session from localStorage.
-    provideAppInitializer(() => {
-      inject(AuthStore).autoLogin();
-    }),
+    @if (data.reason === 'rbac-unavailable' && data.rbacError) {
+      <code class="error-code">{{ data.rbacError }}</code>
+    }
+  </div>
 
-    // 3. Configure Material icon font class.
-    provideAppInitializer(() => {
-      inject(MatIconRegistry).setDefaultFontSetClass('material-icons');
-    }),
-  ],
-};
+  <div class="denied-footer">
+    @if (data.reason === 'stale-session') {
+      <button mat-flat-button color="warn" (click)="logout()">
+        <mat-icon>logout</mat-icon> Re-authenticate
+      </button>
+    } @else {
+      <button mat-flat-button color="primary" (click)="close()">Dismiss</button>
+    }
+  </div>
+</div>
+=======
+.denied-dialog {
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.denied-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+
+  .denied-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    margin-top: 2px;
+
+    &.icon-lock   { color: #e53935; }
+    &.icon-error  { color: #f57c00; }
+    &.icon-session { color: #1976d2; }
+  }
+
+  .denied-titles {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .denied-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--mat-sys-on-surface, #1c1b1f);
+  }
+
+  .denied-subtitle {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant, #49454f);
+  }
+
+  .close-btn {
+    margin: -8px -8px 0 0;
+    flex-shrink: 0;
+  }
+}
+
+.denied-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .denied-message {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--mat-sys-on-surface-variant, #49454f);
+  }
+}
+
+.roles-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .roles-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--mat-sys-on-surface-variant, #79747e);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    padding: 2px 10px;
+    border-radius: 100px;
+    background: var(--mat-sys-surface-variant, #e7e0ec);
+    color: var(--mat-sys-on-surface-variant, #49454f);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+  }
+}
+
+.error-code {
+  display: block;
+  font-family: monospace;
+  font-size: 11px;
+  color: #c62828;
+  background: #fce8e8;
+  border-left: 3px solid #e53935;
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  word-break: break-all;
+}
+
+.denied-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+
+  button {
+    font-size: 13px;
+    height: 32px;
+    line-height: 32px;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-right: 4px;
+    }
+  }
+}
 =====
-import { Routes } from '@angular/router';
-import { authGuard } from '@guards/auth.guard';
-import { roleGuard } from '@guards/role.guard';
-import { EmailStore } from '@store/email/email.store';
-import { WellDocsStore } from '@store/well-docs/well-docs.store';
-import { PresentationStore } from './features/presentation/store/presentation.store';
-import { ActiveWwellStore } from './features/active-wwell/store/active-wwell.store';
-import { MorningReportStore } from './features/morning-report/store/morning-report.store';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { AuthStore } from '../../../features/auth/store/auth.store';
 
-export const routes: Routes = [
-  {
-    path: '',
-    redirectTo: 'login',
-    pathMatch: 'full',
-  },
-  {
-    path: 'login',
-    loadComponent: () =>
-      import('./features/auth/login.component').then(
-        (m) => m.LoginComponent,
-      ),
-  },
-  {
-    path: 'main',
-    loadComponent: () =>
-      import('./layout/layout.component').then(
-        (m) => m.LayoutComponent,
-      ),
-    canActivate: [authGuard],
-    canActivateChild: [authGuard],
-    children: [
-      {
-        path: '',
-        redirectTo: 'home',
-        pathMatch: 'full',
-      },
-      {
-        path: 'home',
-        loadComponent: () =>
-          import('./features/home/home.component').then(
-            (m) => m.HomeComponent,
-          ),
-      },
-      {
-        path: 'presentations',
-        data: { routeId: 'presentations' },
-        canActivate: [roleGuard],
-        loadComponent: () =>
-          import('./features/presentation/presentation.component').then(
-            (m) => m.PresentationComponent,
-          ),
-        providers: [PresentationStore, WellDocsStore],
-      },
-      {
-        path: 'active-wwell',
-        data: { routeId: 'active-wwell' },
-        canActivate: [roleGuard],
-        loadComponent: () =>
-          import('./features/active-wwell/active-wwell-view/active-wwell-view.component').then(
-            (m) => m.ActiveWwellViewComponent,
-          ),
-        providers: [ActiveWwellStore],
-      },
-      {
-        path: 'morning-report',
-        data: { routeId: 'morning-report' },
-        canActivate: [roleGuard],
-        loadComponent: () =>
-          import('./features/morning-report/morning-report.component').then(
-            (m) => m.MorningReportComponent,
-          ),
-        providers: [EmailStore, MorningReportStore],
-      },
-    ],
-  },
-  { path: '**', redirectTo: 'login' },
-];
-========
+export type DeniedReason = 'no-permission' | 'stale-session' | 'rbac-unavailable';
+
+export interface AccessDeniedData {
+  readonly routeId:   string;
+  readonly userRoles: string[];
+  readonly reason:    DeniedReason;
+  readonly rbacError?: string;
+}
+
+@Component({
+  selector: 'app-access-denied',
+  standalone: true,
+  imports: [MatButtonModule, MatIconModule],
+  templateUrl: './access-denied.component.html',
+  styleUrl: './access-denied.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class AccessDeniedComponent {
+  protected readonly data      = inject<AccessDeniedData>(MAT_DIALOG_DATA);
+  private   readonly dialogRef = inject(MatDialogRef<AccessDeniedComponent>);
+  private   readonly authStore = inject(AuthStore);
+
+  protected get icon(): string {
+    const icons: Record<DeniedReason, string> = {
+      'no-permission':    'lock',
+      'stale-session':    'schedule',
+      'rbac-unavailable': 'error_outline',
+    };
+    return icons[this.data.reason];
+  }
+
+  protected get iconClass(): string {
+    const classes: Record<DeniedReason, string> = {
+      'no-permission':    'icon-lock',
+      'stale-session':    'icon-session',
+      'rbac-unavailable': 'icon-error',
+    };
+    return classes[this.data.reason];
+  }
+
+  protected get title(): string {
+    const titles: Record<DeniedReason, string> = {
+      'no-permission':    'Access Restricted',
+      'stale-session':    'Session Outdated',
+      'rbac-unavailable': 'Configuration Error',
+    };
+    return titles[this.data.reason];
+  }
+
+  protected get subtitle(): string {
+    const subtitles: Record<DeniedReason, string> = {
+      'no-permission':    this.data.routeId,
+      'stale-session':    'Credentials need refresh',
+      'rbac-unavailable': 'RBAC could not be loaded',
+    };
+    return subtitles[this.data.reason];
+  }
+
+  protected get message(): string {
+    const messages: Record<DeniedReason, string> = {
+      'no-permission':
+        'You don\'t have the required permissions for this module. Contact your administrator to request access.',
+      'stale-session':
+        'Your session is missing group claims. Log out and re-authenticate to refresh your credentials.',
+      'rbac-unavailable':
+        'Role configuration failed to load. The administrator needs to check the RBAC configuration.',
+    };
+    return messages[this.data.reason];
+  }
+
+  protected logout(): void {
+    this.dialogRef.close();
+    this.authStore.logout();
+  }
+
+  protected close(): void {
+    this.dialogRef.close();
+  }
+}
+=====
 import { inject } from '@angular/core';
 import { CanActivateFn } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -136,7 +273,9 @@ export const roleGuard: CanActivateFn = (route) => {
   if (rbacStore.isLoaded() && rbacStore.roleDefinitions().length === 0) {
     dialog.open<AccessDeniedComponent, AccessDeniedData>(AccessDeniedComponent, {
       data: { routeId, userRoles: [], reason: 'rbac-unavailable', rbacError: rbacStore.error() ?? undefined },
-      width: '420px',
+      width: '360px',
+      maxWidth: '90vw',
+      disableClose: false,
     });
     return false;
   }
@@ -148,7 +287,9 @@ export const roleGuard: CanActivateFn = (route) => {
   if (userRoles.length === 0) {
     dialog.open<AccessDeniedComponent, AccessDeniedData>(AccessDeniedComponent, {
       data: { routeId, userRoles, reason: 'stale-session' },
-      width: '420px',
+      width: '360px',
+      maxWidth: '90vw',
+      disableClose: false,
     });
     return false;
   }
@@ -159,986 +300,10 @@ export const roleGuard: CanActivateFn = (route) => {
 
   dialog.open<AccessDeniedComponent, AccessDeniedData>(AccessDeniedComponent, {
     data: { routeId, userRoles, reason: 'no-permission' },
-    width: '420px',
+    width: '360px',
+    maxWidth: '90vw',
+    disableClose: false,
   });
 
   return false;
 };
-=======
-export interface RoleDefinition {
-  readonly name: string;
-  readonly label: string;
-  readonly routes: string[];
-  readonly canUpdate: string[];
-}
-
-export interface RbacConfig {
-  readonly roles: RoleDefinition[];
-}
-
-export interface RbacState {
-  readonly roleDefinitions: RoleDefinition[];
-  readonly isLoaded: boolean;
-  readonly error: string | null;
-}
-====
-import { inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
-import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
-import { RbacConfig, RbacState } from '@models/rbac/rbac.model';
-
-const initialState: RbacState = {
-  roleDefinitions: [],
-  isLoaded: false,
-  error: null,
-};
-
-export const RbacStore = signalStore(
-  { providedIn: 'root' },
-  withState<RbacState>(initialState),
-  withMethods((store, http = inject(HttpClient)) => ({
-    async loadRoles(url: string): Promise<void> {
-      try {
-        const config = await lastValueFrom(http.get<RbacConfig>(url));
-        patchState(store, { roleDefinitions: config.roles, isLoaded: true, error: null });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load role definitions';
-        patchState(store, { roleDefinitions: [], isLoaded: true, error: message });
-      }
-    },
-
-    canAccessRoute(routeId: string, userRoles: string[]): boolean {
-      const defs = store.roleDefinitions();
-      if (!store.isLoaded() || defs.length === 0) return false;
-      return userRoles.some(
-        role => defs.find(def => def.name === role)?.routes.includes(routeId) ?? false,
-      );
-    },
-
-    canUpdateRoute(routeId: string, userRoles: string[]): boolean {
-      const defs = store.roleDefinitions();
-      if (!store.isLoaded() || defs.length === 0) return false;
-      return userRoles.some(
-        role => defs.find(def => def.name === role)?.canUpdate.includes(routeId) ?? false,
-      );
-    },
-  })),
-);
-===
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { ActiveWwellStore } from '../store/active-wwell.store';
-import { AuthStore } from '../../auth/store/auth.store';
-import { RbacStore } from '@store/rbac/rbac.store';
-
-@Component({
-  selector: 'app-wwell-test',
-  standalone: true,
-  imports: [MatButtonModule],
-  templateUrl: './wwell-test.component.html',
-  styleUrl: './wwell-test.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class WwellTestComponent {
-  private readonly store    = inject(ActiveWwellStore);
-  private readonly auth     = inject(AuthStore);
-  private readonly rbac     = inject(RbacStore);
-
-  protected readonly data = this.store.wwellTest;
-
-  protected readonly isFlowTest = computed(() => {
-    const data = this.data();
-    if (!data) return false;
-    return data.flowType === 'Y' || data.testType.toLowerCase() === 'flow';
-  });
-
-  protected readonly canUpdate = computed(() =>
-    this.rbac.canUpdateRoute('active-wwell', this.auth.user()?.groups ?? []),
-  );
-}
-====
-import { JwtService } from 'src/app/core/services/jwt/jwt.service';
-
-export interface AuthUser {
-  readonly upn?: string;
-  readonly name?: string;
-  readonly preferred_username?: string;
-  readonly unique_name?: string;
-  readonly exp?: number;
-  readonly groups?: string[];
-  readonly [key: string]: unknown;
-}
-
-export interface LoginRequest {
-  readonly username: string;
-  readonly password: string;
-}
-
-export interface AuthState {
-  readonly token: string | null;
-  readonly isAuthenticated: boolean;
-  readonly user: AuthUser | null;
-  readonly isLoading: boolean;
-  readonly error: string | null;
-  readonly sessionExpired: boolean;
-}
-
-export const initialState: AuthState = {
-  token: null,
-  isAuthenticated: false,
-  user: null,
-  isLoading: false,
-  error: null,
-  sessionExpired: false,
-};
-
-export function selectIsTokenExpired(token: string | null, jwt: JwtService): boolean {
-  return token ? jwt.isExpired(token) : true;
-}
-
-export function selectDisplayUsername(user: AuthUser | null): string {
-  if (!user) return 'User';
-
-  const username =
-    user.name ||
-    user.preferred_username ||
-    user.upn ||
-    user.unique_name;
-
-  return typeof username === 'string' && username.trim().length > 0
-    ? username.trim()
-    : 'User';
-}
-
-export function selectUserEmail(user: AuthUser | null): string | null {
-  const upn = user?.upn;
-
-  if (typeof upn !== 'string') {
-    return null;
-  }
-
-  const normalizedUpn = upn.trim();
-
-  if (!normalizedUpn) {
-    return null;
-  }
-
-  return normalizedUpn.includes('@')
-    ? normalizedUpn
-    : `${normalizedUpn}@aramco.com`;
-}
-====
-<header class="top-navbar">
-
-  <!-- Left: hamburger + logo -->
-  <div class="top-navbar__brand">
-    <button
-      class="top-navbar__hamburger"
-      (click)="toggleSidenav.emit()"
-      [attr.aria-label]="sidenavCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
-      [class.top-navbar__hamburger--active]="!sidenavCollapsed()"
-    >
-      <span></span><span></span><span></span>
-    </button>
-
-    <div class="top-navbar__logo">
-      <div class="top-navbar__logo-icon">
-        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="16" cy="20" rx="9" ry="11" fill="url(#dropGrad)"/>
-          <ellipse cx="16" cy="20" rx="5"  ry="7"  fill="rgba(255,255,255,0.25)"/>
-          <path d="M16 4 C16 4 22 12 22 18" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
-          <defs>
-            <linearGradient id="dropGrad" x1="16" y1="9" x2="16" y2="31" gradientUnits="userSpaceOnUse">
-              <stop offset="0%"   stop-color="#38bdf8"/>
-              <stop offset="100%" stop-color="#0369a1"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <span class="top-navbar__logo-text">{{ logoText }}</span>
-    </div>
-  </div>
-
-  <!-- Center: title -->
-  <div class="top-navbar__title">
-    <h1>{{ appTitle }}</h1>
-  </div>
-
-  <!-- Right: notifications + user -->
-  <div class="top-navbar__user">
-
-    <div class="top-navbar__notifications">
-      <button
-        class="top-navbar__icon-btn"
-        aria-label="Notifications"
-        [matBadge]="3"
-        matBadgeColor="warn"
-        [matBadgeOverlap]="true"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 01-3.46 0"/>
-        </svg>
-      </button>
-    </div>
-
-    <div class="top-navbar__divider"></div>
-
-    <div class="top-navbar__menu">
-      <button
-        type="button"
-        class="top-navbar__menu-trigger"
-        (click)="toggleUserMenu($event)"
-        aria-haspopup="menu"
-        [attr.aria-expanded]="menuOpen()"
-        aria-label="Open user menu"
-      >
-        <div class="top-navbar__user-info">
-          <span class="top-navbar__user-name">{{ auth.displayUsername() }}</span>
-          @if (userRoleLabels().length) {
-            <div class="top-navbar__roles">
-              @for (label of userRoleLabels(); track label) {
-                <span class="top-navbar__role-chip">{{ label }}</span>
-              }
-            </div>
-          }
-        </div>
-
-        <div class="top-navbar__avatar" aria-hidden="true">{{ userInitial() }}</div>
-
-        <svg class="top-navbar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
-
-      @if (menuOpen()) {
-        <div class="top-navbar__menu-popup">
-          <div class="top-navbar__profile-card">
-            <div class="top-navbar__profile-head">
-              <div class="top-navbar__profile-avatar" aria-hidden="true">{{ userInitial() }}</div>
-
-              <div class="top-navbar__profile-copy">
-                <span class="top-navbar__profile-label">Signed in as</span>
-                <strong class="top-navbar__profile-name">{{ auth.displayUsername() }}</strong>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="top-navbar__logout-btn"
-              (click)="logout($event)"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-              Logout
-            </button>
-          </div>
-        </div>
-      }
-    </div>
-  </div>
-
-</header>
-====
-// ── Layout constants ─────────────────────────────────────────────────────────
-$nav-h:        62px;
-$ease:         cubic-bezier(0.4, 0, 0.2, 1);
-// Light-on-dark palette for the dark navy bar
-$nav-text:     rgba(255, 255, 255, 0.92);
-$nav-muted:    rgba(255, 255, 255, 0.55);
-$nav-border:   rgba(255, 255, 255, 0.10);
-$nav-hover-bg: rgba(14, 165, 233, 0.14);
-
-// ── Host ─────────────────────────────────────────────────────────────────────
-:host {
-  display: block;
-  flex-shrink: 0;
-}
-
-// ── Shell ────────────────────────────────────────────────────────────────────
-.top-navbar {
-  display: flex;
-  align-items: center;
-  height: $nav-h;
-  padding: 0 20px 0 0;
-  background: var(--bg-topbar);
-  border-bottom: 1px solid $nav-border;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
-  position: relative;
-  z-index: 100;
-
-  // Subtle grid texture
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(56, 189, 248, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(56, 189, 248, 0.035) 1px, transparent 1px);
-    background-size: 32px 32px;
-    pointer-events: none;
-  }
-
-  // Bottom accent line
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      transparent,
-      rgba(14, 165, 233, 0.55) 30%,
-      rgba(14, 165, 233, 0.55) 70%,
-      transparent
-    );
-    pointer-events: none;
-  }
-
-  // ── Brand ─────────────────────────────────────────────────────────────────
-  &__brand {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    gap: 10px;
-    padding: 0 14px;
-    height: 100%;
-    border-right: 1px solid $nav-border;
-    min-width: 224px;
-    transition: min-width 0.26s $ease;
-  }
-
-  // ── Hamburger ─────────────────────────────────────────────────────────────
-  &__hamburger {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 4px;
-    width: 36px;
-    height: 36px;
-    padding: 6px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    border-radius: 8px;
-    flex-shrink: 0;
-    transition: background 0.15s;
-
-    span {
-      display: block;
-      height: 2px;
-      background: $nav-muted;
-      border-radius: 2px;
-      transition: background 0.2s, transform 0.25s;
-
-      &:nth-child(1) { width: 20px; }
-      &:nth-child(2) { width: 14px; }
-      &:nth-child(3) { width: 17px; }
-    }
-
-    &:hover {
-      background: $nav-hover-bg;
-      span { background: #38bdf8; }
-    }
-
-    &--active span { background: #38bdf8; }
-  }
-
-  // ── Logo ──────────────────────────────────────────────────────────────────
-  &__logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-  }
-
-  &__logo-icon {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.65));
-  }
-
-  &__logo-text {
-    font-family: 'DM Sans', system-ui, sans-serif;
-    font-size: 19px;
-    font-weight: 800;
-    letter-spacing: 2.5px;
-    color: #38bdf8;
-    text-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
-    text-transform: uppercase;
-  }
-
-  // ── Center title ──────────────────────────────────────────────────────────
-  &__title {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0 24px;
-
-    h1 {
-      margin: 0;
-      font-family: 'DM Sans', system-ui, sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 1.8px;
-      text-transform: uppercase;
-      color: $nav-text;
-      white-space: nowrap;
-    }
-  }
-
-  // ── Right: user area ──────────────────────────────────────────────────────
-  &__user {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-shrink: 0;
-    margin-left: auto;
-  }
-
-  &__notifications {
-    position: relative;
-  }
-
-  &__icon-btn {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid $nav-border;
-    border-radius: 10px;
-    cursor: pointer;
-    color: $nav-muted;
-    transition: background 0.2s $ease, border-color 0.2s $ease, color 0.2s $ease, box-shadow 0.2s $ease;
-    position: relative;
-
-    svg { width: 18px; height: 18px; }
-
-    &:hover {
-      background: $nav-hover-bg;
-      border-color: rgba(56, 189, 248, 0.4);
-      color: #38bdf8;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
-    }
-  }
-
-  &__divider {
-    width: 1px;
-    height: 26px;
-    background: $nav-border;
-  }
-
-  // ── User info (name text) ─────────────────────────────────────────────────
-  &__user-info {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
-  &__user-name {
-    font-size: 13.5px;
-    font-weight: 700;
-    color: $nav-text;
-    letter-spacing: 0.2px;
-    line-height: 1.2;
-  }
-
-  &__roles {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    margin-top: 3px;
-  }
-
-  &__role-chip {
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: #38bdf8;
-    background: rgba(56, 189, 248, 0.10);
-    border: 1px solid rgba(56, 189, 248, 0.28);
-    border-radius: 4px;
-    padding: 1px 6px;
-    line-height: 1.6;
-    white-space: nowrap;
-  }
-
-  // ── Menu ─────────────────────────────────────────────────────────────────
-  &__menu {
-    position: relative;
-  }
-
-  &__menu-trigger {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 8px 4px 14px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid $nav-border;
-    border-radius: 999px;
-    color: $nav-text;
-    cursor: pointer;
-    transition: background 0.2s $ease, border-color 0.2s $ease, box-shadow 0.2s $ease;
-
-    &:hover {
-      background: $nav-hover-bg;
-      border-color: rgba(56, 189, 248, 0.4);
-      box-shadow: 0 0 14px rgba(56, 189, 248, 0.16);
-    }
-
-    &:focus-visible {
-      outline: 2px solid #38bdf8;
-      outline-offset: 2px;
-    }
-  }
-
-  &__avatar {
-    width: 36px;
-    height: 36px;
-    display: grid;
-    place-items: center;
-    background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
-    border: 2px solid rgba(56, 189, 248, 0.55);
-    border-radius: 50%;
-    font-size: 13px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 0.5px;
-    box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
-  }
-
-  &__chevron {
-    width: 15px;
-    height: 15px;
-    color: $nav-muted;
-    flex-shrink: 0;
-    transition: transform 0.25s $ease;
-  }
-}
-
-// ── Dropdown popup (white surface) ───────────────────────────────────────────
-.top-navbar__menu-popup {
-  min-width: 15rem;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  box-shadow: 0 18px 34px rgba(2, 6, 23, 0.28);
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  z-index: 300;
-}
-
-.top-navbar__profile-card {
-  display: grid;
-  gap: 0.9rem;
-  padding: 1rem;
-}
-
-.top-navbar__profile-head {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--border-sub);
-}
-
-.top-navbar__profile-copy {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.top-navbar__profile-label {
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.top-navbar__profile-name {
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.top-navbar__profile-avatar {
-  width: 2.75rem;
-  height: 2.75rem;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 800;
-  box-shadow: 0 0 14px rgba(14, 165, 233, 0.28);
-  flex-shrink: 0;
-}
-
-.top-navbar__logout-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  justify-content: flex-start;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-card);
-  color: var(--danger);
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-
-  svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    background: rgba(220, 38, 38, 0.07);
-    border-color: rgba(220, 38, 38, 0.3);
-  }
-}
-
-// ── Mat-badge override ────────────────────────────────────────────────────────
-:host ::ng-deep .mat-badge-content {
-  font-size: 9px;
-  font-weight: 800;
-  min-width: 17px;
-  height: 17px;
-  line-height: 17px;
-  border-radius: 6px;
-  letter-spacing: 0.3px;
-}
-
-// ── Responsive ───────────────────────────────────────────────────────────────
-@media (max-width: 900px) {
-  .top-navbar {
-    &__title      { display: none; }
-    &__user       { gap: 10px; }
-    &__user-info  { display: none; }
-    &__menu-trigger { padding-left: 6px; }
-  }
-}
-=====
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  HostListener,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
-import { MatBadgeModule } from '@angular/material/badge';
-import { AuthStore } from 'src/app/features/auth/store/auth.store';
-import { RbacStore } from '@store/rbac/rbac.store';
-
-@Component({
-  selector: 'app-top-navbar',
-  standalone: true,
-  imports: [MatBadgeModule],
-  templateUrl: './top-navbar.component.html',
-  styleUrl: './top-navbar.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class TopNavbarComponent {
-  readonly sidenavCollapsed = input<boolean>(false);
-  readonly toggleSidenav = output<void>();
-
-  protected readonly auth     = inject(AuthStore);
-  protected readonly rbac     = inject(RbacStore);
-  protected readonly menuOpen = signal(false);
-
-  protected readonly userRoleLabels = computed(() => {
-    const groups = this.auth.user()?.groups ?? [];
-    const defs   = this.rbac.roleDefinitions();
-    return groups.map(g => defs.find(d => d.name === g)?.label ?? g);
-  });
-
-  readonly appTitle = 'Aramco Ground Water Application';
-  readonly logoText = 'AGWA';
-
-  @HostListener('document:click')
-  protected closeUserMenu(): void {
-    this.menuOpen.set(false);
-  }
-
-  protected toggleUserMenu(event: MouseEvent): void {
-    event.stopPropagation();
-    this.menuOpen.update((open) => !open);
-  }
-
-  protected logout(event?: MouseEvent): void {
-    event?.stopPropagation();
-    this.menuOpen.set(false);
-    this.auth.logout();
-  }
-
-  protected userInitial(): string {
-    return this.auth.displayUsername().charAt(0).toUpperCase() || 'U';
-  }
-}
-====
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { AuthStore } from '../../../features/auth/store/auth.store';
-
-export type DeniedReason = 'no-permission' | 'stale-session' | 'rbac-unavailable';
-
-export interface AccessDeniedData {
-  readonly routeId:  string;
-  readonly userRoles: string[];
-  readonly reason:   DeniedReason;
-  readonly rbacError?: string;
-}
-
-@Component({
-  selector: 'app-access-denied',
-  standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatIconModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="denied-shell">
-      <mat-icon class="denied-icon">{{ icon }}</mat-icon>
-
-      <h2 mat-dialog-title>{{ title }}</h2>
-
-      <mat-dialog-content>
-        <p>{{ message }}</p>
-
-        @if (data.reason === 'no-permission' && data.userRoles.length) {
-          <p class="roles-row">
-            <span class="roles-label">
-              Your role{{ data.userRoles.length > 1 ? 's' : '' }}:
-            </span>
-            @for (role of data.userRoles; track role) {
-              <span class="role-chip">{{ role }}</span>
-            }
-          </p>
-        }
-
-        @if (data.reason === 'rbac-unavailable' && data.rbacError) {
-          <p class="error-detail">{{ data.rbacError }}</p>
-        }
-      </mat-dialog-content>
-
-      <mat-dialog-actions align="end">
-        @if (data.reason === 'stale-session') {
-          <button mat-flat-button color="primary" (click)="logout()">Log Out & Re-Login</button>
-        } @else {
-          <button mat-flat-button color="primary" (click)="close()">Got it</button>
-        }
-      </mat-dialog-actions>
-    </div>
-  `,
-  styles: [`
-    .denied-shell {
-      text-align: center;
-      padding: 8px 4px;
-    }
-
-    .denied-icon {
-      font-size: 52px;
-      width: 52px;
-      height: 52px;
-      color: #e53935;
-      margin-bottom: 4px;
-    }
-
-    h2[mat-dialog-title] { margin: 0 0 4px; }
-
-    mat-dialog-content { text-align: left; }
-
-    .roles-row {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin: 12px 0;
-    }
-
-    .roles-label {
-      font-size: 13px;
-      color: var(--mat-sys-on-surface-variant, #666);
-    }
-
-    .role-chip {
-      padding: 2px 10px;
-      border-radius: 12px;
-      background: var(--mat-sys-surface-variant, #e0e0e0);
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .error-detail {
-      font-size: 12px;
-      color: #e53935;
-      font-family: monospace;
-      background: #fce8e8;
-      padding: 6px 10px;
-      border-radius: 4px;
-      margin: 8px 0 0;
-      word-break: break-word;
-    }
-
-    .hint {
-      font-size: 13px;
-      color: var(--mat-sys-on-surface-variant, #666);
-      margin: 8px 0 0;
-    }
-  `],
-})
-export class AccessDeniedComponent {
-  protected readonly data      = inject<AccessDeniedData>(MAT_DIALOG_DATA);
-  private   readonly dialogRef = inject(MatDialogRef<AccessDeniedComponent>);
-  private   readonly authStore = inject(AuthStore);
-
-  protected get icon(): string {
-    return this.data.reason === 'rbac-unavailable' ? 'error_outline' : 'lock';
-  }
-
-  protected get title(): string {
-    switch (this.data.reason) {
-      case 'stale-session':    return 'Session Outdated';
-      case 'rbac-unavailable': return 'Configuration Error';
-      default:                 return 'Access Restricted';
-    }
-  }
-
-  protected get message(): string {
-    switch (this.data.reason) {
-      case 'stale-session':
-        return 'Your session does not contain group claims. Please log out and log back in to refresh your credentials.';
-      case 'rbac-unavailable':
-        return 'Role configuration could not be loaded. Contact your administrator.';
-      default:
-        return `You don't have permission to access ${this.data.routeId}. Contact your administrator to request access.`;
-    }
-  }
-
-  protected logout(): void {
-    this.dialogRef.close();
-    this.authStore.logout();
-  }
-
-  protected close(): void {
-    this.dialogRef.close();
-  }
-}
-====
-import { computed, Directive, effect, inject, input, TemplateRef, ViewContainerRef } from '@angular/core';
-import { AuthStore } from '../../../features/auth/store/auth.store';
-import { RbacStore } from '@store/rbac/rbac.store';
-
-/**
- * Structural directive that renders its host element only when the current
- * user has the required permission for a given route.
- *
- * Usage:
- *   *appHasPermission="'active-wwell'"                        (read access)
- *   *appHasPermission="'active-wwell'; action: 'update'"      (write access)
- */
-@Directive({
-  selector: '[appHasPermission]',
-  standalone: true,
-})
-export class HasPermissionDirective {
-  readonly appHasPermission       = input.required<string>();
-  readonly appHasPermissionAction = input<'read' | 'update'>('read');
-
-  private readonly authStore = inject(AuthStore);
-  private readonly rbacStore = inject(RbacStore);
-  private readonly vcr       = inject(ViewContainerRef);
-  private readonly tmpl      = inject(TemplateRef<unknown>);
-  private hasView = false;
-
-  constructor() {
-    const allowed = computed(() => {
-      const routeId   = this.appHasPermission();
-      const action    = this.appHasPermissionAction();
-      const userRoles = this.authStore.user()?.groups ?? [];
-      return action === 'update'
-        ? this.rbacStore.canUpdateRoute(routeId, userRoles)
-        : this.rbacStore.canAccessRoute(routeId, userRoles);
-    });
-
-    effect(() => {
-      if (allowed() && !this.hasView) {
-        this.vcr.createEmbeddedView(this.tmpl);
-        this.hasView = true;
-      } else if (!allowed() && this.hasView) {
-        this.vcr.clear();
-        this.hasView = false;
-      }
-    });
-  }
-}
-===
-export interface AgwaConfig {
-  presWebMapId: string | nullish;
-  tokenUrl: string;
-  dailyOperationServiceUrl: string;
-  presDocsServiceUrl: string;
-  emailServiceUrl: string;
-  mapServerUrl: string;
-  mosaicLayerUrl: string;
-  appId: string;
-  esriUrl: string;
-morningReportWebMapId: string;
-  rolesUrl?: string;
-}
-====
-{
-    "tokenUrl": "assets/mock-token.txt",
-    "dailyOperationServiceUrl": "http://localhost:8080",
-    "emailServiceUrl": "http://localhost:8080",
-    "mapServerUrl": "https://eccenterprisegislbsrvr.enp.aramco.com.sa:6443/arcgis/rest/services/EARTH/EARTH_Layers/MapServer",
-    "mosaicLayerUrl": "https://gissrv.enp.aramco.com.sa:6443/arcgis/rest/services/CART/ASD_100K_MOSAIC/ImageServer",
-    "appId": "M0M4nfZyToqUlgQy",
-    "esriUrl": "https://eccenterprisegis.enp.aramco.com.sa/arcgis",
-    "webMapItemId": "c177620bd7744a22b6e7e0d98c33d18a",
-    "morningReportWebMapId": "",
-    "rolesUrl": "assets/roles.json"
-}
-====
-{
-  "roles": [
-    {
-      "name": "GWD_client",
-      "label": "Client",
-      "routes": ["home", "morning-report", "presentations", "active-wwell"],
-      "canUpdate": []
-    },
-    {
-      "name": "GWD_member",
-      "label": "Member",
-      "routes": ["home", "morning-report", "presentations", "active-wwell"],
-      "canUpdate": ["active-wwell"]
-    },
-    {
-      "name": "GWD_admin",
-      "label": "Administrator",
-      "routes": ["home", "morning-report", "presentations", "active-wwell"],
-      "canUpdate": ["active-wwell"]
-    }
-  ]
-}
