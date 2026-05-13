@@ -1,50 +1,16 @@
-<div class="denied-dialog">
-  <div class="denied-header">
-    <mat-icon class="denied-icon" [class]="iconClass">{{ icon }}</mat-icon>
-    <div class="denied-titles">
-      <h3 class="denied-title">{{ title }}</h3>
-      <span class="denied-subtitle">{{ subtitle }}</span>
-    </div>
-    <button mat-icon-button class="close-btn" (click)="close()">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
+@keyframes icon-drop {
+  0%   { opacity: 0; transform: scale(0.4) rotate(-15deg); }
+  60%  { transform: scale(1.18) rotate(6deg); }
+  80%  { transform: scale(0.94) rotate(-3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
 
-  <div class="denied-body">
-    <p class="denied-message">{{ message }}</p>
-
-    @if (data.reason === 'no-permission' && data.userRoles.length) {
-      <div class="roles-row">
-        <span class="roles-label">Your roles</span>
-        <div class="chips">
-          @for (role of data.userRoles; track role) {
-            <span class="chip">{{ role }}</span>
-          }
-        </div>
-      </div>
-    }
-
-    @if (data.reason === 'rbac-unavailable' && data.rbacError) {
-      <code class="error-code">{{ data.rbacError }}</code>
-    }
-  </div>
-
-  <div class="denied-footer">
-    @if (data.reason === 'stale-session') {
-      <button mat-flat-button color="warn" (click)="logout()">
-        <mat-icon>logout</mat-icon> Re-authenticate
-      </button>
-    } @else {
-      <button mat-flat-button color="primary" (click)="close()">Dismiss</button>
-    }
-  </div>
-</div>
-=======
 .denied-dialog {
   width: 360px;
   display: flex;
   flex-direction: column;
   gap: 0;
+  will-change: transform, opacity;
 }
 
 .denied-header {
@@ -61,8 +27,10 @@
     flex-shrink: 0;
     margin-top: 2px;
 
-    &.icon-lock   { color: #e53935; }
-    &.icon-error  { color: #f57c00; }
+    animation: icon-drop 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 80ms both;
+
+    &.icon-lock    { color: #e53935; }
+    &.icon-error   { color: #f57c00; }
     &.icon-session { color: #1976d2; }
   }
 
@@ -167,143 +135,3 @@
     }
   }
 }
-=====
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { AuthStore } from '../../../features/auth/store/auth.store';
-
-export type DeniedReason = 'no-permission' | 'stale-session' | 'rbac-unavailable';
-
-export interface AccessDeniedData {
-  readonly routeId:   string;
-  readonly userRoles: string[];
-  readonly reason:    DeniedReason;
-  readonly rbacError?: string;
-}
-
-@Component({
-  selector: 'app-access-denied',
-  standalone: true,
-  imports: [MatButtonModule, MatIconModule],
-  templateUrl: './access-denied.component.html',
-  styleUrl: './access-denied.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class AccessDeniedComponent {
-  protected readonly data      = inject<AccessDeniedData>(MAT_DIALOG_DATA);
-  private   readonly dialogRef = inject(MatDialogRef<AccessDeniedComponent>);
-  private   readonly authStore = inject(AuthStore);
-
-  protected get icon(): string {
-    const icons: Record<DeniedReason, string> = {
-      'no-permission':    'lock',
-      'stale-session':    'schedule',
-      'rbac-unavailable': 'error_outline',
-    };
-    return icons[this.data.reason];
-  }
-
-  protected get iconClass(): string {
-    const classes: Record<DeniedReason, string> = {
-      'no-permission':    'icon-lock',
-      'stale-session':    'icon-session',
-      'rbac-unavailable': 'icon-error',
-    };
-    return classes[this.data.reason];
-  }
-
-  protected get title(): string {
-    const titles: Record<DeniedReason, string> = {
-      'no-permission':    'Access Restricted',
-      'stale-session':    'Session Outdated',
-      'rbac-unavailable': 'Configuration Error',
-    };
-    return titles[this.data.reason];
-  }
-
-  protected get subtitle(): string {
-    const subtitles: Record<DeniedReason, string> = {
-      'no-permission':    this.data.routeId,
-      'stale-session':    'Credentials need refresh',
-      'rbac-unavailable': 'RBAC could not be loaded',
-    };
-    return subtitles[this.data.reason];
-  }
-
-  protected get message(): string {
-    const messages: Record<DeniedReason, string> = {
-      'no-permission':
-        'You don\'t have the required permissions for this module. Contact your administrator to request access.',
-      'stale-session':
-        'Your session is missing group claims. Log out and re-authenticate to refresh your credentials.',
-      'rbac-unavailable':
-        'Role configuration failed to load. The administrator needs to check the RBAC configuration.',
-    };
-    return messages[this.data.reason];
-  }
-
-  protected logout(): void {
-    this.dialogRef.close();
-    this.authStore.logout();
-  }
-
-  protected close(): void {
-    this.dialogRef.close();
-  }
-}
-=====
-import { inject } from '@angular/core';
-import { CanActivateFn } from '@angular/router';
-import { MatDialog } from '@angular/material/dialog';
-import { AuthStore } from '../../features/auth/store/auth.store';
-import { RbacStore } from '@store/rbac/rbac.store';
-import { AccessDeniedComponent, type AccessDeniedData } from '@shared/components/access-denied/access-denied.component';
-
-export const roleGuard: CanActivateFn = (route) => {
-  const authStore = inject(AuthStore);
-  const rbacStore = inject(RbacStore);
-  const dialog    = inject(MatDialog);
-
-  const routeId = route.data['routeId'] as string | undefined;
-  if (!routeId) return true;
-
-  // Role config failed to load (network error, 404, etc.)
-  if (rbacStore.isLoaded() && rbacStore.roleDefinitions().length === 0) {
-    dialog.open<AccessDeniedComponent, AccessDeniedData>(AccessDeniedComponent, {
-      data: { routeId, userRoles: [], reason: 'rbac-unavailable', rbacError: rbacStore.error() ?? undefined },
-      width: '360px',
-      maxWidth: '90vw',
-      disableClose: false,
-    });
-    return false;
-  }
-
-  const userRoles: string[] = authStore.user()?.groups ?? [];
-
-  // Authenticated but token carries no group claims → stale token in localStorage.
-  // The dialog will offer a logout button so the user can re-login and get a fresh token.
-  if (userRoles.length === 0) {
-    dialog.open<AccessDeniedComponent, AccessDeniedData>(AccessDeniedComponent, {
-      data: { routeId, userRoles, reason: 'stale-session' },
-      width: '360px',
-      maxWidth: '90vw',
-      disableClose: false,
-    });
-    return false;
-  }
-
-  if (rbacStore.canAccessRoute(routeId, userRoles)) {
-    return true;
-  }
-
-  dialog.open<AccessDeniedComponent, AccessDeniedData>(AccessDeniedComponent, {
-    data: { routeId, userRoles, reason: 'no-permission' },
-    width: '360px',
-    maxWidth: '90vw',
-    disableClose: false,
-  });
-
-  return false;
-};
