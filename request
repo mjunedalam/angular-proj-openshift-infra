@@ -1,280 +1,947 @@
-// login.component.ts
-import { afterNextRender, ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDividerModule } from '@angular/material/divider';
-import { ActivatedRoute, Router } from '@angular/router';
-import { AuthStore } from 'src/app/features/auth/store/auth.store';
-import { LoginRequest } from 'src/app/features/auth/store/auth.selectors';
-import { LoaderService } from '@shared/components/global-loader/loader.service';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { AuthStore } from '../../features/auth/store/auth.store';
+import { RbacStore } from '@store/rbac/rbac.store';
 
-interface LoginForm {
-  username: FormControl<string>;
-  password: FormControl<string>;
+export const roleGuard: CanActivateFn = (route) => {
+  const authStore = inject(AuthStore);
+  const rbacStore = inject(RbacStore);
+  const router    = inject(Router);
+
+  const routeId = route.data['routeId'] as string | undefined;
+  if (!routeId) return true;
+
+  if (rbacStore.isLoaded() && rbacStore.roleDefinitions().length === 0) {
+    return router.parseUrl('/main/home');
+  }
+
+  const userRoles: string[] = authStore.user()?.groups ?? [];
+
+  if (userRoles.length === 0) {
+    return router.parseUrl('/main/home');
+  }
+
+  if (rbacStore.canAccessRoute(routeId, userRoles)) {
+    return true;
+  }
+
+  return router.parseUrl('/main/home');
+};
+===
+<nav class="sidenav" [class.sidenav--collapsed]="collapsed()" aria-label="Main navigation">
+
+  <!-- Nav Items -->
+  <ul class="sidenav__list" role="list">
+
+    @for (item of navItems; track item.id) {
+      <li class="sidenav__item">
+        <button
+          class="sidenav__btn"
+          [class.sidenav__btn--active]="item.id === activeRoute()"
+          [class.sidenav__btn--locked]="isLocked(item)"
+          (click)="onItemClick(item.id)"
+          [attr.aria-current]="item.id === activeRoute() ? 'page' : null"
+          [title]="collapsed() ? item.label : ''"
+        >
+          <!-- Icon -->
+          <span class="sidenav__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              @for (pathD of item.icon.split(' M '); track $index) {
+                @if ($index === 0) {
+                  <path [attr.d]="pathD" />
+                } @else {
+                  <path [attr.d]="'M ' + pathD" />
+                }
+              }
+            </svg>
+          </span>
+
+          <!-- Label (hidden when collapsed) -->
+          @if (!collapsed()) {
+            <span class="sidenav__label">{{ item.label }}</span>
+          }
+
+          <!-- Lock icon for restricted items -->
+          @if (isLocked(item) && !collapsed()) {
+            <span
+              class="sidenav__lock"
+              matTooltip="Access restricted — contact your administrator to request access to this module."
+              matTooltipPosition="after"
+              matTooltipClass="sidenav-lock-tooltip"
+              [matTooltipShowDelay]="180"
+              aria-label="Access restricted"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+            </span>
+          }
+
+          <!-- Active indicator bar -->
+          @if (item.id === activeRoute()) {
+            <span class="sidenav__active-bar"></span>
+          }
+        </button>
+      </li>
+    }
+
+  </ul>
+
+  <!-- Bottom: Water drop decoration -->
+  <div class="sidenav__footer">
+    <div class="sidenav__water-logo">
+      <svg viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="20" cy="30" rx="13" ry="16" fill="url(#sideDropGrad)" opacity="0.85"/>
+        <ellipse cx="20" cy="30" rx="7" ry="10" fill="rgba(255,255,255,0.18)"/>
+        <path d="M20 6 C20 6 28 18 28 28" stroke="rgba(255,255,255,0.5)"
+              stroke-width="2" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="sideDropGrad" x1="20" y1="14" x2="20" y2="46" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#38bdf8"/>
+            <stop offset="100%" stop-color="#0369a1"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    @if (!collapsed()) {
+      <span class="sidenav__footer-text">AGWA v2.4</span>
+    }
+  </div>
+
+</nav>
+=====
+// ── Layout constants ────────────────────────────────────────────────────────
+$expanded-w:  244px;
+$collapsed-w: 64px;
+$ease:        cubic-bezier(0.4, 0, 0.2, 1);
+$transition:  0.26s $ease;
+
+// Light-on-dark palette — sidenav is a dark navy surface
+$nav-text:    rgba(255, 255, 255, 0.88);
+$nav-muted:   rgba(255, 255, 255, 0.48);
+$nav-border:  rgba(255, 255, 255, 0.08);
+$nav-hover-bg: rgba(14, 165, 233, 0.10);
+
+// ── Host ────────────────────────────────────────────────────────────────────
+:host {
+  display: block;
+  flex-shrink: 0;
 }
 
-@Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatDividerModule,
-  ],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class LoginComponent {
-  protected readonly authStore = inject(AuthStore);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-  private readonly loader = inject(LoaderService);
-  private readonly submitted = signal(false);
+// ── Shell ───────────────────────────────────────────────────────────────────
+.sidenav {
+  display: flex;
+  flex-direction: column;
+  width: $expanded-w;
+  height: 100%;
+  background: var(--bg-sidenav);
+  border-right: 1px solid $nav-border;
+  overflow: hidden;
+  transition: width $transition;
+  position: relative;
 
-  protected readonly sessionExpiredMessage = signal<string | null>(null);
+  // Subtle right-edge glow
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 1px; height: 100%;
+    background: linear-gradient(
+      to bottom,
+      rgba(14, 165, 233, 0.35),
+      rgba(14, 165, 233, 0.08) 40%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
 
-  // Collapsible state for credentials form - default collapsed (false)
-  protected readonly isCredentialsExpanded = signal(false);
-  protected readonly hidePassword = signal(true);
+  // ── Collapsed state ────────────────────────────────────────────────────
+  &--collapsed {
+    width: $collapsed-w;
 
-  constructor() {
-    // If the user already has a valid session, send them straight to the app.
-    if (this.authStore.isAuthenticated() && !this.authStore.isTokenExpired()) {
-      void this.router.navigate(['/main']);
-      return;
+    .sidenav__label,
+    .sidenav__footer-text {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
     }
 
-    // Show session-expired banner when redirected by the auth guard.
-    if (this.route.snapshot.queryParamMap.get('reason') === 'session-expired') {
-      this.sessionExpiredMessage.set('Your session has expired. Please log in again.');
+    .sidenav__btn {
+      justify-content: center;
+      padding: 0;
     }
 
-    // No app shell on the login page — complete the native bar once the page renders.
-    afterNextRender(() => this.loader.completeBoot());
+    .sidenav__icon { margin-right: 0; }
+
+    .sidenav__section-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
   }
 
-  protected readonly loginForm = new FormGroup<LoginForm>({
-    username: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-  });
-
-  // SSO Login method
-  protected ssoLogin(): void {
-    this.authStore.login();
+  // ── Section label ──────────────────────────────────────────────────────
+  &__section-label {
+    padding: 20px 18px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: $nav-muted;
+    transition: opacity $transition, height $transition, padding $transition;
+    white-space: nowrap;
+    flex-shrink: 0;
+    overflow: hidden;
   }
 
-  // Toggle credentials form visibility
-  protected toggleCredentials(): void {
-    this.isCredentialsExpanded.update(expanded => !expanded);
-    // Reset form and submission state when collapsing
-    if (!this.isCredentialsExpanded()) {
-      this.submitted.set(false);
-      this.loginForm.reset();
-      this.loginForm.markAsPristine();
+  // ── List ───────────────────────────────────────────────────────────────
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 14px 0 18px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    &::-webkit-scrollbar { width: 0; }
+  }
+
+  &__item {
+    padding: 4px 12px;
+  }
+
+  // ── Nav button ─────────────────────────────────────────────────────────
+  &__btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 58px;
+    padding: 0 16px 0 10px;
+    border: none;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    color: $nav-muted;
+    cursor: pointer;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    gap: 2px;
+    transition:
+      background $transition,
+      color $transition,
+      box-shadow $transition,
+      transform 0.15s ease;
+    overflow: hidden;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(14, 165, 233, 0.14);
+      color: $nav-text;
+      transform: translateX(2px);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.14);
+
+      .sidenav__icon {
+        background: rgba(14, 165, 233, 0.16);
+
+        svg {
+          stroke: #38bdf8;
+          filter: drop-shadow(0 0 5px rgba(14, 165, 233, 0.4));
+        }
+      }
+    }
+
+    &--active {
+      background: linear-gradient(90deg, rgba(14, 165, 233, 0.2) 0%, rgba(14, 165, 233, 0.08) 100%);
+      color: #dff6ff;
+      font-weight: 800;
+      box-shadow:
+        inset 0 0 0 1px rgba(56, 189, 248, 0.28),
+        0 8px 18px rgba(2, 132, 199, 0.12);
+
+      .sidenav__icon {
+        background: rgba(14, 165, 233, 0.22);
+
+        svg {
+          stroke: #38bdf8;
+          filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.55));
+        }
+      }
     }
   }
 
-  protected submit(): void {
-    this.submitted.set(true);
+  // ── Icon container ─────────────────────────────────────────────────────
+  &__icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    margin-right: 13px;
+    transition: margin $transition, background $transition;
 
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
+    svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      transition: stroke 0.2s ease, filter 0.2s ease;
     }
-
-    this.authStore.login(this.loginForm.getRawValue() as LoginRequest);
   }
 
-  protected togglePasswordVisibility(): void {
-    this.hidePassword.update((hidden) => !hidden);
+  // ── Label ──────────────────────────────────────────────────────────────
+  &__label {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    color: inherit;
+    transition: opacity $transition, width $transition;
+    white-space: nowrap;
   }
 
-  protected isFieldInvalid(field: keyof LoginRequest): boolean {
-    const control = this.loginForm.controls[field];
-    return control.invalid && (control.dirty || control.touched || this.submitted());
+  // ── Lock icon ──────────────────────────────────────────────────────────
+  &__lock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(220, 38, 38, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(220, 38, 38, 0.28);
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+    svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      flex-shrink: 0;
+    }
+  }
+
+  &__btn--locked {
+    opacity: 0.72;
+
+    &:hover {
+      opacity: 1;
+
+      .sidenav__lock {
+        background: rgba(220, 38, 38, 0.26);
+        color: #fca5a5;
+        box-shadow:
+          0 0 0 1px rgba(220, 38, 38, 0.4),
+          0 0 10px rgba(220, 38, 38, 0.35);
+      }
+    }
+  }
+
+  // ── Active indicator (left edge) ────────────────────────────────────────
+  &__active-bar {
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 4px;
+    background: #38bdf8;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 2px 0 14px rgba(14, 165, 233, 0.55);
+  }
+
+  // ── Footer ─────────────────────────────────────────────────────────────
+  &__footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    border-top: 1px solid $nav-border;
+    flex-shrink: 0;
+    background: rgba(14, 165, 233, 0.03);
+  }
+
+  &__water-logo {
+    width: 28px;
+    height: 34px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__footer-text {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: $nav-muted;
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    transition: opacity $transition, width $transition;
+    text-transform: uppercase;
   }
 }
-=
+===
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
-  signal,
+  input,
+  output,
 } from '@angular/core';
-import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs';
-import { TopNavbarComponent } from './header/top-navbar.component';
-import { LeftSidenavComponent } from './sidebar/left-sidenav.component';
-import { LoaderService } from '@shared/components/global-loader/loader.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthStore } from '../../features/auth/store/auth.store';
+import { RbacStore } from '@store/rbac/rbac.store';
+
+export interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  routeId?: string;
+  badge?: string | number;
+  active?: boolean;
+}
 
 @Component({
-  selector: 'app-layout',
+  selector: 'app-left-sidenav',
   standalone: true,
-  imports: [TopNavbarComponent, LeftSidenavComponent, RouterOutlet],
-  templateUrl: './layout.component.html',
-  styleUrl: './layout.component.scss',
+  imports: [MatTooltipModule],
+  templateUrl: './left-sidenav.component.html',
+  styleUrl: './left-sidenav.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LayoutComponent {
-  private  readonly router           = inject(Router);
-  private  readonly loader           = inject(LoaderService);
-  protected readonly sidenavCollapsed = signal<boolean>(false);
-  protected readonly activeRoute      = signal<string>('home');
+export class LeftSidenavComponent {
+  private readonly authStore = inject(AuthStore);
+  private readonly rbacStore = inject(RbacStore);
 
-  constructor() {
-    // Keep active nav item in sync with browser URL
-    this.router.events
-      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe((e) => {
-        const segment = e.urlAfterRedirects.split('/').filter(Boolean)[1] ?? 'home';
-        this.activeRoute.set(segment);
-      });
+  readonly collapsed    = input<boolean>(false);
+  readonly activeRoute  = input<string>('home');
+  readonly navItemClick = output<string>();
 
-    // Fire after the first full render cycle — child ngOnInit calls (which register
-    // boot tasks) have already run by this point, so completeBootIfReady() sees the
-    // correct task count before deciding whether to close the native bar.
-    afterNextRender(() => this.loader.markAppShellReady());
+  readonly navItems: NavItem[] = [
+    {
+      id: 'home',
+      label: 'Home',
+      icon: 'M3 12L12 3l9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10',
+      active: true,
+    },
+    {
+      id: 'morning-report',
+      label: 'Reports',
+      routeId: 'morning-report',
+      icon: 'M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V8l-5-5H5a2 2 0 00-2 2v13a2 2 0 002 2z',
+    },
+    {
+      id: 'active-wwell',
+      label: 'Active Water Well',
+      routeId: 'active-wwell',
+      icon: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+    },
+    {
+      id: 'presentations',
+      label: 'Presentations',
+      routeId: 'presentations',
+      icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+    },
+  ];
+
+  protected readonly lockedRouteIds = computed(() => {
+    const userRoles = this.authStore.user()?.groups ?? [];
+    return new Set(
+      this.navItems
+        .filter(item => item.routeId && !this.rbacStore.canAccessRoute(item.routeId, userRoles))
+        .map(item => item.routeId!),
+    );
+  });
+
+  protected isLocked(item: NavItem): boolean {
+    return !!item.routeId && this.lockedRouteIds().has(item.routeId);
   }
 
-  protected toggleSidenav(): void {
-    this.sidenavCollapsed.update((v) => !v);
-  }
-
-  protected onNavItemClick(id: string): void {
-    this.activeRoute.set(id);
-    this.router.navigate(['main', id]);
+  protected onItemClick(id: string): void {
+    this.navItemClick.emit(id);
   }
 }
-=
-import { Injectable, computed, signal } from '@angular/core';
+===
+===
 
-type LoaderMode = 'idle' | 'login';
+@use '@angular/material' as mat;
 
-const LOGIN_PROGRESS_MAX = 92;
-const LOGIN_PROGRESS_STEP = 6;
-const LOGIN_PROGRESS_INTERVAL_MS = 180;
-const LOADER_HIDE_DELAY_MS = 160;
+@include mat.core();
 
-declare global {
-  interface Window {
-    __agwaBootLoader?: {
-      complete: () => void;
-      setProgress: (progress: number) => void;
-    };
+html, body { height: 100%; overflow: hidden; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; overflow: hidden; }
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+:root {
+  // App shell backgrounds
+  --bg-app:       #0b1e38;
+  --bg-topbar:    #0d2340;
+  --bg-sidenav:   #0d2340;
+  --bg-content:   #0f3460;
+  --bg-surface:   #ffffff;
+  --bg-card:      #f8fafc;
+
+  // Borders
+  --border:       rgba(148, 163, 184, 0.2);
+  --border-sub:   rgba(148, 163, 184, 0.12);
+
+  // Text
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #000;
+
+  // Accent
+  --accent-muted:   rgba(14, 165, 233, 0.08);
+
+  // Semantic
+  --danger: #dc2626;
+}
+
+
+/* 
+   Gradient definitions 
+  */
+
+svg defs linearGradient#mainGradient stop:nth-child(1) { stop-color: #5d6264; }
+svg defs linearGradient#mainGradient stop:nth-child(2) { stop-color: #fff; }
+svg defs linearGradient#mainGradient stop:nth-child(3) { stop-color: #5d6264; }
+
+svg defs linearGradient#complCasingGradient stop { stop-color: #4ca746; }
+
+/* 
+   Grid pattern (used by the liner‑screen component)
+ */
+ 
+svg defs pattern#gridpattern path {
+  stroke: #000;
+  stroke-width: 2;
+  fill: none;
+}
+
+.agwa-theme-bg-color {
+  background: #5084F0;
+background: linear-gradient(90deg, rgba(80, 132, 240, 1) 44%, rgba(121, 207, 241, 1) 86%);
+}
+
+/* ── File preview dialog — container overrides ──────────────────────────────── */
+.file-preview-panel .mat-mdc-dialog-surface {
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 24px 80px rgba(0, 0, 0, 0.75),
+    0 8px 30px rgba(0, 0, 0, 0.55),
+    0 2px 8px  rgba(0, 0, 0, 0.4) !important;
+  background: transparent !important;
+}
+
+.hover-card:hover{
+  box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
+-webkit-box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
+-moz-box-shadow: 4px 3px 9px 2px rgba(0,0,0,0.65);
+transition: 0.3s ease;
+}
+
+.word-wrap{
+  word-wrap: break-word;
+}
+
+// ── Lock icon tooltip ─────────────────────────────────────────────────────────
+.mat-mdc-tooltip.sidenav-lock-tooltip .mdc-tooltip__surface {
+  background: linear-gradient(150deg, #dc2626 0%, #991b1b 100%) !important;
+  color: #ffffff !important;
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0.15px !important;
+  padding: 10px 14px !important;
+  border-radius: 8px !important;
+  max-width: 230px !important;
+  white-space: normal !important;
+  text-align: left !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow:
+    0 0 0 1px rgba(220, 38, 38, 0.35),
+    0 6px 24px rgba(153, 27, 27, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.45) !important;
+}
+
+.wells-value{
+  background: #87ceeb;
+  border-color: #38bdf8;
+  color: #0f172a;
+}
+======
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+} from '@angular/core';
+import { Router } from '@angular/router';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthStore } from '../auth/store/auth.store';
+import { RbacStore } from '@store/rbac/rbac.store';
+
+interface QuickListItem {
+  label: string;
+  route: string;
+  routeId?: string;
+  iconPaths: string[];
+  color: string;
+}
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  imports: [MatTooltipModule],
+  templateUrl: './home.component.html',
+  styleUrl: './home.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class HomeComponent {
+  private readonly router    = inject(Router);
+  private readonly authStore = inject(AuthStore);
+  private readonly rbacStore = inject(RbacStore);
+
+  protected readonly quickItems: QuickListItem[] = [
+    {
+      label: 'Reports',
+      route: 'morning-report',
+      routeId: 'morning-report',
+      iconPaths: [
+        'M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V8l-5-5H5a2 2 0 00-2 2v13a2 2 0 002 2z',
+      ],
+      color: '#3b82f6',
+    },
+    {
+      label: 'Active Water Well Map',
+      route: 'active-wwell',
+      routeId: 'active-wwell',
+      iconPaths: [
+        'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
+        'M12 11.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z',
+      ],
+      color: '#06b6d4',
+    },
+    {
+      label: 'Presentation',
+      route: 'presentations',
+      routeId: 'presentations',
+      iconPaths: [
+        'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
+        'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+      ],
+      color: '#22d3ee',
+    },
+  ];
+
+  protected readonly lockedRouteIds = computed(() => {
+    const userRoles = this.authStore.user()?.groups ?? [];
+    return new Set(
+      this.quickItems
+        .filter(item => item.routeId && !this.rbacStore.canAccessRoute(item.routeId, userRoles))
+        .map(item => item.routeId!),
+    );
+  });
+
+  protected isLocked(item: QuickListItem): boolean {
+    return !!item.routeId && this.lockedRouteIds().has(item.routeId);
+  }
+
+  protected navigate(route: string): void {
+    this.router.navigate(['main', route]);
+  }
+}
+=======
+// ── Host layout ──────────────────────────────────────────────────────────────
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 14px;
+  height: 100%;
+  overflow: hidden;
+  background: #ffffff;
+  width: 100%;
+}
+
+// ══════════════════ QUICK LIST ════════════════════════════════════════════════
+.quick-list {
+  width: fit-content;
+  min-width: 220px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 16px;
+  padding: 16px 14px 12px;
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.07),
+    0 1px 4px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+    padding-left: 2px;
   }
 }
 
-@Injectable({ providedIn: 'root' })
-export class LoaderService {
-  private readonly _mode = signal<LoaderMode>('idle');
-  private readonly _progress = signal(0);
-  private readonly _message = signal('Preparing your workspace...');
-  private progressTimer: number | null = null;
-  private hideTimer: number | null = null;
-  private readonly bootTasks = new Set<string>();
-  private appShellReady = false;
-  private bootCompleted = false;
+// Quick list item
+.ql-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 8px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.15s ease;
+  margin-bottom: 6px;
 
-  readonly isLoading = computed(() => this._mode() !== 'idle');
-  readonly isLoginLoading = computed(() => this._mode() === 'login');
-  readonly progress = computed(() => this._progress());
-  readonly message = computed(() => this._message());
+  &:last-child { margin-bottom: 0; }
 
-  startLogin(message = 'Signing you in...'): void {
-    this.clearHideTimer();
-    this.clearTimer();
-    this._mode.set('login');
-    this._message.set(message);
-    this._progress.set(12);
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+    transform: translateX(3px);
 
-    this.progressTimer = window.setInterval(() => {
-      this._progress.update((value) => Math.min(LOGIN_PROGRESS_MAX, value + LOGIN_PROGRESS_STEP));
-    }, LOGIN_PROGRESS_INTERVAL_MS);
+    .ql-item__label { color: #1e293b; }
   }
 
-  setLoginMessage(message: string): void {
-    if (this._mode() !== 'login') return;
-    this._message.set(message);
-  }
+  &:active { transform: translateX(1px) scale(0.98); }
 
-  setProgress(progress: number): void {
-    if (this._mode() !== 'login') return;
-    const clamped = Math.max(0, Math.min(100, progress));
-    this._progress.set(clamped);
-    if (clamped >= LOGIN_PROGRESS_MAX) {
-      this.clearTimer();
+  // Icon circle
+  &__icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: box-shadow 0.18s;
+
+    svg {
+      width: 22px;
+      height: 22px;
     }
   }
 
-  completeLogin(): void {
-    if (this._mode() !== 'login') return;
-    this.clearTimer();
-    this._progress.set(100);
-
-    this.hideTimer = window.setTimeout(() => {
-      this._mode.set('idle');
-      this._progress.set(0);
-    }, LOADER_HIDE_DELAY_MS);
+  &:hover &__icon {
+    box-shadow:
+      0 6px 20px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
 
-  fail(): void {
-    this.clearHideTimer();
-    this.clearTimer();
-    this._mode.set('idle');
-    this._progress.set(0);
+  // Label
+  &__label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+    letter-spacing: 0.01em;
+    transition: color 0.18s;
+    flex: 1;
+    text-align: left;
   }
 
-  registerBootTask(taskId: string): void {
-    if (this.bootCompleted || !taskId) return;
-    this.bootTasks.add(taskId);
-    this.pushBootProgress(this.appShellReady ? 88 : 56);
-  }
+  // Lock badge
+  &__lock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: rgba(220, 38, 38, 0.10);
+    color: #ef4444;
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    flex-shrink: 0;
+    transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 
-  resolveBootTask(taskId: string): void {
-    if (!this.bootTasks.delete(taskId) || this.bootCompleted) return;
-    this.pushBootProgress(this.appShellReady ? 96 : 72);
-    this.completeBootIfReady();
-  }
-
-  markAppShellReady(): void {
-    if (this.bootCompleted) return;
-    this.appShellReady = true;
-    this.pushBootProgress(96);
-    this.completeBootIfReady();
-  }
-
-  private clearTimer(): void {
-    if (this.progressTimer !== null) {
-      window.clearInterval(this.progressTimer);
-      this.progressTimer = null;
+    svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
     }
   }
 
-  private clearHideTimer(): void {
-    if (this.hideTimer !== null) {
-      window.clearTimeout(this.hideTimer);
-      this.hideTimer = null;
+  // Locked state
+  &--locked {
+    opacity: 0.72;
+
+    &:hover {
+      opacity: 1;
+
+      .ql-item__lock {
+        background: rgba(220, 38, 38, 0.20);
+        color: #dc2626;
+        box-shadow:
+          0 0 0 1px rgba(220, 38, 38, 0.35),
+          0 0 10px rgba(220, 38, 38, 0.25);
+      }
     }
-  }
-
-  /** Call from pages that have no app shell (e.g. login) to close the native bar. */
-  completeBoot(): void {
-    if (this.bootCompleted) return;
-    this.bootCompleted = true;
-    this.appShellReady = true;
-    window.__agwaBootLoader?.complete();
-  }
-
-  private completeBootIfReady(): void {
-    if (!this.appShellReady || this.bootCompleted || this.bootTasks.size > 0) return;
-    this.bootCompleted = true;
-    this.pushBootProgress(100);
-    window.__agwaBootLoader?.complete();
-  }
-
-  private pushBootProgress(progress: number): void {
-    window.__agwaBootLoader?.setProgress(progress);
   }
 }
+
+// ══════════════════ MAP WIDGET ════════════════════════════════════════════════
+.map-widget {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  // Globe sits half above the map frame
+  &__globe {
+    width: 72px;
+    height: 72px;
+    margin-top: 14px;
+    margin-bottom: -10px;
+    z-index: 2;
+    filter: drop-shadow(0 6px 18px rgba(6, 182, 212, 0.55));
+    animation: globe-float 4s ease-in-out infinite;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  // Inner frame: depth bar + map
+  &__frame {
+    display: flex;
+    width: 100%;
+    gap: 0;
+  }
+
+  // Left blue depth bar
+  &__depth-bar {
+    width: 14px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #1d4ed8 0%, #0ea5e9 50%, #06b6d4 100%);
+    min-height: 140px;
+  }
+
+  // Map area
+  &__map {
+    flex: 1;
+    display: flex;
+    position: relative;
+    background: #dbeafe;
+    min-height: 140px;
+  }
+
+  // Right legend bar
+  &__legend {
+    width: 20px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #0f766e 0%, #0d9488 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 8px 0;
+  }
+}
+
+// SVG map fills the space
+.map-svg {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+// Legend dots
+.legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.5);
+
+  &--green  { background: #22c55e; }
+  &--red    { background: #ef4444; }
+  &--blue   { background: #3b82f6; }
+  &--yellow { background: #f59e0b; }
+  &--grey   { background: #94a3b8; }
+}
+
+// Globe floating animation
+@keyframes globe-float {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-5px); }
+}
+========
+<div class="home">
+
+  <!-- ══ Quick List ══ -->
+  <div class="quick-list">
+    <div class="quick-list__title">Quick List</div>
+
+    @for (item of quickItems; track item.route) {
+      <button
+        class="ql-item"
+        [class.ql-item--locked]="isLocked(item)"
+        (click)="navigate(item.route)"
+      >
+        <span class="ql-item__icon" [style.background]="'radial-gradient(circle at 35% 35%, ' + item.color + 'cc, ' + item.color + '55)'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round">
+            @for (p of item.iconPaths; track $index) {
+              <path [attr.d]="p" />
+            }
+          </svg>
+        </span>
+
+        <span class="ql-item__label">{{ item.label }}</span>
+
+        @if (isLocked(item)) {
+          <span
+            class="ql-item__lock"
+            matTooltip="Access restricted — contact your administrator to request access to this module."
+            matTooltipPosition="after"
+            matTooltipClass="sidenav-lock-tooltip"
+            [matTooltipShowDelay]="180"
+            aria-label="Access restricted"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+          </span>
+        }
+      </button>
+    }
+  </div>
+
+</div>
