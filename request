@@ -1,1153 +1,671 @@
-<span class="ql-item__icon" [style.background]="'radial-gradient(circle at 35% 35%, ' + item.color + 'cc, ' + item.color + '55)'">
-          <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="isLocked(item) ? '#f87171' : '#ffffff'" stroke-width="1.8"
-               stroke-linecap="round" stroke-linejoin="round">
-            @for (p of item.iconPaths; track $index) {
-              <path [attr.d]="p" />
-            }
-          </svg>
-        </span>
-
+eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiBUb2tlbiIsInVwbiI6IkFMQU1NWDFPIiwiZXhwIjoxNzc4Nzc0NDAxLCJqdGkiOiIwMDAwMDA4MTUxSlFIMlIyWUdQTyIsImF1ZCI6IkFHV0EiLCJsYXN0X2xvZ2luIjoxNzc4NzMxMjAxLCJncm91cHMiOlsiR1dEX2NsaWVudCIsIkdXRF9tZW1iZXIiLCJHV0RfYWRtaW4iXSwiaWF0IjoxNzc4NzQ1OTY1LCJpc3MiOiJodHRwczovL29jcGEuZW5wLmFyYW1jby5jb20uc2EvIn0.beBvWGnLw7RepYF5wxqKxbFnlRWeSDCv32p7RYI3g0d6olqZjSCogR_SCsoUrdK-fbWLVKu8i-rrhaVI9gznvuOkaOj82fvSc5JgaDnj6MuLs9K1O_mHkGcQTRYDN6QU6uPDOlzTsrNYcIvq3yHfr2O85qo6rXEHHbFELX5rTmj4DZnvA8QdvUpvIgfIuHSQcC8q4ZMgKdYNia25Tzsx1WoaeKC8UdzlYq85GeLkV0EYe8GaSirIb--aVIR2s68fk3U9Z6iksFjjfOWeQj8TKFRe0uH2GpzSGbcBbczVFFLQQeAxthU6tm3ANC_vwjUbzLC8qllH2TBDzucLjCqhvw
 
 ===
-// ── Host layout ──────────────────────────────────────────────────────────────
-:host {
-  display: block;
-  height: 100%;
-  overflow: hidden;
-}
+ lastLogin: decodedToken?.last_login ? new Date(decodedToken.last_login) : null
 
-.home {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px 14px;
-  height: 100%;
-  overflow: hidden;
-  background: #ffffff;
-  width: 100%;
-}
 
-// ══════════════════ QUICK LIST ════════════════════════════════════════════════
-.quick-list {
-  width: fit-content;
-  min-width: 220px;
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  border-radius: 16px;
-  padding: 16px 14px 12px;
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.07),
-    0 1px 4px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-
-  &__title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #64748b;
-    letter-spacing: 0.04em;
-    margin-bottom: 14px;
-    padding-left: 2px;
-  }
-}
-
-// Quick list item
-.ql-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 8px 6px;
-  background: transparent;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.18s ease, transform 0.15s ease;
-  margin-bottom: 6px;
-
-  &:last-child { margin-bottom: 0; }
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.04);
-    transform: translateX(3px);
-
-    .ql-item__label { color: #1e293b; }
-  }
-
-  &:active { transform: translateX(1px) scale(0.98); }
-
-  // Icon circle
-  &__icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    box-shadow:
-      0 4px 14px rgba(0, 0, 0, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    transition: box-shadow 0.18s;
-
-    svg {
-      width: 22px;
-      height: 22px;
-    }
-  }
-
-  &:hover &__icon {
-    box-shadow:
-      0 6px 20px rgba(0, 0, 0, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  }
-
-  // Label
-  &__label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #475569;
-    letter-spacing: 0.01em;
-    transition: color 0.18s;
-    flex: 1;
-    text-align: left;
-  }
-
-  // Lock badge
-  &__lock {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    background: rgba(220, 38, 38, 0.10);
-    color: #ef4444;
-    border: 1px solid rgba(220, 38, 38, 0.25);
-    flex-shrink: 0;
-    transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-
-    svg {
-      width: 13px;
-      height: 13px;
-      stroke: currentColor;
-    }
-  }
-
-  // Locked state
-  &--locked {
-    opacity: 0.72;
-
-    &:hover {
-      background: rgba(220, 38, 38, 0.07);
-      opacity: 1;
-      .ql-item__label { color: #dc2626; }
-
-      .ql-item__lock {
-        background: rgba(220, 38, 38, 0.20);
-        color: #dc2626;
-        box-shadow:
-          0 0 0 1px rgba(220, 38, 38, 0.35),
-          0 0 10px rgba(220, 38, 38, 0.25);
-      }
-    }
-  }
-}
-
-// ══════════════════ MAP WIDGET ════════════════════════════════════════════════
-.map-widget {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-  backdrop-filter: blur(6px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  // Globe sits half above the map frame
-  &__globe {
-    width: 72px;
-    height: 72px;
-    margin-top: 14px;
-    margin-bottom: -10px;
-    z-index: 2;
-    filter: drop-shadow(0 6px 18px rgba(6, 182, 212, 0.55));
-    animation: globe-float 4s ease-in-out infinite;
-
-    svg { width: 100%; height: 100%; }
-  }
-
-  // Inner frame: depth bar + map
-  &__frame {
-    display: flex;
-    width: 100%;
-    gap: 0;
-  }
-
-  // Left blue depth bar
-  &__depth-bar {
-    width: 14px;
-    flex-shrink: 0;
-    background: linear-gradient(180deg, #1d4ed8 0%, #0ea5e9 50%, #06b6d4 100%);
-    min-height: 140px;
-  }
-
-  // Map area
-  &__map {
-    flex: 1;
-    display: flex;
-    position: relative;
-    background: #dbeafe;
-    min-height: 140px;
-  }
-
-  // Right legend bar
-  &__legend {
-    width: 20px;
-    flex-shrink: 0;
-    background: linear-gradient(180deg, #0f766e 0%, #0d9488 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-evenly;
-    padding: 8px 0;
-  }
-}
-
-// SVG map fills the space
-.map-svg {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-// Legend dots
-.legend-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.5);
-
-  &--green  { background: #22c55e; }
-  &--red    { background: #ef4444; }
-  &--blue   { background: #3b82f6; }
-  &--yellow { background: #f59e0b; }
-  &--grey   { background: #94a3b8; }
-}
-
-// Globe floating animation
-@keyframes globe-float {
-  0%, 100% { transform: translateY(0);   }
-  50%       { transform: translateY(-5px); }
-}
-===
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-} from '@angular/core';
-import { Router } from '@angular/router';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { AuthStore } from '../auth/store/auth.store';
-import { RbacStore } from '@store/rbac/rbac.store';
-
-interface QuickListItem {
-  label: string;
-  route: string;
-  routeId?: string;
-  iconPaths: string[];
-  color: string;
-}
-
-@Component({
-  selector: 'app-home',
-  standalone: true,
-  imports: [MatTooltipModule],
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class HomeComponent {
-  private readonly router    = inject(Router);
-  private readonly authStore = inject(AuthStore);
-  private readonly rbacStore = inject(RbacStore);
-
-  protected readonly quickItems: QuickListItem[] = [
-    {
-      label: 'Reports',
-      route: 'morning-report',
-      routeId: 'morning-report',
-      iconPaths: [
-        'M9 17v-2m3 2v-4m3 4v-6',
-        'M5 20h14a2 2 0 002-2V8l-5-5H5a2 2 0 00-2 2v13a2 2 0 002 2z',
-      ],
-      color: '#3b82f6',
-    },
-    {
-      label: 'Active Water Well Map',
-      route: 'active-wwell',
-      routeId: 'active-wwell',
-      iconPaths: [
-        'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-        'M12 11.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z',
-      ],
-      color: '#06b6d4',
-    },
-    {
-      label: 'Presentation',
-      route: 'presentations',
-      routeId: 'presentations',
-      iconPaths: [
-        'M9.75 17L9 20l-1 1h8l-1-1-.75-3',
-        'M3 13h18',
-        'M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-      ],
-      color: '#22d3ee',
-    },
-  ];
-
-  protected readonly lockedRouteIds = computed(() => {
-    const userRoles = this.authStore.user()?.groups ?? [];
-    return new Set(
-      this.quickItems
-        .filter(item => item.routeId && !this.rbacStore.canAccessRoute(item.routeId, userRoles))
-        .map(item => item.routeId!),
-    );
-  });
-
-  protected isLocked(item: QuickListItem): boolean {
-    return !!item.routeId && this.lockedRouteIds().has(item.routeId);
-  }
-
-  protected navigate(route: string): void {
-    this.router.navigate(['main', route]);
-  }
-}
-===
-<header class="top-navbar">
-
-  <!-- Left: hamburger + logo -->
-  <div class="top-navbar__brand">
-    <button
-      class="top-navbar__hamburger"
-      (click)="toggleSidenav.emit()"
-      [attr.aria-label]="sidenavCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
-      [class.top-navbar__hamburger--active]="!sidenavCollapsed()"
-    >
-      <span></span><span></span><span></span>
-    </button>
-
-    <div class="top-navbar__logo">
-      <div class="top-navbar__logo-icon">
-        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="16" cy="20" rx="9" ry="11" fill="url(#dropGrad)"/>
-          <ellipse cx="16" cy="20" rx="5"  ry="7"  fill="rgba(255,255,255,0.25)"/>
-          <path d="M16 4 C16 4 22 12 22 18" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
-          <defs>
-            <linearGradient id="dropGrad" x1="16" y1="9" x2="16" y2="31" gradientUnits="userSpaceOnUse">
-              <stop offset="0%"   stop-color="#38bdf8"/>
-              <stop offset="100%" stop-color="#0369a1"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <span class="top-navbar__logo-text">{{ logoText }}</span>
-    </div>
-  </div>
-
-  <!-- Center: title -->
-  <div class="top-navbar__title">
-    <h1>{{ appTitle }}</h1>
-  </div>
-
-  <!-- Right: notifications + user -->
-  <div class="top-navbar__user">
-
-    <div class="top-navbar__notifications">
-      <button
-        class="top-navbar__icon-btn"
-        aria-label="Notifications"
-        [matBadge]="3"
-        matBadgeColor="warn"
-        [matBadgeOverlap]="true"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 01-3.46 0"/>
-        </svg>
-      </button>
-    </div>
-
-    <div class="top-navbar__divider"></div>
-
-    <div class="top-navbar__menu">
-      <button
-        type="button"
-        class="top-navbar__menu-trigger"
-        (click)="toggleUserMenu($event)"
-        aria-haspopup="menu"
-        [attr.aria-expanded]="menuOpen()"
-        aria-label="Open user menu"
-      >
-        <div class="top-navbar__user-info">
-          <span class="top-navbar__user-name">{{ auth.displayUsername() }}</span>
-        </div>
-
-        <div class="top-navbar__avatar" aria-hidden="true">{{ userInitial() }}</div>
-
-        <svg class="top-navbar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
-
-      @if (menuOpen()) {
-        <div class="top-navbar__menu-popup">
-          <div class="top-navbar__profile-card">
-            <div class="top-navbar__profile-head">
-              <div class="top-navbar__profile-avatar" aria-hidden="true">{{ userInitial() }}</div>
-
-              <div class="top-navbar__profile-copy">
-                <span class="top-navbar__profile-label">Signed in as</span>
-                <strong class="top-navbar__profile-name">{{ auth.displayUsername() }}</strong>
-                @if (userRoleLabels().length) {
-                  <div class="top-navbar__profile-roles">
-                    @for (label of userRoleLabels(); track label) {
-                      <span class="top-navbar__profile-role-chip">{{ label }}</span>
-                    }
-                  </div>
-                }
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="top-navbar__logout-btn"
-              (click)="logout($event)"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-              Logout
-            </button>
-          </div>
-        </div>
-      }
-    </div>
-  </div>
-
-</header>
 ==
-// ── Layout constants ─────────────────────────────────────────────────────────
-$nav-h:        62px;
-$ease:         cubic-bezier(0.4, 0, 0.2, 1);
-// Light-on-dark palette for the dark navy bar
-$nav-text:     rgba(255, 255, 255, 0.92);
-$nav-muted:    rgba(255, 255, 255, 0.55);
-$nav-border:   rgba(255, 255, 255, 0.10);
-$nav-hover-bg: rgba(14, 165, 233, 0.14);
-
-// ── Host ─────────────────────────────────────────────────────────────────────
-:host {
-  display: block;
-  flex-shrink: 0;
-}
-
-// ── Shell ────────────────────────────────────────────────────────────────────
-.top-navbar {
-  display: flex;
-  align-items: center;
-  height: $nav-h;
-  padding: 0 20px 0 0;
-  background: var(--bg-topbar);
-  border-bottom: 1px solid $nav-border;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
-  position: relative;
-  z-index: 100;
-
-  // Subtle grid texture
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(56, 189, 248, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(56, 189, 248, 0.035) 1px, transparent 1px);
-    background-size: 32px 32px;
-    pointer-events: none;
-  }
-
-  // Bottom accent line
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      transparent,
-      rgba(14, 165, 233, 0.55) 30%,
-      rgba(14, 165, 233, 0.55) 70%,
-      transparent
-    );
-    pointer-events: none;
-  }
-
-  // ── Brand ─────────────────────────────────────────────────────────────────
-  &__brand {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    gap: 10px;
-    padding: 0 14px;
-    height: 100%;
-    border-right: 1px solid $nav-border;
-    min-width: 224px;
-    transition: min-width 0.26s $ease;
-  }
-
-  // ── Hamburger ─────────────────────────────────────────────────────────────
-  &__hamburger {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 4px;
-    width: 36px;
-    height: 36px;
-    padding: 6px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    border-radius: 8px;
-    flex-shrink: 0;
-    transition: background 0.15s;
-
-    span {
-      display: block;
-      height: 2px;
-      background: $nav-muted;
-      border-radius: 2px;
-      transition: background 0.2s, transform 0.25s;
-
-      &:nth-child(1) { width: 20px; }
-      &:nth-child(2) { width: 14px; }
-      &:nth-child(3) { width: 17px; }
-    }
-
-    &:hover {
-      background: $nav-hover-bg;
-      span { background: #38bdf8; }
-    }
-
-    &--active span { background: #38bdf8; }
-  }
-
-  // ── Logo ──────────────────────────────────────────────────────────────────
-  &__logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-  }
-
-  &__logo-icon {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.65));
-  }
-
-  &__logo-text {
-    font-family: 'DM Sans', system-ui, sans-serif;
-    font-size: 19px;
-    font-weight: 800;
-    letter-spacing: 2.5px;
-    color: #38bdf8;
-    text-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
-    text-transform: uppercase;
-  }
-
-  // ── Center title ──────────────────────────────────────────────────────────
-  &__title {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0 24px;
-
-    h1 {
-      margin: 0;
-      font-family: 'DM Sans', system-ui, sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 1.8px;
-      text-transform: uppercase;
-      color: $nav-text;
-      white-space: nowrap;
-    }
-  }
-
-  // ── Right: user area ──────────────────────────────────────────────────────
-  &__user {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-shrink: 0;
-    margin-left: auto;
-  }
-
-  &__notifications {
-    position: relative;
-  }
-
-  &__icon-btn {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid $nav-border;
-    border-radius: 10px;
-    cursor: pointer;
-    color: $nav-muted;
-    transition: background 0.2s $ease, border-color 0.2s $ease, color 0.2s $ease, box-shadow 0.2s $ease;
-    position: relative;
-
-    svg { width: 18px; height: 18px; }
-
-    &:hover {
-      background: $nav-hover-bg;
-      border-color: rgba(56, 189, 248, 0.4);
-      color: #38bdf8;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
-    }
-  }
-
-  &__divider {
-    width: 1px;
-    height: 26px;
-    background: $nav-border;
-  }
-
-  // ── User info (name text) ─────────────────────────────────────────────────
-  &__user-info {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
-  &__user-name {
-    font-size: 13.5px;
-    font-weight: 700;
-    color: $nav-text;
-    letter-spacing: 0.2px;
-    line-height: 1.2;
-  }
-
-  &__roles {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    margin-top: 3px;
-  }
-
-  &__role-chip {
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: #38bdf8;
-    background: rgba(56, 189, 248, 0.10);
-    border: 1px solid rgba(56, 189, 248, 0.28);
-    border-radius: 4px;
-    padding: 1px 6px;
-    line-height: 1.6;
-    white-space: nowrap;
-  }
-
-  // ── Menu ─────────────────────────────────────────────────────────────────
-  &__menu {
-    position: relative;
-  }
-
-  &__menu-trigger {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 8px 4px 14px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid $nav-border;
-    border-radius: 999px;
-    color: $nav-text;
-    cursor: pointer;
-    transition: background 0.2s $ease, border-color 0.2s $ease, box-shadow 0.2s $ease;
-
-    &:hover {
-      background: $nav-hover-bg;
-      border-color: rgba(56, 189, 248, 0.4);
-      box-shadow: 0 0 14px rgba(56, 189, 248, 0.16);
-    }
-
-    &:focus-visible {
-      outline: 2px solid #38bdf8;
-      outline-offset: 2px;
-    }
-  }
-
-  &__avatar {
-    width: 36px;
-    height: 36px;
-    display: grid;
-    place-items: center;
-    background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
-    border: 2px solid rgba(56, 189, 248, 0.55);
-    border-radius: 50%;
-    font-size: 13px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 0.5px;
-    box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
-  }
-
-  &__chevron {
-    width: 15px;
-    height: 15px;
-    color: $nav-muted;
-    flex-shrink: 0;
-    transition: transform 0.25s $ease;
-  }
-}
-
-// ── Dropdown popup (white surface) ───────────────────────────────────────────
-.top-navbar__menu-popup {
-  min-width: 15rem;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  box-shadow: 0 18px 34px rgba(2, 6, 23, 0.28);
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  z-index: 300;
-}
-
-.top-navbar__profile-card {
-  display: grid;
-  gap: 0.9rem;
-  padding: 1rem;
-}
-
-.top-navbar__profile-head {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--border-sub);
-}
-
-.top-navbar__profile-copy {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.top-navbar__profile-label {
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.top-navbar__profile-name {
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.top-navbar__profile-avatar {
-  width: 2.75rem;
-  height: 2.75rem;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 800;
-  box-shadow: 0 0 14px rgba(14, 165, 233, 0.28);
-  flex-shrink: 0;
-}
-
-.top-navbar__profile-roles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 5px;
-}
-
-.top-navbar__profile-role-chip {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #0ea5e9;
-  background: rgba(14, 165, 233, 0.10);
-  border: 1px solid rgba(14, 165, 233, 0.30);
-  border-radius: 5px;
-  padding: 2px 7px;
-  line-height: 1.6;
-  white-space: nowrap;
-}
-
-.top-navbar__logout-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  justify-content: flex-start;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-card);
-  color: var(--danger);
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-
-  svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    background: rgba(220, 38, 38, 0.07);
-    border-color: rgba(220, 38, 38, 0.3);
-  }
-}
-
-// ── Mat-badge override ────────────────────────────────────────────────────────
-:host ::ng-deep .mat-badge-content {
-  font-size: 9px;
-  font-weight: 800;
-  min-width: 17px;
-  height: 17px;
-  line-height: 17px;
-  border-radius: 6px;
-  letter-spacing: 0.3px;
-}
-
-// ── Responsive ───────────────────────────────────────────────────────────────
-@media (max-width: 900px) {
-  .top-navbar {
-    &__title      { display: none; }
-    &__user       { gap: 10px; }
-    &__user-info  { display: none; }
-    &__menu-trigger { padding-left: 6px; }
-  }
-}
-==
-// ── Layout constants ────────────────────────────────────────────────────────
-$expanded-w:  244px;
-$collapsed-w: 64px;
-$ease:        cubic-bezier(0.4, 0, 0.2, 1);
-$transition:  0.26s $ease;
-
-// Light-on-dark palette — sidenav is a dark navy surface
-$nav-text:    rgba(255, 255, 255, 0.88);
-$nav-muted:   rgba(255, 255, 255, 0.48);
-$nav-border:  rgba(255, 255, 255, 0.08);
-$nav-hover-bg: rgba(14, 165, 233, 0.10);
-
-// ── Host ────────────────────────────────────────────────────────────────────
-:host {
-  display: block;
-  flex-shrink: 0;
-}
-
-// ── Shell ───────────────────────────────────────────────────────────────────
-.sidenav {
-  display: flex;
-  flex-direction: column;
-  width: $expanded-w;
-  height: 100%;
-  background: var(--bg-sidenav);
-  border-right: 1px solid $nav-border;
-  overflow: hidden;
-  transition: width $transition;
-  position: relative;
-
-  // Subtle right-edge glow
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 1px; height: 100%;
-    background: linear-gradient(
-      to bottom,
-      rgba(14, 165, 233, 0.35),
-      rgba(14, 165, 233, 0.08) 40%,
-      transparent 70%
-    );
-    pointer-events: none;
-  }
-
-  // ── Collapsed state ────────────────────────────────────────────────────
-  &--collapsed {
-    width: $collapsed-w;
-
-    .sidenav__label,
-    .sidenav__footer-text {
-      opacity: 0;
-      width: 0;
-      overflow: hidden;
-    }
-
-    .sidenav__btn {
-      justify-content: center;
-      padding: 0;
-    }
-
-    .sidenav__icon { margin-right: 0; }
-
-    .sidenav__section-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
-  }
-
-  // ── Section label ──────────────────────────────────────────────────────
-  &__section-label {
-    padding: 20px 18px 6px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.8px;
-    text-transform: uppercase;
-    color: $nav-muted;
-    transition: opacity $transition, height $transition, padding $transition;
-    white-space: nowrap;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  // ── List ───────────────────────────────────────────────────────────────
-  &__list {
-    list-style: none;
-    margin: 0;
-    padding: 14px 0 18px;
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-
-    &::-webkit-scrollbar { width: 0; }
-  }
-
-  &__item {
-    padding: 4px 12px;
-  }
-
-  // ── Nav button ─────────────────────────────────────────────────────────
-  &__btn {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    height: 58px;
-    padding: 0 16px 0 10px;
-    border: none;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.02);
-    color: $nav-muted;
-    cursor: pointer;
-    font-family: 'DM Sans', system-ui, sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-    gap: 2px;
-    transition:
-      background $transition,
-      color $transition,
-      box-shadow $transition,
-      transform 0.15s ease;
-    overflow: hidden;
-    white-space: nowrap;
-
-    &:hover {
-      background: rgba(14, 165, 233, 0.14);
-      color: $nav-text;
-      transform: translateX(2px);
-      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.14);
-
-      .sidenav__icon {
-        background: rgba(14, 165, 233, 0.16);
-
-        svg {
-          stroke: #38bdf8;
-          filter: drop-shadow(0 0 5px rgba(14, 165, 233, 0.4));
-        }
-      }
-    }
-
-    &--active {
-      background: linear-gradient(90deg, rgba(14, 165, 233, 0.2) 0%, rgba(14, 165, 233, 0.08) 100%);
-      color: #dff6ff;
-      font-weight: 800;
-      box-shadow:
-        inset 0 0 0 1px rgba(56, 189, 248, 0.28),
-        0 8px 18px rgba(2, 132, 199, 0.12);
-
-      .sidenav__icon {
-        background: rgba(14, 165, 233, 0.22);
-
-        svg {
-          stroke: #38bdf8;
-          filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.55));
-        }
-      }
-    }
-  }
-
-  // ── Icon container ─────────────────────────────────────────────────────
-  &__icon {
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    margin-right: 13px;
-    transition: margin $transition, background $transition;
-
-    svg {
-      width: 22px;
-      height: 22px;
-      stroke: currentColor;
-      transition: stroke 0.2s ease, filter 0.2s ease;
-    }
-  }
-
-  // ── Label ──────────────────────────────────────────────────────────────
-  &__label {
-    flex: 1;
-    font-size: 16px;
-    font-weight: 700;
-    line-height: 1;
-    color: inherit;
-    transition: opacity $transition, width $transition;
-    white-space: nowrap;
-  }
-
-  // ── Lock icon ──────────────────────────────────────────────────────────
-  &__lock {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: auto;
-    flex-shrink: 0;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    background: rgba(220, 38, 38, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(220, 38, 38, 0.28);
-    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-
-    svg {
-      width: 13px;
-      height: 13px;
-      stroke: currentColor;
-      stroke-width: 2.2;
-      flex-shrink: 0;
-    }
-  }
-
-  &__btn--locked {
-    opacity: 0.72;
-
-    .sidenav__icon {
-      background: rgba(220, 38, 38, 0.12);
-
-      svg { stroke: #f87171; }
-    }
-
-    &:hover {
-      background: rgba(220, 38, 38, 0.11);
-      color: #fca5a5;
-      transform: translateX(2px);
-      box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.18);
-      opacity: 1;
-
-      .sidenav__icon {
-        background: rgba(220, 38, 38, 0.22);
-
-        svg {
-          stroke: #fca5a5;
-          filter: drop-shadow(0 0 5px rgba(220, 38, 38, 0.45));
-        }
-      }
-
-      .sidenav__lock {
-        background: rgba(220, 38, 38, 0.26);
-        color: #fca5a5;
-        box-shadow:
-          0 0 0 1px rgba(220, 38, 38, 0.4),
-          0 0 10px rgba(220, 38, 38, 0.35);
-      }
-    }
-  }
-
-  // ── Active indicator (left edge) ────────────────────────────────────────
-  &__active-bar {
-    position: absolute;
-    left: 0;
-    top: 9px;
-    bottom: 9px;
-    width: 4px;
-    background: #38bdf8;
-    border-radius: 0 4px 4px 0;
-    box-shadow: 2px 0 14px rgba(14, 165, 233, 0.55);
-  }
-
-  // ── Footer ─────────────────────────────────────────────────────────────
-  &__footer {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 18px;
-    border-top: 1px solid $nav-border;
-    flex-shrink: 0;
-    background: rgba(14, 165, 233, 0.03);
-  }
-
-  &__water-logo {
-    width: 28px;
-    height: 34px;
-    flex-shrink: 0;
-    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));
-
-    svg { width: 100%; height: 100%; }
-  }
-
-  &__footer-text {
-    font-size: 12.5px;
-    font-weight: 800;
-    color: $nav-muted;
-    letter-spacing: 1.2px;
-    white-space: nowrap;
-    transition: opacity $transition, width $transition;
-    text-transform: uppercase;
-  }
-}
+3.20.3.redhat-00006
+===
+
+#Log level and pattern
+quarkus.http.access-log.enabled=true
+quarkus.http.access-log.pattern=%h %l %u "%r" %s %b "%{i,User-Agent}" "%{i,Referer}"
+
+quarkus.http.port=8080
+quarkus.http.enable-health=true
+quarkus.http.health-path=/q/health
+
+# Global level
+%prod.quarkus.log.level=INFO
+# Console handler (the default, but explicit is better)
+quarkus.log.console.enable=true
+quarkus.log.console.format=%d{HH:mm:ss.SSS} %-5p [%c] (%t) %s%e%n
+quarkus.log.category."io.quarkus.vertx.http.runtime.VertxHttpRecorder".level=INFO
+# Package?specific levels (add/remove as needed)
+quarkus.log.category."io.quarkus".level=INFO
+quarkus.log.category."org.hibernate".level=INFO
+
+quarkus.http.auth.permission.health-policy.paths=/q/health/*
+quarkus.http.auth.permission.health-policy.policy=permit
+
+#datasource
+quarkus.datasource.db-kind=oracle
+quarkus.datasource.jdbc.driver=oracle.jdbc.driver.OracleDriver
+quarkus.datasource.jdbc.url=${JDBC_URL}
+quarkus.datasource.jdbc.additional-params=oracle.jdbc.defaultNChar=true&oracle.jdbc.NLS_LANG=AMERICAN_AMERICA.AL32UTF8
+quarkus.native.add-all-charsets=true
+quarkus.datasource.username=G_RFID
+quarkus.datasource.password=${RFID_PASSWORD}
+
+#mybatis
+quarkus.mybatis.mapper-package=com.aramco.easd.rfid.mapper
+quarkus.mybatis.mapper-locations=mappers/
+quarkus.mybatis.jdbc-type-for-null=varchar
+quarkus.mybatis.use-actual-param-name=true
+
+#CSRF
+# ------------------- CSRF basics (default profile) -------------------
+quarkus.csrf-reactive.enabled=true                # default, can be omitted
+quarkus.csrf-reactive.cookie-name=XSRF-TOKEN
+quarkus.csrf-reactive.token-header-name=X-XSRF-TOKEN
+quarkus.csrf-reactive.cookie-http-only=false      # needed for SPA
+quarkus.csrf-reactive.allow-json=true             # <?? crucial for JSON POSTs
+
+# ------------------- Cookie hardening (optional but recommended) -------------------
+quarkus.csrf-reactive.cookie-secure=true
+quarkus.csrf-reactive.cookie-same-site=strict
+quarkus.csrf-reactive.cookie-path=/api
+
+# ------------------- Dev / Test shortcuts (no CSRF at all) -------------------
+%dev.quarkus.csrf-reactive.enabled=false
+%test.quarkus.csrf-reactive.enabled=false
+
+# ------------------- Example of excluding a path (if you ever need it) -------------------
+# quarkus.csrf-reactive.exclude-paths=/api/assets/acknowledge
+mybatis.configuration.log-impl=org.apache.ibatis.logging.slf4j.Slf4jImpl
+# (optional) Register the package that contains your model classes.
+quarkus.mybatis.type-aliases-package=com.aramco.easd.rfid.models
+# Register the package that contains mapper interfaces (if you don?t use @Mapper)
+quarkus.mybatis.mapper-packages=com.aramco.easd.rfid.dao
+
+# OpenAPI (SmallRye) ? this replaces the `apiInfo()` builder
+# -----------------------------------------------------------------
+mp.openapi.extensions.smallrye.info.title=Client REST Services
+mp.openapi.extensions.smallrye.info.version=1.0
+mp.openapi.extensions.smallrye.info.description=A set of services to track assets movement originated from RFID system
+mp.openapi.extensions.smallrye.info.termsOfService=Terms of Service
+mp.openapi.extensions.smallrye.info.contact.name=CORE_APPS_SUPPORT
+mp.openapi.extensions.smallrye.info.contact.url=http://cwar
+mp.openapi.extensions.smallrye.info.contact.email=COREAPPSSUPPORT@Exchange.aramco.com.sa
+mp.openapi.extensions.smallrye.info.license.name=Proprietary
+mp.openapi.extensions.smallrye.info.license.url=   # empty string is fine
+
+#Enable Swagger uI
+quarkus.native.additional-build-args=-H:AdditionalSecurityProviders=sun.security.jgss.SunProvider
+quarkus.swagger-ui.always-include=true
+
+quarkus.http.auth.permission.api.paths=/api/*
+quarkus.http.auth.permission.api.policy=permit
+quarkus.http.auth.permission.api.ip-allowlist=10.55.3.129,10.1.151.154,10.3.112.164
+
+quarkus.http.auth.permission.default.policy=deny
+
+#splunk kafka
+application.splunk.enabled=${ENABLE_SPLUNK:true}
+application.user=G_TOKEN
+%prod.kafka.bootstrap.servers=brandy.enp.aramco.com.sa:9091,brandy.enp.aramco.com.sa:9092,brandy.enp.aramco.com.sa:9093,sandy.enp.aramco.com.sa:9094,sandy.enp.aramco.com.sa:9095,sandy.enp.aramco.com.sa:9096,short.enp.aramco.com.sa:9091,short.enp.aramco.com.sa:9092,short.enp.aramco.com.sa:9093,story.enp.aramco.com.sa:9094,story.enp.aramco.com.sa:9095,story.enp.aramco.com.sa:9096
+%prod.mp.messaging.outgoing.splunk.connector=smallrye-kafka
+%prod.mp.messaging.outgoing.splunk.topic=easd-rfid
+
+# Reactive?messaging / Kafka
+quarkus.log.category."io.smallrye.reactive.messaging".level=INFO
+quarkus.log.category."org.apache.kafka".level=INFO
+quarkus.log.category."io.netty.buffer".level=INFO
+
+# SmallRye?Messaging (Kafka connector)
+quarkus.log.category."io.smallrye.reactive.messaging.kafka".level=INFO
+
+# Mutiny (reactive streams)
+quarkus.log.category."io.smallrye.mutiny".level=INFO
+
+# Configuration source loading (helps to confirm /config is used)
+quarkus.log.category."io.quarkus.runtime.configuration".level=INFO
+
+===
+
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.aramco.easd</groupId>
+    <artifactId>rfid</artifactId>
+    <version>2.0.0</version>
+    <properties>
+        <compiler-plugin.version>3.14.0</compiler-plugin.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>com.redhat.quarkus.platform</quarkus.platform.group-id>
+        <quarkus.platform.version>3.20.3.redhat-00006</quarkus.platform.version>
+        <quarkus.mybatis.version>2.4.1</quarkus.mybatis.version>
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.4</surefire-plugin.version>
+        <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
+        <fortify-plugin.version>24.2.0</fortify-plugin.version>
+        <sonatype-plugin.version>2.54.0-01</sonatype-plugin.version>
+    </properties>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.quarkiverse.mybatis</groupId>
+            <artifactId>quarkus-mybatis</artifactId>
+            <version>${quarkus.mybatis.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jfree</groupId>
+                    <artifactId>jfreechart</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-oracle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.36</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-messaging-kafka</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.lz4</groupId>
+                    <artifactId>lz4-java</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-security</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jacoco</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <repositories>
+        <repository>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>redhat</id>
+            <url>https://maven.repository.redhat.com/ga</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>redhat</id>
+            <url>https://maven.repository.redhat.com/ga</url>
+        </pluginRepository>
+    </pluginRepositories>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                        <oracle.jdbc.javaNetNio>false</oracle.jdbc.javaNetNio>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <native.image.path>${project.build.directory}/${project.build.finalName}-runner
+                                </native.image.path>
+                                <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                                <maven.home>${maven.home}</maven.home>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${checkstyle-plugin.version}</version>
+                <configuration>
+                    <configLocation>google_checks.xml</configLocation>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.fortify.sca.plugins.maven</groupId>
+                <artifactId>sca-maven-plugin</artifactId>
+                <version>${fortify-plugin.version}</version>
+                <configuration>
+                    <sscUrl>https://ex91yfrtscc.enp.aramco.com.sa:8443/ssc</sscUrl>
+                    <sscApplicationName>EASD-GDSD-RFID</sscApplicationName>
+                    <sscApplicationVersion>DEV</sscApplicationVersion>
+                    <sscUploadToken>${env.FORTIFY_TOKEN}</sscUploadToken>
+                    <scaFailOnError>true</scaFailOnError>
+                    <excludes>**/pom.xml</excludes>
+                    <debug>true</debug>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.sonatype.clm</groupId>
+                <artifactId>clm-maven-plugin</artifactId>
+                <version>${sonatype-plugin.version}</version>
+                <configuration>
+                    <serverUrl>https://ost1v.enp.aramco.com.sa:8070/</serverUrl>
+                    <applicationId>rfid</applicationId>
+                    <stage>release</stage>
+                    <serverId>nexus-clm</serverId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>evaluate</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <skipITs>false</skipITs>
+                <quarkus.package.type>native</quarkus.package.type>
+            </properties>
+        </profile>
+    </profiles>
+</project>
+
+
+========= DO ==========
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.aramco.easd</groupId>
+    <artifactId>dailyoperations</artifactId>
+    <version>1.0.0</version>
+
+    <properties>
+        <compiler-plugin.version>3.14.0</compiler-plugin.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>com.redhat.quarkus.platform</quarkus.platform.group-id>
+        <quarkus.platform.version>3.20.3.redhat-00006</quarkus.platform.version>
+
+        <quarkus.mybatis.version>2.4.1</quarkus.mybatis.version>
+        <commons-lang3.version>3.14.0</commons-lang3.version>
+        <protobuf.version>3.25.5.redhat-00003</protobuf.version>
+
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.4</surefire-plugin.version>
+        <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkiverse.mybatis</groupId>
+                <artifactId>quarkus-mybatis</artifactId>
+                <version>${quarkus.mybatis.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-csrf</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-jwt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-oracle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkiverse.mybatis</groupId>
+            <artifactId>quarkus-mybatis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+            <version>5.5.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-narayana-jta</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-security</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-messaging-kafka</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.lz4</groupId>
+                    <artifactId>lz4-java</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                                <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                                <maven.home>${maven.home}</maven.home>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${checkstyle-plugin.version}</version>
+                <configuration>
+                    <configLocation>google_checks.xml</configLocation>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <skipITs>false</skipITs>
+                <quarkus.package.type>native</quarkus.package.type>
+            </properties>
+        </profile>
+    </profiles>
+</project>
+=============  DO ============
+# datasource
+quarkus.datasource.db-kind=oracle
+quarkus.datasource.jdbc.driver=oracle.jdbc.driver.OracleDriver
+quarkus.native.add-all-charsets=true
+quarkus.datasource.jdbc.url=${JDBC_URL}
+quarkus.datasource.username=${AGWA_USERNAME}
+quarkus.datasource.password=${AGWA_PASSWORD}
+
+quarkus.http.test-port=9696
+
+# mybatis
+quarkus.mybatis.mapper-locations=mappers/
+quarkus.mybatis.jdbc-type-for-null=varchar
+quarkus.mybatis.use-actual-param-name=true
+quarkus.mybatis.transaction-factory=MANAGED
+
+# csrf
+quarkus.rest-csrf.cookie-name=XSRF-TOKEN
+quarkus.rest-csrf.token-header-name=X-XSRF-TOKEN
+quarkus.rest-csrf.cookie-http-only=false
+quarkus.rest-csrf.enabled=false
+%dev.quarkus.rest-csrf.enabled=false
+%test.quarkus.rest-csrf.enabled=false
+
+# opentelemetry
+quarkus.otel.exporter.otlp.endpoint=http://otel-collector.tempo-monolithic.svc.cluster.local:4317/
+quarkus.otel.security-events.enabled=true
+quarkus.datasource.jdbc.telemetry=true
+
+# rest client
+quarkus.rest-client.logging.scope=request-response
+quarkus.rest-client.logging.body-limit=5000
+
+# cors
+quarkus.http.cors=true
+quarkus.http.cors.methods=GET,POST,PUT,DELETE,OPTIONS
+quarkus.http.cors.headers=Content-Type,Authorization
+quarkus.http.cors.origins=*
+
+quarkus.swagger-ui.always-include=true
+
+# app
+agwa.dailyreports.path=/well-presentation-docs
+agwa.max.filesize=5242880
+======================
