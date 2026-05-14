@@ -1,539 +1,784 @@
+import { JwtService } from 'src/app/core/services/jwt/jwt.service';
 
-export interface AgwaConfig {
-  tokenUrl: string;
-  dailyOperationServiceUrl: string;
-  drillingEyeServiceUrl?: string;
-  presDocsServiceUrl?: string;
-  emailServiceUrl: string;
-  mapServerUrl: string;
-  appId: string;
-
-  esriUrl: string;
-  webMapItemId: string;
-
-  mockWebMapItemId: string;
-
-  useMockMap: boolean;
+export interface AuthUser {
+  readonly upn?: string;
+  readonly name?: string;
+  readonly preferred_username?: string;
+  readonly unique_name?: string;
+  readonly exp?: number;
+  readonly last_login?: number | string;
+  readonly groups?: string[];
+  readonly [key: string]: unknown;
 }
 
-==
-import { isPlatformBrowser } from '@angular/common';
+export interface LoginRequest {
+  readonly username: string;
+  readonly password: string;
+}
+
+export interface AuthState {
+  readonly token: string | null;
+  readonly isAuthenticated: boolean;
+  readonly user: AuthUser | null;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  readonly sessionExpired: boolean;
+}
+
+export const initialState: AuthState = {
+  token: null,
+  isAuthenticated: false,
+  user: null,
+  isLoading: false,
+  error: null,
+  sessionExpired: false,
+};
+
+export function selectIsTokenExpired(token: string | null, jwt: JwtService): boolean {
+  return token ? jwt.isExpired(token) : true;
+}
+
+export function selectDisplayUsername(user: AuthUser | null): string {
+  if (!user) return 'User';
+
+  const username =
+    user.name ||
+    user.preferred_username ||
+    user.upn ||
+    user.unique_name;
+
+  return typeof username === 'string' && username.trim().length > 0
+    ? username.trim()
+    : 'User';
+}
+
+export function selectLastLogin(user: AuthUser | null): Date | null {
+  const ts = user?.last_login;
+  if (!ts) return null;
+  // JWT timestamps are Unix seconds; multiply to get ms for the Date constructor
+  return new Date(Number(ts) * 1000);
+}
+
+export function selectUserEmail(user: AuthUser | null): string | null {
+  const upn = user?.upn;
+
+  if (typeof upn !== 'string') {
+    return null;
+  }
+
+  const normalizedUpn = upn.trim();
+
+  if (!normalizedUpn) {
+    return null;
+  }
+
+  return normalizedUpn.includes('@')
+    ? normalizedUpn
+    : `${normalizedUpn}@aramco.com`;
+}
+===
+import { computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+
+import { JwtService } from 'src/app/core/services/jwt/jwt.service';
+import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
+import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
+import { AuthState, initialState, LoginRequest, selectDisplayUsername, selectIsTokenExpired, selectLastLogin, selectUserEmail } from './auth.selectors';
+
+export const AuthStore = signalStore(
+  { providedIn: 'root' },
+  withState<AuthState>(initialState),
+  withComputed(({ token, user }) => ({
+    isTokenExpired: computed(() => selectIsTokenExpired(token(), inject(JwtService))),
+    displayUsername: computed(() => selectDisplayUsername(user())),
+    userEmail: computed(() => selectUserEmail(user())),
+    lastLogin: computed(() => selectLastLogin(user())),
+  })),
+  withMethods((
+    store,
+    http = inject(HttpClient),
+    router = inject(Router),
+    jwt = inject(JwtService),
+    loading = inject(LoaderService),
+    extAppConfigService = inject(ExternalConfigService),
+  ) => ({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async login(credentials?: LoginRequest) {
+      loading.startLogin('Contacting identity service...');
+      patchState(store, { isLoading: true });
+
+      http.get(`${extAppConfigService.settings.tokenUrl}`, { responseType: 'text', withCredentials: true })
+        .subscribe({
+          next: (token) => {
+            loading.setProgress(72);
+            loading.setLoginMessage('Session verified. Opening the application...');
+            const decoded = jwt.decode(token);
+            patchState(store, {
+              token,
+              isAuthenticated: true,
+              user: decoded,
+              isLoading: false,
+            });
+            console.log('fetching token === ' + decoded.upn);
+            localStorage.setItem('agwa_token', token);
+            loading.setProgress(96);
+            void router.navigate(['main']).finally(() => loading.completeLogin());
+          },
+          error: () => {
+            patchState(store, {
+              error: 'Login Failed',
+              isLoading: false,
+            });
+            loading.fail();
+          },
+        });
+    },
+
+    logout() {
+      localStorage.removeItem('agwa_token');
+      patchState(store, initialState);
+      void router.navigate(['/login']);
+    },
+
+    // Token Refresh — called at app bootstrap via APP_INITIALIZER
+    autoLogin() {
+      const token = localStorage.getItem('agwa_token');
+
+      if (token && !jwt.isExpired(token)) {
+        patchState(store, {
+          token,
+          isAuthenticated: true,
+          user: jwt.decode(token),
+          sessionExpired: false,
+        });
+        return;
+      }
+
+      localStorage.removeItem('agwa_token');
+
+      // If a token existed but is now expired, flag it so the guard can
+      // redirect to login with a session-expired message.
+      patchState(store, { ...initialState, sessionExpired: !!token });
+    },
+  })),
+);
+===
+<header class="top-navbar">
+
+  <!-- Left: hamburger + logo -->
+  <div class="top-navbar__brand">
+    <button
+      class="top-navbar__hamburger"
+      (click)="toggleSidenav.emit()"
+      [attr.aria-label]="sidenavCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+      [class.top-navbar__hamburger--active]="!sidenavCollapsed()"
+    >
+      <span></span><span></span><span></span>
+    </button>
+
+    <div class="top-navbar__logo">
+      <div class="top-navbar__logo-icon">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="16" cy="20" rx="9" ry="11" fill="url(#dropGrad)"/>
+          <ellipse cx="16" cy="20" rx="5"  ry="7"  fill="rgba(255,255,255,0.25)"/>
+          <path d="M16 4 C16 4 22 12 22 18" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+          <defs>
+            <linearGradient id="dropGrad" x1="16" y1="9" x2="16" y2="31" gradientUnits="userSpaceOnUse">
+              <stop offset="0%"   stop-color="#38bdf8"/>
+              <stop offset="100%" stop-color="#0369a1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="top-navbar__logo-text">{{ logoText }}</span>
+    </div>
+  </div>
+
+  <!-- Center: title -->
+  <div class="top-navbar__title">
+    <h1>{{ appTitle }}</h1>
+  </div>
+
+  <!-- Right: notifications + user -->
+  <div class="top-navbar__user">
+
+    <div class="top-navbar__notifications">
+      <button
+        class="top-navbar__icon-btn"
+        aria-label="Notifications"
+        [matBadge]="3"
+        matBadgeColor="warn"
+        [matBadgeOverlap]="true"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 01-3.46 0"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="top-navbar__divider"></div>
+
+    <div class="top-navbar__menu">
+      <button
+        type="button"
+        class="top-navbar__menu-trigger"
+        (click)="toggleUserMenu($event)"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="menuOpen()"
+        aria-label="Open user menu"
+      >
+        <div class="top-navbar__user-info">
+          <span class="top-navbar__user-name">{{ auth.displayUsername() }}</span>
+          @if (lastLoginDisplay()) {
+            <span class="top-navbar__last-login">{{ lastLoginDisplay() }}</span>
+          }
+        </div>
+
+        <div class="top-navbar__avatar" aria-hidden="true">{{ userInitial() }}</div>
+
+        <svg class="top-navbar__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      @if (menuOpen()) {
+        <div class="top-navbar__menu-popup">
+          <div class="top-navbar__profile-card">
+            <div class="top-navbar__profile-head">
+              <div class="top-navbar__profile-avatar" aria-hidden="true">{{ userInitial() }}</div>
+
+              <div class="top-navbar__profile-copy">
+                <span class="top-navbar__profile-label">Signed in as</span>
+                <strong class="top-navbar__profile-name">{{ auth.displayUsername() }}</strong>
+                @if (lastLoginDisplay()) {
+                  <span class="top-navbar__profile-last-login">Last login: {{ lastLoginDisplay() }}</span>
+                }
+                @if (userRoleLabels().length) {
+                  <div class="top-navbar__profile-roles">
+                    @for (label of userRoleLabels(); track label) {
+                      <span class="top-navbar__profile-role-chip">{{ label }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="top-navbar__logout-btn"
+              (click)="logout($event)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Logout
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+</header>
+===
+// ── Layout constants ─────────────────────────────────────────────────────────
+$nav-h:        62px;
+$ease:         cubic-bezier(0.4, 0, 0.2, 1);
+// Light-on-dark palette for the dark navy bar
+$nav-text:     rgba(255, 255, 255, 0.92);
+$nav-muted:    rgba(255, 255, 255, 0.55);
+$nav-border:   rgba(255, 255, 255, 0.10);
+$nav-hover-bg: rgba(14, 165, 233, 0.14);
+
+// ── Host ─────────────────────────────────────────────────────────────────────
+:host {
+  display: block;
+  flex-shrink: 0;
+}
+
+// ── Shell ────────────────────────────────────────────────────────────────────
+.top-navbar {
+  display: flex;
+  align-items: center;
+  height: $nav-h;
+  padding: 0 20px 0 0;
+  background: var(--bg-topbar);
+  border-bottom: 1px solid $nav-border;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 100;
+
+  // Subtle grid texture
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(56, 189, 248, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56, 189, 248, 0.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+
+  // Bottom accent line
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(14, 165, 233, 0.55) 30%,
+      rgba(14, 165, 233, 0.55) 70%,
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  // ── Brand ─────────────────────────────────────────────────────────────────
+  &__brand {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 10px;
+    padding: 0 14px;
+    height: 100%;
+    border-right: 1px solid $nav-border;
+    min-width: 224px;
+    transition: min-width 0.26s $ease;
+  }
+
+  // ── Hamburger ─────────────────────────────────────────────────────────────
+  &__hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+
+    span {
+      display: block;
+      height: 2px;
+      background: $nav-muted;
+      border-radius: 2px;
+      transition: background 0.2s, transform 0.25s;
+
+      &:nth-child(1) { width: 20px; }
+      &:nth-child(2) { width: 14px; }
+      &:nth-child(3) { width: 17px; }
+    }
+
+    &:hover {
+      background: $nav-hover-bg;
+      span { background: #38bdf8; }
+    }
+
+    &--active span { background: #38bdf8; }
+  }
+
+  // ── Logo ──────────────────────────────────────────────────────────────────
+  &__logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+
+  &__logo-icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.65));
+  }
+
+  &__logo-text {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: 2.5px;
+    color: #38bdf8;
+    text-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
+    text-transform: uppercase;
+  }
+
+  // ── Center title ──────────────────────────────────────────────────────────
+  &__title {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 24px;
+
+    h1 {
+      margin: 0;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: $nav-text;
+      white-space: nowrap;
+    }
+  }
+
+  // ── Right: user area ──────────────────────────────────────────────────────
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  &__notifications {
+    position: relative;
+  }
+
+  &__icon-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid $nav-border;
+    border-radius: 10px;
+    cursor: pointer;
+    color: $nav-muted;
+    transition: background 0.2s $ease, border-color 0.2s $ease, color 0.2s $ease, box-shadow 0.2s $ease;
+    position: relative;
+
+    svg { width: 18px; height: 18px; }
+
+    &:hover {
+      background: $nav-hover-bg;
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 26px;
+    background: $nav-border;
+  }
+
+  // ── User info (name text) ─────────────────────────────────────────────────
+  &__user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  &__user-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: $nav-text;
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+  }
+
+  &__last-login {
+    font-size: 10px;
+    color: $nav-muted;
+    letter-spacing: 0.15px;
+    line-height: 1.2;
+  }
+
+  &__roles {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-top: 3px;
+  }
+
+  &__role-chip {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.10);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    border-radius: 4px;
+    padding: 1px 6px;
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  // ── Menu ─────────────────────────────────────────────────────────────────
+  &__menu {
+    position: relative;
+  }
+
+  &__menu-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px 4px 14px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid $nav-border;
+    border-radius: 999px;
+    color: $nav-text;
+    cursor: pointer;
+    transition: background 0.2s $ease, border-color 0.2s $ease, box-shadow 0.2s $ease;
+
+    &:hover {
+      background: $nav-hover-bg;
+      border-color: rgba(56, 189, 248, 0.4);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.16);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #38bdf8;
+      outline-offset: 2px;
+    }
+  }
+
+  &__avatar {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+    border: 2px solid rgba(56, 189, 248, 0.55);
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
+  }
+
+  &__chevron {
+    width: 15px;
+    height: 15px;
+    color: $nav-muted;
+    flex-shrink: 0;
+    transition: transform 0.25s $ease;
+  }
+}
+
+// ── Dropdown popup (white surface) ───────────────────────────────────────────
+.top-navbar__menu-popup {
+  min-width: 15rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  box-shadow: 0 18px 34px rgba(2, 6, 23, 0.28);
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 300;
+}
+
+.top-navbar__profile-card {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.top-navbar__profile-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border-sub);
+}
+
+.top-navbar__profile-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.top-navbar__profile-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.top-navbar__profile-name {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.top-navbar__profile-last-login {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.top-navbar__profile-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  box-shadow: 0 0 14px rgba(14, 165, 233, 0.28);
+  flex-shrink: 0;
+}
+
+.top-navbar__profile-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.top-navbar__profile-role-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.10);
+  border: 1px solid rgba(14, 165, 233, 0.30);
+  border-radius: 5px;
+  padding: 2px 7px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.top-navbar__logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  justify-content: flex-start;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--danger);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: rgba(220, 38, 38, 0.07);
+    border-color: rgba(220, 38, 38, 0.3);
+  }
+}
+
+// ── Mat-badge override ────────────────────────────────────────────────────────
+:host ::ng-deep .mat-badge-content {
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 17px;
+  height: 17px;
+  line-height: 17px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+
+// ── Responsive ───────────────────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .top-navbar {
+    &__title      { display: none; }
+    &__user       { gap: 10px; }
+    &__user-info  { display: none; }
+    &__menu-trigger { padding-left: 6px; }
+  }
+}
+===
 import {
   ChangeDetectionStrategy,
   Component,
-  effect,
-  ElementRef,
-  Inject,
-  OnDestroy,
-  OnInit,
-  PLATFORM_ID,
+  computed,
+  HostListener,
+  inject,
+  input,
+  output,
   signal,
-  ViewChild,
 } from '@angular/core';
-import Graphic from '@arcgis/core/Graphic';
-import { watch } from '@arcgis/core/core/reactiveUtils';
-import Point from '@arcgis/core/geometry/Point';
-import Polyline from '@arcgis/core/geometry/Polyline';
-import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import SimpleFillSymbol from '@arcgis/core/symbols/SimpleFillSymbol';
-import PictureMarkerSymbol from '@arcgis/core/symbols/PictureMarkerSymbol';
-import TextSymbol from '@arcgis/core/symbols/TextSymbol';
-import { MatCardModule } from '@angular/material/card';
-import { Subject, takeUntil } from 'rxjs';
-import { MorningReport } from 'src/app/core/models/morning-report/morning-report.model';
-import { MorningReportService } from 'src/app/core/services/morning-report.service';
-import { LoaderService } from 'src/app/shared/components/global-loader/loader.service';
-import {
-  bottomPolygonTemplate,
-  lineSymbol,
-  locationTextSymbol,
-  MAP_BOUNDS,
-  MAP_CONFIG,
-  MAX_WIDTH,
-  STYLE,
-  tilesMap,
-  topPolygonTemplate,
-  WWell,
-  wwellIdTextSymbol,
-} from 'src/app/shared/models/config/agwa-map.config';
-import {
-  createLegendLayer,
-  findNonOverlappingPosition,
-  translatePolygon,
-} from 'src/app/shared/utils/wwell-placement-utils';
-import { ExternalConfigService } from 'src/app/shared/services/external-config.service';
-
-const BOOT_TASK = 'arcgis-map';
+import { MatBadgeModule } from '@angular/material/badge';
+import { AuthStore } from 'src/app/features/auth/store/auth.store';
+import { RbacStore } from '@store/rbac/rbac.store';
 
 @Component({
-  selector: 'app-wwellmap',
+  selector: 'app-top-navbar',
   standalone: true,
-  imports: [MatCardModule],
-  templateUrl: './wwell-map.component.html',
-  styleUrl: './wwell-map.component.scss',
+  imports: [MatBadgeModule],
+  templateUrl: './top-navbar.component.html',
+  styleUrl: './top-navbar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class WwellmapComponent implements OnInit, OnDestroy {
-  @ViewChild('mapViewNode', { static: true }) private mapViewEl?: ElementRef;
-
-  private mapView?: __esri.MapView;
-  private legendLayer?: GraphicsLayer;
-  private stationaryWatchHandle?: __esri.WatchHandle;
-
-  protected readonly wwells         = signal<WWell[]>([]);
-  protected readonly errorMessage   = signal<string | null>(null);
-  protected readonly mapReady       = signal(false);
-  private   readonly bubbleLayerReady = signal<GraphicsLayer | null>(null);
-
-  private placedBubbles: { x: number; y: number; radius: number }[] = [];
-  private readonly destroy$ = new Subject<void>();
-  private bootRegistered = false;
-
-  constructor(
-    @Inject(PLATFORM_ID) private readonly platformId: object,
-    private readonly morningService: MorningReportService,
-    private readonly extConfig: ExternalConfigService,
-    private readonly loader: LoaderService,
-  ) {
-    effect(() => {
-      this.wwells();
-      if (!this.mapReady()) return;
-      const wwellLayer = this.getLayerById('WWell-icons') as GraphicsLayer;
-      if (!wwellLayer) return;
-      this.drawWWellIcons(wwellLayer);
-    });
-
-    effect(() => {
-      this.wwells();
-      const bubbleLayer = this.bubbleLayerReady();
-      if (!bubbleLayer) return;
-      this.layoutBubbles(bubbleLayer);
-    });
-  }
-
-  ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    this.registerBoot();
-    this.fetchWells();
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.stationaryWatchHandle?.remove();
-    this.mapView?.destroy();
-    this.resolveBoot();
-  }
-
-  // ── Public API ─────────────────────────────────────────────────────────────
-
-  async captureMapAsBase64(): Promise<string | undefined> {
-    if (!this.mapView) return undefined;
-    this.legendLayer!.visible = true;
-    await this.waitForLayerRender(this.legendLayer!);
-    const base64 = await this.getScreenshotBase64();
-    this.legendLayer!.visible = false;
-    return base64;
-  }
-
-  async saveMapImage(): Promise<void> {
-    const base64 = await this.captureMapAsBase64();
-    if (!base64) return;
-    const a = document.createElement('a');
-    a.href = `data:image/png;base64,${base64}`;
-    a.download = 'water-wells-map.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  // ── Private ────────────────────────────────────────────────────────────────
-
-  private fetchWells(): void {
-    this.morningService
-      .getMorningReportForKSA()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (data: MorningReport[]) => {
-          this.buildWWells(data);
-          this.initMap().catch((e) => {
-            console.error('[WwellMap] initMap error', e);
-            this.errorMessage.set('Map could not be initialized.');
-            this.resolveBoot();
-          });
-        },
-        error: (err: unknown) => {
-          console.error('[WwellMap] fetch failed', err);
-          this.errorMessage.set('Unable to load well data.');
-          this.resolveBoot();
-        },
-      });
-  }
-
-  private buildWWells(data: MorningReport[]): void {
-    const safeNum = (s?: string | null): number => {
-      const n = Number.parseFloat(s ?? '');
-      return Number.isNaN(n) ? 0 : n;
-    };
-
-    this.wwells.set(
-      data
-        .map((r) => ({
-          wwellId:  r.wGnrName       ?? 'N/A',
-          lat:      safeNum(r.racEstDdLatCord),
-          lng:      safeNum(r.racEstDdLonCord),
-          location: r.trgtRsvrCd     ?? 'N/A',
-          label:    r.biNum          ?? 'N/A',
-        }))
-        .filter((w) => w.lat !== 0 && w.lng !== 0),
-    );
-  }
-
-  private async initMap(): Promise<void> {
-    try {
-      const [{ default: WebMapMod }, { default: MapViewMod }, { default: FL }, { default: esriCfg }] =
-        await Promise.all([
-          import('@arcgis/core/WebMap'),
-          import('@arcgis/core/views/MapView'),
-          import('@arcgis/core/layers/FeatureLayer'),
-          import('@arcgis/core/config'),
-        ]);
-
-      const { useMockMap, esriUrl, webMapItemId, mockWebMapItemId } = this.extConfig.settings;
-      const itemId = useMockMap ? mockWebMapItemId : webMapItemId;
-
-      // point to Aramco portal when not in mock mode
-      if (!useMockMap && esriUrl) {
-        esriCfg.portalUrl = esriUrl;
-      }
-
-      const webMap = new WebMapMod({ portalItem: { id: itemId } });
-
-      this.mapView = new MapViewMod({
-        container:   this.mapViewEl?.nativeElement,
-        map:         webMap,
-        center:      MAP_CONFIG.center,
-        zoom:        MAP_CONFIG.zoom,
-        constraints: { minZoom: MAP_CONFIG.minZoom, maxZoom: MAP_CONFIG.maxZoom },
-      });
-
-      await this.mapView.when();
-
-      // KSA country boundary highlight (public Esri World Countries service)
-      const ksaBoundary = new FL({
-        url: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Countries_(Generalized)/FeatureServer/0',
-        definitionExpression: "COUNTRY = 'Saudi Arabia'",
-        renderer: {
-          type: 'simple',
-          symbol: {
-            type: 'simple-fill',
-            color:   [255, 200, 0, 0.06],
-            outline: { type: 'simple-line', color: [255, 165, 0, 1], width: 2.5, style: 'dash' },
-          },
-        } as any,
-        title: 'KSA Boundary',
-      });
-
-      this.legendLayer = createLegendLayer(this.mapView);
-
-      const wwellLayer  = new GraphicsLayer({ id: 'WWell-icons' });
-      const bubbleLayer = new GraphicsLayer({ id: 'WWell-bubbles' });
-
-      // layer order: KSA boundary → well icons → bubbles → legend (top)
-      webMap.addMany([ksaBoundary, wwellLayer, bubbleLayer]);
-      webMap.add(this.legendLayer);
-
-      this.mapReady.set(true);
-      this.bubbleLayerReady.set(bubbleLayer);
-
-      await this.waitForMapRender();
-      this.resolveBoot();
-
-      this.stationaryWatchHandle = watch(
-        () => this.mapView?.stationary,
-        (isStationary) => {
-          if (isStationary) {
-            const layer = this.bubbleLayerReady();
-            if (layer) this.layoutBubbles(layer);
-          }
-        },
-      );
-
-    } catch (e) {
-      console.error('[WwellMap] Failed to load ArcGIS modules', e);
-      this.errorMessage.set('Map could not be initialized.');
-      this.resolveBoot();
-    }
-  }
-
-  private drawWWellIcons(layer: GraphicsLayer): void {
-    layer.removeAll();
-    for (const well of this.wwells()) {
-      layer.add(
-        new Graphic({
-          geometry: new Point({ latitude: well.lat, longitude: well.lng }),
-          symbol: new PictureMarkerSymbol({
-            url:    STYLE.markerIcon,
-            width:  STYLE.markerSize,
-            height: STYLE.markerSize,
-          }),
-          attributes: { wwellId: well.wwellId, location: well.location },
-        }),
-      );
-    }
-  }
-
-  private layoutBubbles(layer: GraphicsLayer): void {
-    if (!this.mapView) return;
-    layer.removeAll();
-    this.placedBubbles = [];
-
-    const view            = this.mapView;
-    const viewW           = view.width;
-    const viewH           = view.height;
-    const bubblePixelRadius = Math.max(STYLE.squareSize / 2, 20) + 8;
-    const iconRadius      = STYLE.markerSize / 2;
-    const graphics: Graphic[] = [];
-    const anchorPt        = new Point({ latitude: 0, longitude: 0, spatialReference: { wkid: 4326 } });
-
-    for (const well of this.wwells()) {
-      anchorPt.latitude  = well.lat;
-      anchorPt.longitude = well.lng;
-
-      const sp = view.toScreen(anchorPt);
-      if (!sp) continue;
-
-      sp.x = Math.max(8, Math.min(viewW - 8, sp.x));
-      sp.y = Math.max(8, Math.min(viewH - 8, sp.y));
-
-      const obstacles  = [...this.placedBubbles, { x: sp.x, y: sp.y, radius: iconRadius + 6 }];
-      const finalScreen = findNonOverlappingPosition(sp.x, sp.y, obstacles, bubblePixelRadius);
-
-      this.placedBubbles.push({ x: finalScreen.x, y: finalScreen.y, radius: bubblePixelRadius });
-
-      let finalMapPt = view.toMap(finalScreen) as __esri.Point | null;
-      if (!finalMapPt) finalMapPt = anchorPt.clone();
-
-      finalMapPt.latitude  = Math.min(Math.max(finalMapPt.latitude!  + 3, MAP_BOUNDS.minLat), MAP_BOUNDS.maxLat);
-      finalMapPt.longitude = Math.min(Math.max(finalMapPt.longitude! + 2, MAP_BOUNDS.minLng), MAP_BOUNDS.maxLng);
-
-      const tileColor = tilesMap.get(well.label)?.color ?? [100, 100, 100, 0.9];
-
-      // Stick
-      graphics.push(new Graphic({
-        geometry: new Polyline({
-          paths: [[[well.lng, well.lat], [finalMapPt.longitude!, finalMapPt.latitude!]]],
-          spatialReference: { wkid: 4326 },
-        }),
-        symbol: lineSymbol(tileColor),
-      }));
-
-      // Top rectangle
-      graphics.push(new Graphic({
-        geometry: translatePolygon(topPolygonTemplate, finalMapPt.longitude!, finalMapPt.latitude!),
-        symbol:   new SimpleFillSymbol({ color: tileColor, outline: { color: [0, 0, 0], width: 1 } }),
-      }));
-
-      // Bottom rectangle
-      graphics.push(new Graphic({
-        geometry: translatePolygon(bottomPolygonTemplate, finalMapPt.longitude!, finalMapPt.latitude!),
-        symbol:   new SimpleFillSymbol({ color: [0, 191, 255, 0.9], outline: { color: [0, 0, 0], width: 1 } }),
-      }));
-
-      // Well ID label
-      const wwellIdLabel = new Graphic({ geometry: finalMapPt, symbol: wwellIdTextSymbol(STYLE.textFont) });
-      (wwellIdLabel.symbol as TextSymbol).text                = `${well.wwellId}`;
-      (wwellIdLabel.symbol as TextSymbol).verticalAlignment   = 'middle';
-      (wwellIdLabel.symbol as TextSymbol).horizontalAlignment = 'center';
-
-      // Location label
-      const locationLabel = new Graphic({ geometry: finalMapPt, symbol: locationTextSymbol(STYLE.textFont) });
-      (locationLabel.symbol as TextSymbol).text                = `${well.location}`;
-      (locationLabel.symbol as TextSymbol).horizontalAlignment = 'center';
-      (locationLabel.symbol as TextSymbol).verticalAlignment   = 'middle';
-
-      graphics.push(wwellIdLabel, locationLabel);
-    }
-
-    layer.addMany(graphics);
-  }
-
-  private getLayerById(id: string): GraphicsLayer | undefined {
-    return this.mapView?.map?.layers.find((l) => l.id === id) as GraphicsLayer | undefined;
-  }
-
-  private async waitForMapRender(): Promise<void> {
-    if (!this.mapView) return;
-    if (!this.mapView.updating) {
-      await new Promise(requestAnimationFrame);
-      return;
-    }
-    await new Promise<void>((resolve) => {
-      const handle = watch(
-        () => this.mapView?.updating ?? false,
-        (updating) => { if (!updating) { handle.remove(); requestAnimationFrame(() => resolve()); } },
-      );
-    });
-  }
-
-  private async waitForLayerRender(layer: GraphicsLayer): Promise<void> {
-    const lv = await this.mapView!.whenLayerView(layer);
-    if (!lv.updating) { await new Promise(requestAnimationFrame); return; }
-    await new Promise<void>((resolve) => {
-      const handle = watch(
-        () => lv.updating,
-        (updating) => { if (!updating) { handle.remove(); requestAnimationFrame(() => resolve()); } },
-      );
-    });
-  }
-
-  private async getScreenshotBase64(): Promise<string> {
-    const screenshot = await this.mapView!.takeScreenshot({ format: 'png', quality: 1 });
-    const [, raw] = screenshot.dataUrl.split(',');
-    if (!raw) throw new Error('Screenshot payload empty');
-
-    const img = new Image();
-    img.src = `data:image/png;base64,${raw}`;
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-
-    const scale  = Math.min(1, MAX_WIDTH / img.width);
-    const canvas = document.createElement('canvas');
-    canvas.width  = img.width  * scale;
-    canvas.height = img.height * scale;
-    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-    await new Promise((r) => setTimeout(r, 300));
-
-    return canvas.toDataURL('image/jpeg', 1).split(',')[1];
-  }
-
-  private registerBoot(): void {
-    if (this.bootRegistered) return;
-    this.bootRegistered = true;
-    this.loader.registerBootTask(BOOT_TASK);
-  }
-
-  private resolveBoot(): void {
-    if (!this.bootRegistered) return;
-    this.bootRegistered = false;
-    this.loader.resolveBootTask(BOOT_TASK);
-  }
-}
-==
-/ ── Status search option ───────────────────────────────────────────────────────
-::ng-deep .status-select-panel {
-  padding-top: 0 !important;
-}
-
-::ng-deep .status-select-panel .status-search-opt {
-  opacity: 1 !important;
-  cursor: default !important;
-  padding: 0 !important;
-  height: auto !important;
-  min-height: unset !important;
-  border-bottom: 1px solid #e5e7eb;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: #fff;
-  pointer-events: auto !important;
-
-  &:hover { background: #fff !important; }
-
-  /* override Material's disabled-state overrides on inner content */
-  .mdc-list-item__primary-text {
-    width: 100%;
-    opacity: 1 !important;
-    color: #1f2937 !important;
-    pointer-events: auto !important;
-  }
-
-  /* Material adds this class on disabled options */
-  &.mdc-list-item--disabled {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-  }
-}
-
-::ng-deep .status-select-panel .status-search-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.6rem;
-}
-
-::ng-deep .status-select-panel .status-search-icon {
-  font-size: 1rem;
-  width: 1rem;
-  height: 1rem;
-  line-height: 1rem;
-  color: #9ca3af;
-  flex-shrink: 0;
-  overflow: visible;
-}
-
-::ng-deep .status-select-panel .status-search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: #1f2937 !important;
-  background: transparent;
-  font-family: inherit;
-  min-width: 0;
-  pointer-events: auto !important;
-  cursor: text !important;
-  opacity: 1 !important;
-
-  &::placeholder { color: #9ca3af; font-weight: 400; }
-}
-
-::ng-deep .status-select-panel .status-no-results {
-  font-size: 0.85rem !important;
-  font-weight: 500 !important;
-  color: #9ca3af !important;
-  font-style: italic;
-  text-align: center;
-  justify-content: center;
-}
-==
-  protected readonly statusSearchQuery = signal('');
-  protected readonly filteredStatusOptions = computed(() => {
-    const q = this.statusSearchQuery().trim().toLowerCase();
-    return q
-      ? this.statusOptions().filter(s => s.toLowerCase().includes(q))
-      : this.statusOptions();
+export class TopNavbarComponent {
+  readonly sidenavCollapsed = input<boolean>(false);
+  readonly toggleSidenav = output<void>();
+
+  protected readonly auth     = inject(AuthStore);
+  protected readonly rbac     = inject(RbacStore);
+  protected readonly menuOpen = signal(false);
+
+  protected readonly userRoleLabels = computed(() => {
+    const groups = this.auth.user()?.groups ?? [];
+    const defs   = this.rbac.roleDefinitions();
+    return groups.map(g => defs.find(d => d.name === g)?.label ?? g);
   });
-==
-  protected onStatusPanelToggle(opened: boolean): void {
-    if (!opened) this.statusSearchQuery.set('');
+
+  protected readonly lastLoginDisplay = computed(() => {
+    const d = this.auth.lastLogin();
+    if (!d) return null;
+    return d.toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  });
+
+  readonly appTitle = 'Aramco Ground Water Application';
+  readonly logoText = 'AGWA';
+
+  @HostListener('document:click')
+  protected closeUserMenu(): void {
+    this.menuOpen.set(false);
   }
+
+  protected toggleUserMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpen.update((open) => !open);
+  }
+
+  protected logout(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.menuOpen.set(false);
+    this.auth.logout();
+  }
+
+  protected userInitial(): string {
+    return this.auth.displayUsername().charAt(0).toUpperCase() || 'U';
+  }
+}
 ==
-<mat-select
-                [ngModel]="selectedStatus()"
-                (ngModelChange)="onSelect($event)"
-                panelClass="status-select-panel"
-                (openedChange)="onStatusPanelToggle($event)"
-              >
-                <mat-option disabled class="status-search-opt">
-                  <div class="status-search-wrap">
-                    <mat-icon class="status-search-icon">search</mat-icon>
-                    <input
-                      class="status-search-input"
-                      placeholder="Search status…"
-                      autocomplete="off"
-                      [ngModel]="statusSearchQuery()"
-                      (ngModelChange)="statusSearchQuery.set($event)"
-                      (click)="$event.stopPropagation()"
-                      (keydown)="$event.key !== 'Escape' && $event.stopPropagation()"
-                    />
-                  </div>
-                </mat-option>
-
-                @if (filteredStatusOptions().length === 0) {
-                  <mat-option disabled class="status-no-results">No results</mat-option>
-                }
-
-                @for (status of filteredStatusOptions(); track status) {
-                  <mat-option [value]="status">{{ status }}</mat-option>
-                }
