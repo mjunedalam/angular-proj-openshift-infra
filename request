@@ -1,96 +1,280 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>AGWA</title>
-  <base href="/" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      --boot-bg: #eef6ff;
-      --boot-track: rgba(15, 23, 42, 0.08);
-      --boot-accent: #0284c7;
+// login.component.ts
+import { afterNextRender, ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDividerModule } from '@angular/material/divider';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AuthStore } from 'src/app/features/auth/store/auth.store';
+import { LoginRequest } from 'src/app/features/auth/store/auth.selectors';
+import { LoaderService } from '@shared/components/global-loader/loader.service';
+
+interface LoginForm {
+  username: FormControl<string>;
+  password: FormControl<string>;
+}
+
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatDividerModule,
+  ],
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LoginComponent {
+  protected readonly authStore = inject(AuthStore);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly loader = inject(LoaderService);
+  private readonly submitted = signal(false);
+
+  protected readonly sessionExpiredMessage = signal<string | null>(null);
+
+  // Collapsible state for credentials form - default collapsed (false)
+  protected readonly isCredentialsExpanded = signal(false);
+  protected readonly hidePassword = signal(true);
+
+  constructor() {
+    // If the user already has a valid session, send them straight to the app.
+    if (this.authStore.isAuthenticated() && !this.authStore.isTokenExpired()) {
+      void this.router.navigate(['/main']);
+      return;
     }
 
-    html, body {
-      margin: 0;
-      height: 100%;
-      background: var(--boot-bg);
-      font-family: 'DM Sans', Arial, sans-serif;
+    // Show session-expired banner when redirected by the auth guard.
+    if (this.route.snapshot.queryParamMap.get('reason') === 'session-expired') {
+      this.sessionExpiredMessage.set('Your session has expired. Please log in again.');
     }
 
-    .boot-loader {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 9999;
-      height: 3px;
-      background: var(--boot-track);
-      transition: opacity 180ms ease, visibility 180ms ease;
+    // No app shell on the login page — complete the native bar once the page renders.
+    afterNextRender(() => this.loader.completeBoot());
+  }
+
+  protected readonly loginForm = new FormGroup<LoginForm>({
+    username: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+  });
+
+  // SSO Login method
+  protected ssoLogin(): void {
+    this.authStore.login();
+  }
+
+  // Toggle credentials form visibility
+  protected toggleCredentials(): void {
+    this.isCredentialsExpanded.update(expanded => !expanded);
+    // Reset form and submission state when collapsing
+    if (!this.isCredentialsExpanded()) {
+      this.submitted.set(false);
+      this.loginForm.reset();
+      this.loginForm.markAsPristine();
+    }
+  }
+
+  protected submit(): void {
+    this.submitted.set(true);
+
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
     }
 
-    .boot-loader--hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
+    this.authStore.login(this.loginForm.getRawValue() as LoginRequest);
+  }
+
+  protected togglePasswordVisibility(): void {
+    this.hidePassword.update((hidden) => !hidden);
+  }
+
+  protected isFieldInvalid(field: keyof LoginRequest): boolean {
+    const control = this.loginForm.controls[field];
+    return control.invalid && (control.dirty || control.touched || this.submitted());
+  }
+}
+=
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
+import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
+import { TopNavbarComponent } from './header/top-navbar.component';
+import { LeftSidenavComponent } from './sidebar/left-sidenav.component';
+import { LoaderService } from '@shared/components/global-loader/loader.service';
+
+@Component({
+  selector: 'app-layout',
+  standalone: true,
+  imports: [TopNavbarComponent, LeftSidenavComponent, RouterOutlet],
+  templateUrl: './layout.component.html',
+  styleUrl: './layout.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LayoutComponent {
+  private  readonly router           = inject(Router);
+  private  readonly loader           = inject(LoaderService);
+  protected readonly sidenavCollapsed = signal<boolean>(false);
+  protected readonly activeRoute      = signal<string>('home');
+
+  constructor() {
+    // Keep active nav item in sync with browser URL
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe((e) => {
+        const segment = e.urlAfterRedirects.split('/').filter(Boolean)[1] ?? 'home';
+        this.activeRoute.set(segment);
+      });
+
+    // Fire after the first full render cycle — child ngOnInit calls (which register
+    // boot tasks) have already run by this point, so completeBootIfReady() sees the
+    // correct task count before deciding whether to close the native bar.
+    afterNextRender(() => this.loader.markAppShellReady());
+  }
+
+  protected toggleSidenav(): void {
+    this.sidenavCollapsed.update((v) => !v);
+  }
+
+  protected onNavItemClick(id: string): void {
+    this.activeRoute.set(id);
+    this.router.navigate(['main', id]);
+  }
+}
+=
+import { Injectable, computed, signal } from '@angular/core';
+
+type LoaderMode = 'idle' | 'login';
+
+const LOGIN_PROGRESS_MAX = 92;
+const LOGIN_PROGRESS_STEP = 6;
+const LOGIN_PROGRESS_INTERVAL_MS = 180;
+const LOADER_HIDE_DELAY_MS = 160;
+
+declare global {
+  interface Window {
+    __agwaBootLoader?: {
+      complete: () => void;
+      setProgress: (progress: number) => void;
+    };
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class LoaderService {
+  private readonly _mode = signal<LoaderMode>('idle');
+  private readonly _progress = signal(0);
+  private readonly _message = signal('Preparing your workspace...');
+  private progressTimer: number | null = null;
+  private hideTimer: number | null = null;
+  private readonly bootTasks = new Set<string>();
+  private appShellReady = false;
+  private bootCompleted = false;
+
+  readonly isLoading = computed(() => this._mode() !== 'idle');
+  readonly isLoginLoading = computed(() => this._mode() === 'login');
+  readonly progress = computed(() => this._progress());
+  readonly message = computed(() => this._message());
+
+  startLogin(message = 'Signing you in...'): void {
+    this.clearHideTimer();
+    this.clearTimer();
+    this._mode.set('login');
+    this._message.set(message);
+    this._progress.set(12);
+
+    this.progressTimer = window.setInterval(() => {
+      this._progress.update((value) => Math.min(LOGIN_PROGRESS_MAX, value + LOGIN_PROGRESS_STEP));
+    }, LOGIN_PROGRESS_INTERVAL_MS);
+  }
+
+  setLoginMessage(message: string): void {
+    if (this._mode() !== 'login') return;
+    this._message.set(message);
+  }
+
+  setProgress(progress: number): void {
+    if (this._mode() !== 'login') return;
+    const clamped = Math.max(0, Math.min(100, progress));
+    this._progress.set(clamped);
+    if (clamped >= LOGIN_PROGRESS_MAX) {
+      this.clearTimer();
     }
+  }
 
-    .boot-loader__bar {
-      display: block;
-      width: 0;
-      height: 100%;
-      background: var(--boot-accent);
-      box-shadow: 0 0 10px color-mix(in srgb, var(--boot-accent) 28%, transparent);
-      transition: width 180ms ease;
+  completeLogin(): void {
+    if (this._mode() !== 'login') return;
+    this.clearTimer();
+    this._progress.set(100);
+
+    this.hideTimer = window.setTimeout(() => {
+      this._mode.set('idle');
+      this._progress.set(0);
+    }, LOADER_HIDE_DELAY_MS);
+  }
+
+  fail(): void {
+    this.clearHideTimer();
+    this.clearTimer();
+    this._mode.set('idle');
+    this._progress.set(0);
+  }
+
+  registerBootTask(taskId: string): void {
+    if (this.bootCompleted || !taskId) return;
+    this.bootTasks.add(taskId);
+    this.pushBootProgress(this.appShellReady ? 88 : 56);
+  }
+
+  resolveBootTask(taskId: string): void {
+    if (!this.bootTasks.delete(taskId) || this.bootCompleted) return;
+    this.pushBootProgress(this.appShellReady ? 96 : 72);
+    this.completeBootIfReady();
+  }
+
+  markAppShellReady(): void {
+    if (this.bootCompleted) return;
+    this.appShellReady = true;
+    this.pushBootProgress(96);
+    this.completeBootIfReady();
+  }
+
+  private clearTimer(): void {
+    if (this.progressTimer !== null) {
+      window.clearInterval(this.progressTimer);
+      this.progressTimer = null;
     }
-  </style>
-</head>
-<body>
-  <div id="boot-loader" class="boot-loader" aria-hidden="true">
-    <span class="boot-loader__bar" id="boot-loader-bar"></span>
-  </div>
-  <app-root></app-root>
-  <script>
-    (function () {
-      var loaderEl = document.getElementById('boot-loader');
-      var barEl = document.getElementById('boot-loader-bar');
-      var progress = 10;
-      var timer = null;
+  }
 
-      function sync() {
-        if (barEl) barEl.style.width = progress + '%';
-      }
+  private clearHideTimer(): void {
+    if (this.hideTimer !== null) {
+      window.clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+  }
 
-      sync();
+  /** Call from pages that have no app shell (e.g. login) to close the native bar. */
+  completeBoot(): void {
+    if (this.bootCompleted) return;
+    this.bootCompleted = true;
+    this.appShellReady = true;
+    window.__agwaBootLoader?.complete();
+  }
 
-      timer = window.setInterval(function () {
-        progress = Math.min(90, progress + (progress < 55 ? 8 : 2));
-        sync();
-      }, 220);
+  private completeBootIfReady(): void {
+    if (!this.appShellReady || this.bootCompleted || this.bootTasks.size > 0) return;
+    this.bootCompleted = true;
+    this.pushBootProgress(100);
+    window.__agwaBootLoader?.complete();
+  }
 
-      window.__agwaBootLoader = {
-        setProgress: function (value) {
-          progress = Math.max(progress, Math.min(100, value));
-          sync();
-        },
-        complete: function () {
-          progress = 100;
-          sync();
-          if (timer) {
-            window.clearInterval(timer);
-            timer = null;
-          }
-          window.setTimeout(function () {
-            if (!loaderEl) return;
-            loaderEl.classList.add('boot-loader--hidden');
-            window.setTimeout(function () {
-              if (loaderEl && loaderEl.parentNode) loaderEl.parentNode.removeChild(loaderEl);
-            }, 180);
-          }, 40);
-        }
-      };
-    })();
-  </script>
-</body>
-</html>
+  private pushBootProgress(progress: number): void {
+    window.__agwaBootLoader?.setProgress(progress);
+  }
+}
