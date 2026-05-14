@@ -1,3 +1,380 @@
+<div class="home">
+
+  <!-- ══ Quick List ══ -->
+  <div class="quick-list">
+    <div class="quick-list__title">Quick List</div>
+
+    @for (item of quickItems; track item.route) {
+      <button
+        class="ql-item"
+        [class.ql-item--locked]="isLocked(item)"
+        (click)="navigate(item.route)"
+      >
+        <span class="ql-item__icon" [style.background]="isLocked(item) ? 'radial-gradient(circle at 35% 35%, rgba(220,38,38,0.55), rgba(220,38,38,0.25))' : 'radial-gradient(circle at 35% 35%, ' + item.color + 'cc, ' + item.color + '55)'">
+          <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="isLocked(item) ? '#fca5a5' : '#ffffff'" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round">
+            @for (p of item.iconPaths; track $index) {
+              <path [attr.d]="p" />
+            }
+          </svg>
+        </span>
+
+        <span class="ql-item__label">{{ item.label }}</span>
+
+        @if (isLocked(item)) {
+          <span
+            class="ql-item__lock"
+            matTooltip="Access restricted — contact your administrator to request access to this module."
+            matTooltipPosition="after"
+            matTooltipClass="sidenav-lock-tooltip"
+            [matTooltipShowDelay]="180"
+            aria-label="Access restricted"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+          </span>
+        }
+      </button>
+    }
+  </div>
+
+</div>
+===
+// ── Host layout ──────────────────────────────────────────────────────────────
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 14px;
+  height: 100%;
+  overflow: hidden;
+  background: #ffffff;
+  width: 100%;
+}
+
+// ══════════════════ QUICK LIST ════════════════════════════════════════════════
+.quick-list {
+  width: fit-content;
+  min-width: 220px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 16px;
+  padding: 16px 14px 12px;
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.07),
+    0 1px 4px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+    padding-left: 2px;
+  }
+}
+
+// Quick list item
+.ql-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 8px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.15s ease;
+  margin-bottom: 6px;
+
+  &:last-child { margin-bottom: 0; }
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+    transform: translateX(3px);
+
+    .ql-item__label { color: #1e293b; }
+  }
+
+  &:active { transform: translateX(1px) scale(0.98); }
+
+  // Icon circle
+  &__icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: box-shadow 0.18s;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  &:hover &__icon {
+    box-shadow:
+      0 6px 20px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  // Label
+  &__label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+    letter-spacing: 0.01em;
+    transition: color 0.18s;
+    flex: 1;
+    text-align: left;
+  }
+
+  // Lock badge
+  &__lock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: rgba(220, 38, 38, 0.10);
+    color: #ef4444;
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    flex-shrink: 0;
+    transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+
+    svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+    }
+  }
+
+  // Locked state
+  &--locked {
+    opacity: 0.72;
+
+    &:hover {
+      background: rgba(220, 38, 38, 0.07);
+      opacity: 1;
+
+      .ql-item__label { color: #dc2626; }
+
+      .ql-item__icon {
+        box-shadow:
+          0 6px 20px rgba(220, 38, 38, 0.40),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      .ql-item__lock {
+        background: rgba(220, 38, 38, 0.20);
+        color: #dc2626;
+        box-shadow:
+          0 0 0 1px rgba(220, 38, 38, 0.35),
+          0 0 10px rgba(220, 38, 38, 0.25);
+      }
+    }
+  }
+}
+
+// ══════════════════ MAP WIDGET ════════════════════════════════════════════════
+.map-widget {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  // Globe sits half above the map frame
+  &__globe {
+    width: 72px;
+    height: 72px;
+    margin-top: 14px;
+    margin-bottom: -10px;
+    z-index: 2;
+    filter: drop-shadow(0 6px 18px rgba(6, 182, 212, 0.55));
+    animation: globe-float 4s ease-in-out infinite;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  // Inner frame: depth bar + map
+  &__frame {
+    display: flex;
+    width: 100%;
+    gap: 0;
+  }
+
+  // Left blue depth bar
+  &__depth-bar {
+    width: 14px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #1d4ed8 0%, #0ea5e9 50%, #06b6d4 100%);
+    min-height: 140px;
+  }
+
+  // Map area
+  &__map {
+    flex: 1;
+    display: flex;
+    position: relative;
+    background: #dbeafe;
+    min-height: 140px;
+  }
+
+  // Right legend bar
+  &__legend {
+    width: 20px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #0f766e 0%, #0d9488 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 8px 0;
+  }
+}
+
+// SVG map fills the space
+.map-svg {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+// Legend dots
+.legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.5);
+
+  &--green  { background: #22c55e; }
+  &--red    { background: #ef4444; }
+  &--blue   { background: #3b82f6; }
+  &--yellow { background: #f59e0b; }
+  &--grey   { background: #94a3b8; }
+}
+
+// Globe floating animation
+@keyframes globe-float {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-5px); }
+}
+==
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+} from '@angular/core';
+import { Router } from '@angular/router';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthStore } from '../auth/store/auth.store';
+import { RbacStore } from '@store/rbac/rbac.store';
+
+interface QuickListItem {
+  label: string;
+  route: string;
+  routeId?: string;
+  iconPaths: string[];
+  color: string;
+}
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  imports: [MatTooltipModule],
+  templateUrl: './home.component.html',
+  styleUrl: './home.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class HomeComponent {
+  private readonly router    = inject(Router);
+  private readonly authStore = inject(AuthStore);
+  private readonly rbacStore = inject(RbacStore);
+
+  protected readonly quickItems: QuickListItem[] = [
+    {
+      label: 'Reports',
+      route: 'morning-report',
+      routeId: 'morning-report',
+      iconPaths: [
+        'M9 17v-2m3 2v-4m3 4v-6',
+        'M5 20h14a2 2 0 002-2V8l-5-5H5a2 2 0 00-2 2v13a2 2 0 002 2z',
+      ],
+      color: '#3b82f6',
+    },
+    {
+      label: 'Active Water Well Map',
+      route: 'active-wwell',
+      routeId: 'active-wwell',
+      iconPaths: [
+        'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
+        'M12 11.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z',
+      ],
+      color: '#06b6d4',
+    },
+    {
+      label: 'Presentation',
+      route: 'presentations',
+      routeId: 'presentations',
+      iconPaths: [
+        'M9.75 17L9 20l-1 1h8l-1-1-.75-3',
+        'M3 13h18',
+        'M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+      ],
+      color: '#22d3ee',
+    },
+  ];
+
+  protected readonly lockedRouteIds = computed(() => {
+    const userRoles = this.authStore.user()?.groups ?? [];
+    return new Set(
+      this.quickItems
+        .filter(item => item.routeId && !this.rbacStore.canAccessRoute(item.routeId, userRoles))
+        .map(item => item.routeId!),
+    );
+  });
+
+  protected isLocked(item: QuickListItem): boolean {
+    return !!item.routeId && this.lockedRouteIds().has(item.routeId);
+  }
+
+  protected navigate(route: string): void {
+    this.router.navigate(['main', route]);
+  }
+}
+===
 <header class="top-navbar">
 
   <!-- Left: hamburger + logo -->
@@ -112,7 +489,7 @@
   </div>
 
 </header>
-====
+===
 // ── Layout constants ─────────────────────────────────────────────────────────
 $nav-h:        62px;
 $ease:         cubic-bezier(0.4, 0, 0.2, 1);
@@ -523,5 +900,295 @@ $nav-hover-bg: rgba(14, 165, 233, 0.14);
     &__user       { gap: 10px; }
     &__user-info  { display: none; }
     &__menu-trigger { padding-left: 6px; }
+  }
+}
+===
+// ── Layout constants ────────────────────────────────────────────────────────
+$expanded-w:  244px;
+$collapsed-w: 64px;
+$ease:        cubic-bezier(0.4, 0, 0.2, 1);
+$transition:  0.26s $ease;
+
+// Light-on-dark palette — sidenav is a dark navy surface
+$nav-text:    rgba(255, 255, 255, 0.88);
+$nav-muted:   rgba(255, 255, 255, 0.48);
+$nav-border:  rgba(255, 255, 255, 0.08);
+$nav-hover-bg: rgba(14, 165, 233, 0.10);
+
+// ── Host ────────────────────────────────────────────────────────────────────
+:host {
+  display: block;
+  flex-shrink: 0;
+}
+
+// ── Shell ───────────────────────────────────────────────────────────────────
+.sidenav {
+  display: flex;
+  flex-direction: column;
+  width: $expanded-w;
+  height: 100%;
+  background: var(--bg-sidenav);
+  border-right: 1px solid $nav-border;
+  overflow: hidden;
+  transition: width $transition;
+  position: relative;
+
+  // Subtle right-edge glow
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 1px; height: 100%;
+    background: linear-gradient(
+      to bottom,
+      rgba(14, 165, 233, 0.35),
+      rgba(14, 165, 233, 0.08) 40%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  // ── Collapsed state ────────────────────────────────────────────────────
+  &--collapsed {
+    width: $collapsed-w;
+
+    .sidenav__label,
+    .sidenav__footer-text {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+    }
+
+    .sidenav__btn {
+      justify-content: center;
+      padding: 0;
+    }
+
+    .sidenav__icon { margin-right: 0; }
+
+    .sidenav__section-label { opacity: 0; height: 0; padding: 0; overflow: hidden; }
+  }
+
+  // ── Section label ──────────────────────────────────────────────────────
+  &__section-label {
+    padding: 20px 18px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: $nav-muted;
+    transition: opacity $transition, height $transition, padding $transition;
+    white-space: nowrap;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  // ── List ───────────────────────────────────────────────────────────────
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 14px 0 18px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    &::-webkit-scrollbar { width: 0; }
+  }
+
+  &__item {
+    padding: 4px 12px;
+  }
+
+  // ── Nav button ─────────────────────────────────────────────────────────
+  &__btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 58px;
+    padding: 0 16px 0 10px;
+    border: none;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    color: $nav-muted;
+    cursor: pointer;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    gap: 2px;
+    transition:
+      background $transition,
+      color $transition,
+      box-shadow $transition,
+      transform 0.15s ease;
+    overflow: hidden;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(14, 165, 233, 0.14);
+      color: $nav-text;
+      transform: translateX(2px);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.14);
+
+      .sidenav__icon {
+        background: rgba(14, 165, 233, 0.16);
+
+        svg {
+          stroke: #38bdf8;
+          filter: drop-shadow(0 0 5px rgba(14, 165, 233, 0.4));
+        }
+      }
+    }
+
+    &--active {
+      background: linear-gradient(90deg, rgba(14, 165, 233, 0.2) 0%, rgba(14, 165, 233, 0.08) 100%);
+      color: #dff6ff;
+      font-weight: 800;
+      box-shadow:
+        inset 0 0 0 1px rgba(56, 189, 248, 0.28),
+        0 8px 18px rgba(2, 132, 199, 0.12);
+
+      .sidenav__icon {
+        background: rgba(14, 165, 233, 0.22);
+
+        svg {
+          stroke: #38bdf8;
+          filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.55));
+        }
+      }
+    }
+  }
+
+  // ── Icon container ─────────────────────────────────────────────────────
+  &__icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    margin-right: 13px;
+    transition: margin $transition, background $transition;
+
+    svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      transition: stroke 0.2s ease, filter 0.2s ease;
+    }
+  }
+
+  // ── Label ──────────────────────────────────────────────────────────────
+  &__label {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    color: inherit;
+    transition: opacity $transition, width $transition;
+    white-space: nowrap;
+  }
+
+  // ── Lock icon ──────────────────────────────────────────────────────────
+  &__lock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(220, 38, 38, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(220, 38, 38, 0.28);
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+    svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      flex-shrink: 0;
+    }
+  }
+
+  &__btn--locked {
+    opacity: 0.72;
+
+    .sidenav__icon {
+      background: rgba(220, 38, 38, 0.12);
+
+      svg { stroke: #f87171; }
+    }
+
+    &:hover {
+      background: rgba(220, 38, 38, 0.11);
+      color: #fca5a5;
+      transform: translateX(2px);
+      box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.18);
+      opacity: 1;
+
+      .sidenav__icon {
+        background: rgba(220, 38, 38, 0.22);
+
+        svg {
+          stroke: #fca5a5;
+          filter: drop-shadow(0 0 5px rgba(220, 38, 38, 0.45));
+        }
+      }
+
+      .sidenav__lock {
+        background: rgba(220, 38, 38, 0.26);
+        color: #fca5a5;
+        box-shadow:
+          0 0 0 1px rgba(220, 38, 38, 0.4),
+          0 0 10px rgba(220, 38, 38, 0.35);
+      }
+    }
+  }
+
+  // ── Active indicator (left edge) ────────────────────────────────────────
+  &__active-bar {
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 4px;
+    background: #38bdf8;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 2px 0 14px rgba(14, 165, 233, 0.55);
+  }
+
+  // ── Footer ─────────────────────────────────────────────────────────────
+  &__footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    border-top: 1px solid $nav-border;
+    flex-shrink: 0;
+    background: rgba(14, 165, 233, 0.03);
+  }
+
+  &__water-logo {
+    width: 28px;
+    height: 34px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__footer-text {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: $nav-muted;
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    transition: opacity $transition, width $transition;
+    text-transform: uppercase;
   }
 }
