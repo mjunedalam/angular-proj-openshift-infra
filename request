@@ -1,17 +1,5 @@
-<div class="home">
-
-  <!-- ══ Quick List ══ -->
-  <div class="quick-list">
-    <div class="quick-list__title">Quick List</div>
-
-    @for (item of quickItems; track item.route) {
-      <button
-        class="ql-item"
-        [class.ql-item--locked]="isLocked(item)"
-        (click)="navigate(item.route)"
-      >
-        <span class="ql-item__icon" [style.background]="isLocked(item) ? 'radial-gradient(circle at 35% 35%, rgba(220,38,38,0.55), rgba(220,38,38,0.25))' : 'radial-gradient(circle at 35% 35%, ' + item.color + 'cc, ' + item.color + '55)'">
-          <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="isLocked(item) ? '#fca5a5' : '#ffffff'" stroke-width="1.8"
+<span class="ql-item__icon" [style.background]="'radial-gradient(circle at 35% 35%, ' + item.color + 'cc, ' + item.color + '55)'">
+          <svg viewBox="0 0 24 24" fill="none" [attr.stroke]="isLocked(item) ? '#f87171' : '#ffffff'" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round">
             @for (p of item.iconPaths; track $index) {
               <path [attr.d]="p" />
@@ -19,29 +7,7 @@
           </svg>
         </span>
 
-        <span class="ql-item__label">{{ item.label }}</span>
 
-        @if (isLocked(item)) {
-          <span
-            class="ql-item__lock"
-            matTooltip="Access restricted — contact your administrator to request access to this module."
-            matTooltipPosition="after"
-            matTooltipClass="sidenav-lock-tooltip"
-            [matTooltipShowDelay]="180"
-            aria-label="Access restricted"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0110 0v4"/>
-            </svg>
-          </span>
-        }
-      </button>
-    }
-  </div>
-
-</div>
 ===
 // ── Host layout ──────────────────────────────────────────────────────────────
 :host {
@@ -176,14 +142,7 @@
     &:hover {
       background: rgba(220, 38, 38, 0.07);
       opacity: 1;
-
       .ql-item__label { color: #dc2626; }
-
-      .ql-item__icon {
-        box-shadow:
-          0 6px 20px rgba(220, 38, 38, 0.40),
-          inset 0 1px 0 rgba(255, 255, 255, 0.2);
-      }
 
       .ql-item__lock {
         background: rgba(220, 38, 38, 0.20);
@@ -290,7 +249,7 @@
   0%, 100% { transform: translateY(0);   }
   50%       { transform: translateY(-5px); }
 }
-==
+===
 import {
   ChangeDetectionStrategy,
   Component,
@@ -489,7 +448,7 @@ export class HomeComponent {
   </div>
 
 </header>
-===
+==
 // ── Layout constants ─────────────────────────────────────────────────────────
 $nav-h:        62px;
 $ease:         cubic-bezier(0.4, 0, 0.2, 1);
@@ -902,7 +861,7 @@ $nav-hover-bg: rgba(14, 165, 233, 0.14);
     &__menu-trigger { padding-left: 6px; }
   }
 }
-===
+==
 // ── Layout constants ────────────────────────────────────────────────────────
 $expanded-w:  244px;
 $collapsed-w: 64px;
